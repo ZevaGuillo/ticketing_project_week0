@@ -25,13 +25,19 @@ public class DbInitializer : IDbInitializer
         try
         {
             // Verificar que el schema "bc_identity" existe
-            var schemaExists = await _dbContext.Database
-                .SqlQueryRaw<bool>(
-                    @"SELECT EXISTS (
-                        SELECT 1 FROM information_schema.schemata 
-                        WHERE schema_name = 'bc_identity'
-                    )")
-                .FirstOrDefaultAsync();
+            var connection = _dbContext.Database.GetDbConnection();
+            await connection.OpenAsync();
+            
+            using var command = connection.CreateCommand();
+            command.CommandText = @"SELECT EXISTS (
+                SELECT 1 FROM information_schema.schemata 
+                WHERE schema_name = 'bc_identity'
+            )";
+            
+            var result = await command.ExecuteScalarAsync();
+            var schemaExists = (bool)(result ?? false);
+            
+            await connection.CloseAsync();
 
             if (!schemaExists)
             {
