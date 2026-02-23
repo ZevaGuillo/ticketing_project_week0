@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
         });
         
         services.AddScoped<IDbInitializer, DbInitializer>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
         
         return services;
     }
