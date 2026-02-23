@@ -32,7 +32,7 @@ Catalog (read side)
 
 Inventory (reservation core)
 - [X] T015 Crear proyecto `services/inventory/src` con estructura Hexagonal (P1, Est: 2h) [Dependencias: T005]
-- [ ] T016 Crear `InventoryDbContext` con schema `bc_inventory` y migration inicial (P1, Est: 3h) [Dependencias: T002]
+- [X] T016 Crear `InventoryDbContext` con schema `bc_inventory` y migration inicial (P1, Est: 3h) [Dependencias: T002]
 - [ ] T017 Crear entidad `Seat` y columna `version` (rowversion/timestamp) en `bc_catalog`/`bc_inventory` modelo (P1, Est: 3h) [Dependencias: T012, T016]
 - [ ] T018 Implementar Redis lock helper (adapter) en `Infrastructure` (StackExchange.Redis) (P1, Est: 4h) [Dependencias: T001]
 - [ ] T019 Implementar endpoint `POST /reservations` (Inventory) que: adquiere Redis lock, verifica seat version, crea `Reservation` con `expires_at = now + 15m`, actualiza seat status `reserved`, publica `reservation-created` en Kafka (P1, Est: 12h) [Dependencias: T016, T017, T018, T009]
