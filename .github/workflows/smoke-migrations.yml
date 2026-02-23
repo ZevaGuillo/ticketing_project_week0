@@ -5,11 +5,13 @@ on:
     branches:
       - main
       - develop
+      - master
       - '001-ticketing-mvp'
   pull_request:
     branches:
       - main
       - develop
+      - master
 
 jobs:
   smoke-migrations:
