@@ -31,7 +31,7 @@ Catalog (read side)
 - [ ] T014 Añadir unit tests domain para `Event` y `Seat` agregados (xUnit) (P1, Est: 3h) [Dependencias: T011]
 
 Inventory (reservation core)
-- [ ] T015 Crear proyecto `services/inventory/src` con estructura Hexagonal (P1, Est: 2h) [Dependencias: T005]
+- [X] T015 Crear proyecto `services/inventory/src` con estructura Hexagonal (P1, Est: 2h) [Dependencias: T005]
 - [ ] T016 Crear `InventoryDbContext` con schema `bc_inventory` y migration inicial (P1, Est: 3h) [Dependencias: T002]
 - [ ] T017 Crear entidad `Seat` y columna `version` (rowversion/timestamp) en `bc_catalog`/`bc_inventory` modelo (P1, Est: 3h) [Dependencias: T012, T016]
 - [ ] T018 Implementar Redis lock helper (adapter) en `Infrastructure` (StackExchange.Redis) (P1, Est: 4h) [Dependencias: T001]
