@@ -1,0 +1,38 @@
+# Ignore Postgres local data directories (development only)
+/data/postgres/
+/infra/data/postgres/
+
+# .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Visual Studio Code
+.vscode/
+
+# JetBrains
+.idea/
+
+# macOS
+.DS_Store
+
+# Logs and env
+*.log
+.env
+.env.*
+
+# Docker overrides and artifacts
+docker-compose.override.yml
+**/docker-compose.override.yml
+
+# Node
+node_modules/
+
+# Coverage
+coverage/
+
+# Temporary files
+tmp/
+*.tmp

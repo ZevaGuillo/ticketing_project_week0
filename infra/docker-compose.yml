@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # PostgreSQL: single shared instance for all bounded contexts (schemas created separately)
+  postgres:
+    image: postgres:17
+    container_name: speckit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ticketing
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./infra/db/init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis: used for distributed locks and short-lived reservation keys
+  redis:
+    image: redis:7
+    container_name: speckit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Zookeeper: required by Confluent Kafka images
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: speckit-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    # Use Zookeeper 'ruok' command for a reliable health check
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c \"echo ruok | nc -w 2 localhost 2181 | grep imok || exit 1\""]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # Kafka (Confluent cp-kafka)
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: speckit-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      # Advertise 'localhost:9092' for host tools (dev). Internal clients inside Docker
+      # can still use 'kafka:9092' when running inside the same compose network.
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    # Use kafka-broker-api-versions for a more accurate broker health check
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c \"kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1\""]
+      interval: 10s
+      timeout: 15s
+      retries: 12
+
+# Useful environment variables (for .NET apps or local dev use)
+# Use these values when configuring your services' connection strings.
+# Example POSTGRES_URL: Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres
+# Example REDIS_URL: redis:6379
+# Example KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+networks:
+  default:
+    name: speckit-net
+
+# Notes:
+# - This compose file is targeted for local development only.
+# - Postgres data is mounted at ./data/postgres so it persists between restarts.
+# - Healthchecks use simple TCP or client commands; adjust per your environment.

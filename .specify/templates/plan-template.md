@@ -31,7 +31,18 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+The plan MUST include an explicit confirmation that the feature complies with the project constitution. At minimum, verify and document the following checks:
+
+- **Architecture:** Service design follows Hexagonal (Ports & Adapters). Confirm domain contains no infra dependencies and ports/adapters are identified.
+- **Database:** Confirms use of the shared PostgreSQL instance; lists target schema `bc_<name>` and the migrating service owning it.
+- **DbContext / Migrations:** For .NET services, confirm an EF Core `DbContext` per service and that migrations target the service schema only.
+- **Communication:** Declares synchronous endpoints (HTTP/REST or gRPC) and any asynchronous Kafka topics/events involved; include event schemas/contracts.
+- **Transactions:** Document whether the feature can use local ACID transactions or requires distributed coordination (saga). If saga proposed, include justification and design.
+- **Local Dev Topology:** Confirm the feature runs in the `docker-compose` dev setup and any additional services (e.g., Redis, Kafka topics) are declared.
+- **Security:** Confirm JWT flows or Identity service dependencies, and any secrets required (User Secrets/.env) are noted.
+- **Testing:** Lists unit tests, integration tests (Testcontainers), and contract tests required for the feature; ensure CI gates will run them.
+
+Add a short checklist entry in the plan's header showing PASS/FAIL for each item and link to artifacts (diagrams, migrations, event contracts).
 
 ## Project Structure
 
@@ -55,41 +66,6 @@ specs/[###-feature]/
   not include Option labels.
 -->
 
-```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
-```
 
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]

@@ -3,71 +3,116 @@ Sync Impact Report
 
 - Version change: unspecified -> 1.1.0
 - Modified principles:
-	- Architecture: [PRINCIPLE_1_NAME] -> Arquitectura Hexagonal (Ports & Adapters)
-	- Database: [PRINCIPLE_2_NAME] -> Base de datos: Shared PostgreSQL (schemas por bounded context)
-	- Communication: [PRINCIPLE_3_NAME] -> Comunicación síncrona/asíncrona (HTTP/gRPC + Kafka)
-	- Transactions/Sagas: [PRINCIPLE_4_NAME] -> Prefer local transactions; evitar sagas complejas al inicio
-	- Deployment & Quality: [PRINCIPLE_5_NAME] -> Docker Compose despliegue + Testcontainers
-- Added sections: standardized Development Workflow and Database constraints clarified
+	- Architecture: generic -> Arquitectura: Hexagonal (Ports & Adapters)
+    - Tech stack base: .NET 9 (o superior), EF Core 9+ con Npgsql, Confluent.Kafka 2.x, MediatR, FluentValidation, Serilog + OpenTelemetry.
+	- Database: generic -> Base de datos: UNA instancia PostgreSQL compartida (schemas por bounded context)
+	- Communication: generic -> Comunicación síncrona (HTTP/REST, gRPC) y asíncrona (Kafka)
+	- Transactions/Sagas: generic -> Priorizar transacciones locales; evitar sagas complejas al inicio
+	- Deployment & Quality: generic -> Despliegue local con Docker Compose + Testcontainers para integración
+- Added sections: Development Workflow (Constitution Check in PRs) and explicit Database & Security Constraints
 - Removed sections: none
-- Templates requiring updates: .specify/templates/plan-template.md (⚠ pending), .specify/templates/spec-template.md (⚠ pending), .specify/templates/tasks-template.md (⚠ pending), .specify/templates/constitution-template.md (⚠ pending)
+- Templates requiring updates: .specify/templates/plan-template.md (✅ updated), .specify/templates/spec-template.md (⚠ pending), .specify/templates/tasks-template.md (⚠ pending), .specify/templates/constitution-template.md (⚠ pending)
 - Follow-up TODOs:
 	- TODO(RATIFICATION_DATE): confirm original ratification date and replace placeholder
-	- Review templates listed above and align their "Constitution Check" storage/infra guidance with the shared-Postgres decision
-	- Evaluate RBAC per-schema in postgres and document recommended roles
+	- Update .specify/templates/spec-template.md and .specify/templates/tasks-template.md to reflect shared-Postgres schema rules and required CI checks
+	- Create or review commands documentation in .specify/templates/commands/ for agent-neutral guidance (if present)
+	- Document recommended RBAC and schema roles for the shared Postgres instance
 -->
 
 # Speckit Ticketing Constitution
+**Version**: 1.1.0  
+**Ratified**: 2026-02-22  
+**Last Amended**: 2026-02-22  
+**Sync Impact Report** (resumen de cambios desde versión anterior):
+- Arquitectura: de genérica a Hexagonal obligatoria
+- Base de datos: de genérica a una sola PostgreSQL compartida con schemas por bounded context
+- Comunicación: explicitada como síncrona (HTTP/REST + gRPC opcional) y asíncrona (Kafka)
+- Transacciones: priorizar locales; evitar sagas complejas al inicio
+- Añadidos: Redis para locks/caché, Observability (OTel), workflow de desarrollo (PRs + CI gating)
+- Templates afectados: plan-template.md (actualizado), spec-template.md y tasks-template.md (pendientes de actualización)
 
 ## Core Principles
 
-### Arquitectura: Hexagonal (Ports & Adapters)
-La arquitectura de cada microservicio MUST seguir el patrón Hexagonal (Ports & Adapters). El dominio debe permanecer puro y aislado de detalles de infraestructura.
-- Regla: Todo acceso externo (DB, mensajería, HTTP, almacenamiento) MUST realizarse a través de puertos (interfaces) e implementado por adaptadores.
-- Rationale: Garantiza testabilidad del dominio, independencia tecnológica y facilidad de evolución.
+### 1. Arquitectura: Hexagonal (Ports & Adapters)
+Cada microservicio **MUST** seguir estrictamente el patrón Hexagonal (Ports & Adapters).  
+- El dominio **MUST** permanecer puro y aislado de cualquier detalle de infraestructura (DB, mensajería, HTTP, etc.).  
+- Todo acceso externo **MUST** realizarse a través de **puertos** (interfaces) e implementarse en **adaptadores**.  
+**Rationale**: Garantiza testabilidad del dominio, independencia tecnológica y facilidad de evolución futura.
 
-### Base de datos: UNA instancia PostgreSQL compartida (shared database pattern)
-Se adopta UNA sola instancia PostgreSQL compartida para el entorno de producción y desarrollo (ej: postgres:5432), con aislamiento lógico mediante schemas por bounded context (ej: catalog, inventory, ordering).
-- Regla: Cada bounded context MUST usar su propio schema PostgreSQL. Los microservicios MUST acceder a la base de datos mediante repositorios definidos como puertos (IRepository) y nunca exponer SQL cru directamente fuera del adaptador de persistencia.
-- Regla: En .NET usar EF Core con un `DbContext` por microservicio; un `DbContext` compartido solo si la simplicidad lo justifica y no rompe el aislamiento lógico.
-- Regla: La connection string de la instancia es única en `docker-compose`; sin embargo, implantar roles/privilegios por schema es RECOMMENDED para seguridad.
-- Rationale: Reduce la complejidad operativa y facilita transacciones locales; los schemas permiten separación lógica sin múltiples instancias.
+### 2. Base de datos: Una sola instancia PostgreSQL compartida
+Se adopta una única instancia PostgreSQL (shared database pattern) para desarrollo, integración y producción.  
+- Aislamiento lógico mediante **schemas** por bounded context (ej: `bc_catalog`, `bc_inventory`, `bc_ordering`, `bc_payment`, etc.).  
+- Cada microservicio **MUST** acceder a su schema correspondiente mediante repositorios definidos como puertos (`IRepository`).  
+- **NO** exponer SQL directo fuera del adaptador de persistencia.  
+- En .NET: usar EF Core con un `DbContext` por microservicio (configurando el schema vía `SearchPath` o `.HasDefaultSchema()`).  
+- Connection string única en `docker-compose.yml`.  
+- **RECOMMENDED**: Definir roles y privilegios PostgreSQL por schema para mayor seguridad.  
+**Rationale**: Simplifica operaciones (backups, monitoreo, migraciones), permite transacciones locales ACID y reduce complejidad en MVP.
 
-### Comunicación: Síncrona y Asíncrona
-- Síncrona: Usar HTTP/REST o gRPC para consultas/operaciones donde se requiere respuesta inmediata. Preferir gRPC para contratos fuertemente tipados y alto rendimiento interno.
-- Asíncrona: Usar Kafka para eventos no críticos, notificaciones y patrones de eventual consistency (confirmaciones, proyecciones, integración eventual entre bounded contexts).
-- Regla: Preferir diseño que permita fallos aislados y reintentos; eventos MUST ser idempotentes cuando sea posible.
+### 3. Comunicación
+- **Síncrona**: HTTP/REST (Minimal APIs) como principal; gRPC opcional para casos de baja latencia (ej: chequeos de inventario).  
+- **Asíncrona**: Kafka como event bus principal para eventos no críticos, notificaciones y eventual consistency.  
+**Reglas**:  
+- Eventos **MUST** ser idempotentes cuando corresponda.  
+- Preferir fallos aislados + reintentos + dead-letter queues.  
+**Rationale**: Balance entre respuesta inmediata y desacoplamiento.
 
-### Transacciones y Orquestación (Sagas)
-- Regla: No forzar sagas complejas al inicio. Favor transacciones locales ACID dentro del mismo schema/microservicio siempre que sea posible.
-- Regla: Emplear sagas o coreografías solo cuando la consistencia distribuida sea necesaria y justificar su complejidad en la especificación del feature.
-- Rationale: Minimizar complejidad operativa y técnica al inicio; favorecer soluciones simples y explicables.
+### 4. Transacciones y Orquestación (Sagas)
+- **Priorizar** transacciones locales ACID dentro del mismo schema/microservicio siempre que sea posible.  
+- **NO** introducir sagas complejas o coreografías distribuidas al inicio a menos que la especificación lo justifique explícitamente.  
+**Rationale**: Minimizar complejidad técnica y operativa en fases iniciales.
 
-### Despliegue: Docker Compose (entorno dev/integ)
-- Regla: Despliegue base con `docker-compose` que incluya: 1 Postgres (instancia única), Redis, Kafka, y los servicios .NET del sistema.
-- Rationale: Entorno reproducible y sencillo para desarrollo; producción puede usar orquestadores, pero la topología lógica (una BD compartida con schemas) se mantiene.
+### 5. Caché y Locks Distribuidos
+- Redis **MUST** usarse para:  
+  - Reservas temporales con TTL (default 15 minutos).  
+  - Distributed locks en secciones críticas de alta concurrencia.  
+- **NO** abusar de Redis como caché general; priorizar PostgreSQL para datos persistentes.  
+**Rationale**: Garantiza manejo seguro de concurrencia en reservas sin bloquear la BD principal.
 
-### Calidad y Tests
-- Regla: Unit tests MUST mock puertos y casos de uso; Integration tests MUST usar Testcontainers con un solo contenedor Postgres compartido para validar integraciones reales.
-- Regla: Contract tests y pruebas de integración asíncronas para flujos basados en Kafka son RECOMMENDED.
-- Rationale: Balance entre velocidad de testeo (mocks) y fiabilidad (Testcontainers con Postgres real).
+### 6. Observability
+- Todos los servicios **MUST** emitir:  
+  - Logs estructurados (JSON via Serilog).  
+  - Traces y métricas con OpenTelemetry.  
+- Incluir correlation IDs en requests y eventos Kafka.  
+- Entorno local: incluir OTEL collector en `docker-compose.yml` (export a Jaeger/Zipkin o console).  
+**Rationale**: Facilita debugging distribuido y monitoreo.
+
+### 7. Despliegue Local (Entorno de Desarrollo/Integración)
+- Entorno base reproducible con `docker-compose.yml` que incluya:  
+  - 1 instancia PostgreSQL  
+  - Redis  
+  - Kafka + Zookeeper  
+  - Servicios .NET  
+**Rationale**: Simplicidad y reproducibilidad en desarrollo.
+
+### 8. Calidad y Tests
+- Unit tests **MUST** mockear puertos y casos de uso.  
+- Integration tests **MUST** usar Testcontainers (con un solo contenedor PostgreSQL compartido).  
+- Contract tests y pruebas asíncronas (Kafka) **RECOMMENDED**.  
+**Rationale**: Balance entre velocidad y fiabilidad.
 
 ## Database & Security Constraints
-- Naming: Schemas MUST usar prefijo del bounded context: `bc_<name>` o `schema_<bounded_context>` (consistencia obligatoria).
-- Migrations: Cada microservicio mantiene sus migraciones y las aplica únicamente al schema que controla.
-- Backups: La instancia PostgreSQL MUST tener backups periódicos; restauraciones y políticas operativas deben documentarse fuera de esta constitución.
+- Schemas **MUST** usar prefijo consistente: `bc_<bounded_context>` (ej: `bc_inventory`).  
+- Migraciones: Cada microservicio mantiene y aplica sus propias migraciones solo a su schema.  
+- Seguridad: Limitar permisos de cada servicio a su schema; usar secrets via `.env` o User Secrets en desarrollo.
 
 ## Development Workflow
-- PRs MUST include: descripción del cambio, impacto en schemas (si aplica), tests unitarios y una sección "Constitution Check" que confirme cumplimiento con esta constitución.
-- CI gating: El pipeline MUST ejecutar unit tests, contract tests (si existen) y al menos una suite de integración ligera contra Postgres Testcontainer antes de merge.
-- Code review: Cambios de esquemas o migraciones REQUIERE al menos dos aprobaciones y un plan de despliegue/migración.
+- Cada PR **MUST** incluir:  
+  - Descripción del cambio.  
+  - Impacto en schemas (si aplica).  
+  - Tests unitarios.  
+  - Sección "Constitution Check" confirmando cumplimiento.  
+- CI pipeline **MUST** ejecutar: unit tests, integración ligera con Testcontainers, y validación de contratos (si existen).  
+- Cambios en schemas o migraciones **REQUIEREN** al menos dos aprobaciones + plan de migración/despliegue.
 
 ## Governance
-- Enmiendas: Las modificaciones a esta constitución requieren una propuesta documentada y una revisión por el equipo técnico. Cambios menores (clarificaciones) pueden aprobarse por mayoría simple; cambios materiales (nuevo principio o redefinición) requieren consenso técnico y un plan de migración.
-- Versioning policy:
-	- MAJOR: Cambios incompatibles en principios fundamentales (ej. remover el patrón shared DB o cambiar la arquitectura obligatoria).
-	- MINOR: Añadir un principio nuevo o expandir materialmente la guía (esta actualización → MINOR).
-	- PATCH: Correcciones de redacción, typos y clarificaciones menores.
-- Compliance review: Antes de merges que alteren infra o schemas, agregar una etiqueta `constitution-check` y pasar la revisión de cumplimiento.
+- Enmiendas: Cambios requieren propuesta documentada y revisión técnica.  
+  - Cambios menores (clarificaciones): mayoría simple.  
+  - Cambios materiales: consenso + plan de migración.  
+- Actualizaciones: Ejecutar `/speckit.constitution` con el nuevo texto y commitear.  
+- Versioning:  
+  - **MAJOR**: Cambios incompatibles (ej: eliminar shared DB o hexagonal).  
+  - **MINOR**: Nuevos principios o expansiones significativas.  
+  - **PATCH**: Correcciones menores.
 
-**Version**: 1.1.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-02-22
+**Tech stack base recomendado**: .NET 9 (o superior), EF Core 9+ con Npgsql, Confluent.Kafka 2.x, MediatR, FluentValidation, Serilog + OpenTelemetry.
