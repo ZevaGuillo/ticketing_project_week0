@@ -8,16 +8,30 @@ namespace Ordering.Application.UseCases.AddToCart;
 public sealed class AddToCartHandler : IRequestHandler<AddToCartCommand, AddToCartResponse>
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly IReservationValidationService _reservationValidationService;
 
-    public AddToCartHandler(IOrderRepository orderRepository)
+    public AddToCartHandler(
+        IOrderRepository orderRepository,
+        IReservationValidationService reservationValidationService)
     {
         _orderRepository = orderRepository;
+        _reservationValidationService = reservationValidationService;
     }
 
     public async Task<AddToCartResponse> Handle(AddToCartCommand request, CancellationToken cancellationToken)
     {
         try 
         {
+            // Validate reservation before adding to cart
+            var validationResult = await _reservationValidationService.ValidateReservationAsync(
+                request.ReservationId, 
+                request.SeatId);
+
+            if (!validationResult.IsValid)
+            {
+                return new AddToCartResponse(false, validationResult.ErrorMessage, null);
+            }
+
             // Find existing draft order or create new one
             var existingOrder = await _orderRepository.GetDraftOrderAsync(
                 request.UserId, request.GuestToken, cancellationToken);
@@ -26,6 +40,12 @@ public sealed class AddToCartHandler : IRequestHandler<AddToCartCommand, AddToCa
             
             if (existingOrder != null)
             {
+                // Check if seat is already in the cart
+                if (existingOrder.Items.Any(i => i.SeatId == request.SeatId))
+                {
+                    return new AddToCartResponse(false, "Seat is already in the cart", null);
+                }
+
                 // Add item to existing order
                 var newItem = new OrderItem
                 {
