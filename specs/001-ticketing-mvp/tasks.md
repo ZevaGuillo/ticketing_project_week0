@@ -42,7 +42,7 @@ Inventory (reservation core)
 
 Ordering (cart + order persistence)
 - [X] T023 Crear proyecto `services/ordering/src` con estructura Hexagonal (P1, Est: 2h) [Dependencias: T005]
-- [ ] T024 Crear `OrderingDbContext` con schema `bc_ordering` y migration inicial (P1, Est: 3h) [Dependencias: T002]
+- [X] T024 Crear `OrderingDbContext` con schema `bc_ordering` y migration inicial (P1, Est: 3h) [Dependencias: T002]
 - [ ] T025 Implementar modelo `Order` y endpoints: `POST /cart/add`, `POST /orders/checkout` (P1, Est: 10h) [Dependencias: T023, T024, T019]
 - [ ] T026 Implementar listeners/validation in Ordering to validate reservation existence on add-to-cart (consumes `reservation-created` o consulta directa a Inventory) (P1, Est: 6h) [Dependencias: T019, T023]
 - [ ] T027 Unit tests for Ordering domain and cart flows (P1, Est: 6h) [Dependencias: T025]
