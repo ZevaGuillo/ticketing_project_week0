@@ -25,10 +25,10 @@ Notes:
 ## Phase 1 — Core services (Catalog, Inventory, Ordering)
 
 Catalog (read side)
-- [ ] T011 Crear proyecto `services/catalog/src` con estructura Hexagonal (Domain/Application/Infrastructure/Api) (P1, Est: 2h) [Dependencias: T005]
-- [ ] T012 Crear `CatalogDbContext` configurado con schema `bc_catalog` y migration inicial en `migrations/catalog` (P1, Est: 3h) [Dependencias: T002]
-- [ ] T013 Implementar endpoint `GET /events/{id}/seatmap` en `catalog` que retorna seats & base prices (P1, Est: 6h) [Dependencias: T011, T012]
-- [ ] T014 Añadir unit tests domain para `Event` y `Seat` agregados (xUnit) (P1, Est: 3h) [Dependencias: T011]
+- [X] T011 Crear proyecto `services/catalog/src` con estructura Hexagonal (Domain/Application/Infrastructure/Api) (P1, Est: 2h) [Dependencias: T005]
+- [X] T012 Crear `CatalogDbContext` configurado con schema `bc_catalog` y migration inicial en `migrations/catalog` (P1, Est: 3h) [Dependencias: T002]
+- [X] T013 Implementar endpoint `GET /events/{id}/seatmap` en `catalog` que retorna seats & base prices (P1, Est: 6h) [Dependencias: T011, T012]
+- [X] T014 Añadir unit tests domain para `Event` y `Seat` agregados (xUnit) (P1, Est: 3h) [Dependencias: T011]
 
 Inventory (reservation core)
 - [X] T015 Crear proyecto `services/inventory/src` con estructura Hexagonal (P1, Est: 2h) [Dependencias: T005]
