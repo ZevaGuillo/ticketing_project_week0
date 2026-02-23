@@ -1,50 +1,73 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+
+- Version change: unspecified -> 1.1.0
+- Modified principles:
+	- Architecture: [PRINCIPLE_1_NAME] -> Arquitectura Hexagonal (Ports & Adapters)
+	- Database: [PRINCIPLE_2_NAME] -> Base de datos: Shared PostgreSQL (schemas por bounded context)
+	- Communication: [PRINCIPLE_3_NAME] -> Comunicación síncrona/asíncrona (HTTP/gRPC + Kafka)
+	- Transactions/Sagas: [PRINCIPLE_4_NAME] -> Prefer local transactions; evitar sagas complejas al inicio
+	- Deployment & Quality: [PRINCIPLE_5_NAME] -> Docker Compose despliegue + Testcontainers
+- Added sections: standardized Development Workflow and Database constraints clarified
+- Removed sections: none
+- Templates requiring updates: .specify/templates/plan-template.md (⚠ pending), .specify/templates/spec-template.md (⚠ pending), .specify/templates/tasks-template.md (⚠ pending), .specify/templates/constitution-template.md (⚠ pending)
+- Follow-up TODOs:
+	- TODO(RATIFICATION_DATE): confirm original ratification date and replace placeholder
+	- Review templates listed above and align their "Constitution Check" storage/infra guidance with the shared-Postgres decision
+	- Evaluate RBAC per-schema in postgres and document recommended roles
+-->
+
+# Speckit Ticketing Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Arquitectura: Hexagonal (Ports & Adapters)
+La arquitectura de cada microservicio MUST seguir el patrón Hexagonal (Ports & Adapters). El dominio debe permanecer puro y aislado de detalles de infraestructura.
+- Regla: Todo acceso externo (DB, mensajería, HTTP, almacenamiento) MUST realizarse a través de puertos (interfaces) e implementado por adaptadores.
+- Rationale: Garantiza testabilidad del dominio, independencia tecnológica y facilidad de evolución.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### Base de datos: UNA instancia PostgreSQL compartida (shared database pattern)
+Se adopta UNA sola instancia PostgreSQL compartida para el entorno de producción y desarrollo (ej: postgres:5432), con aislamiento lógico mediante schemas por bounded context (ej: catalog, inventory, ordering).
+- Regla: Cada bounded context MUST usar su propio schema PostgreSQL. Los microservicios MUST acceder a la base de datos mediante repositorios definidos como puertos (IRepository) y nunca exponer SQL cru directamente fuera del adaptador de persistencia.
+- Regla: En .NET usar EF Core con un `DbContext` por microservicio; un `DbContext` compartido solo si la simplicidad lo justifica y no rompe el aislamiento lógico.
+- Regla: La connection string de la instancia es única en `docker-compose`; sin embargo, implantar roles/privilegios por schema es RECOMMENDED para seguridad.
+- Rationale: Reduce la complejidad operativa y facilita transacciones locales; los schemas permiten separación lógica sin múltiples instancias.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### Comunicación: Síncrona y Asíncrona
+- Síncrona: Usar HTTP/REST o gRPC para consultas/operaciones donde se requiere respuesta inmediata. Preferir gRPC para contratos fuertemente tipados y alto rendimiento interno.
+- Asíncrona: Usar Kafka para eventos no críticos, notificaciones y patrones de eventual consistency (confirmaciones, proyecciones, integración eventual entre bounded contexts).
+- Regla: Preferir diseño que permita fallos aislados y reintentos; eventos MUST ser idempotentes cuando sea posible.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### Transacciones y Orquestación (Sagas)
+- Regla: No forzar sagas complejas al inicio. Favor transacciones locales ACID dentro del mismo schema/microservicio siempre que sea posible.
+- Regla: Emplear sagas o coreografías solo cuando la consistencia distribuida sea necesaria y justificar su complejidad en la especificación del feature.
+- Rationale: Minimizar complejidad operativa y técnica al inicio; favorecer soluciones simples y explicables.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### Despliegue: Docker Compose (entorno dev/integ)
+- Regla: Despliegue base con `docker-compose` que incluya: 1 Postgres (instancia única), Redis, Kafka, y los servicios .NET del sistema.
+- Rationale: Entorno reproducible y sencillo para desarrollo; producción puede usar orquestadores, pero la topología lógica (una BD compartida con schemas) se mantiene.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### Calidad y Tests
+- Regla: Unit tests MUST mock puertos y casos de uso; Integration tests MUST usar Testcontainers con un solo contenedor Postgres compartido para validar integraciones reales.
+- Regla: Contract tests y pruebas de integración asíncronas para flujos basados en Kafka son RECOMMENDED.
+- Rationale: Balance entre velocidad de testeo (mocks) y fiabilidad (Testcontainers con Postgres real).
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## Database & Security Constraints
+- Naming: Schemas MUST usar prefijo del bounded context: `bc_<name>` o `schema_<bounded_context>` (consistencia obligatoria).
+- Migrations: Cada microservicio mantiene sus migraciones y las aplica únicamente al schema que controla.
+- Backups: La instancia PostgreSQL MUST tener backups periódicos; restauraciones y políticas operativas deben documentarse fuera de esta constitución.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Development Workflow
+- PRs MUST include: descripción del cambio, impacto en schemas (si aplica), tests unitarios y una sección "Constitution Check" que confirme cumplimiento con esta constitución.
+- CI gating: El pipeline MUST ejecutar unit tests, contract tests (si existen) y al menos una suite de integración ligera contra Postgres Testcontainer antes de merge.
+- Code review: Cambios de esquemas o migraciones REQUIERE al menos dos aprobaciones y un plan de despliegue/migración.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+- Enmiendas: Las modificaciones a esta constitución requieren una propuesta documentada y una revisión por el equipo técnico. Cambios menores (clarificaciones) pueden aprobarse por mayoría simple; cambios materiales (nuevo principio o redefinición) requieren consenso técnico y un plan de migración.
+- Versioning policy:
+	- MAJOR: Cambios incompatibles en principios fundamentales (ej. remover el patrón shared DB o cambiar la arquitectura obligatoria).
+	- MINOR: Añadir un principio nuevo o expandir materialmente la guía (esta actualización → MINOR).
+	- PATCH: Correcciones de redacción, typos y clarificaciones menores.
+- Compliance review: Antes de merges que alteren infra o schemas, agregar una etiqueta `constitution-check` y pasar la revisión de cumplimiento.
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.1.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-02-22
