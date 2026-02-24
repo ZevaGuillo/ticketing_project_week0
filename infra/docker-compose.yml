@@ -63,19 +63,38 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      # Advertise 'localhost:9092' for host tools (dev). Internal clients inside Docker
-      # can still use 'kafka:9092' when running inside the same compose network.
       KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
       KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-    # Use kafka-broker-api-versions for a more accurate broker health check
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
     healthcheck:
       test: ["CMD-SHELL", "bash -c \"kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1\""]
       interval: 10s
       timeout: 15s
       retries: 12
+
+  # Kafka topic initializer - runs on startup to create required topics
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: speckit-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "
+        echo 'Waiting for Kafka to be ready...' &&
+        until kafka-broker-api-versions --bootstrap-server kafka:9092 > /dev/null 2>&1; do
+          sleep 1
+        done &&
+        echo 'Kafka is ready. Creating topics...' &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic reservation-created &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic reservation-expired &&
+        echo 'Topics created successfully!' &&
+        kafka-topics --list --bootstrap-server kafka:9092
+      "
+    restart: "no"
 
 # Useful environment variables (for .NET apps or local dev use)
 # Use these values when configuring your services' connection strings.
