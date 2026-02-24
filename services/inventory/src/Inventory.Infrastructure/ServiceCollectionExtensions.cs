@@ -38,7 +38,7 @@ public static class ServiceCollectionExtensions
         };
         var producer = new ProducerBuilder<string?, string>(kafkaConfig).Build();
         services.AddSingleton(producer);
-        services.AddScoped<IKafkaProducer, KafkaProducer>();
+        services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
         // Register expiry worker as hosted service (optional in tests)
         services.AddSingleton<IHostedService, Inventory.Infrastructure.Workers.ReservationExpiryWorker>(sp =>

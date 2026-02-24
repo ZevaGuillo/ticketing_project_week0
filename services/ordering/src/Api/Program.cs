@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Ordering.Infrastructure;
 using Ordering.Application.UseCases.AddToCart;
+using Ordering.Application.Ports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,23 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(AddToCartHandler).Assembly));
 
 var app = builder.Build();
+
+// Apply migrations automatically on startup
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+        await dbInitializer.InitializeAsync();
+        Console.WriteLine("✓ Ordering DB initialized");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"✗ FATAL: Could not initialize database");
+        Console.WriteLine($"  Reason: {ex.Message}");
+        throw;
+    }
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

@@ -5,7 +5,7 @@ using Catalog.Application.UseCases.GetEventSeatmap;
 namespace Catalog.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("[controller]")]
 public class EventsController : ControllerBase
 {
     private readonly IMediator _mediator;
