@@ -152,7 +152,7 @@ sleep 8
 # Test 3: Add to cart in Ordering (with timeout)
 if [ ! -z "$RESERVATION_ID" ]; then
     echo -n "3. Ordering: POST /cart/add... "
-    CART_RESPONSE=$(curl -s --max-time 5 -X POST "http://localhost:50003/cart/add" \
+    CART_RESPONSE=$(curl -s --max-time 5 -X POST "http://localhost:5003/cart/add" \
         -H "Content-Type: application/json" \
         -d "{\"reservationId\":\"$RESERVATION_ID\",\"seatId\":\"$SEAT_ID\",\"price\":50.00,\"userId\":\"test-user-001\"}" || echo "timeout")
     
