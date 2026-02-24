@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Ordering.Infrastructure;
 using Ordering.Application.UseCases.AddToCart;
 using Ordering.Application.Ports;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -31,9 +31,23 @@ public class RedisLock : IRedisLock
         if (string.IsNullOrEmpty(key)) throw new ArgumentNullException(nameof(key));
 
         var token = Guid.NewGuid().ToString("N");
-        // NX and expiry
-        var acquired = await _db.StringSetAsync(key, token, ttl, when: When.NotExists).ConfigureAwait(false);
-        return acquired ? token : null;
+        try
+        {
+            // Use a 5-second timeout for lock acquisition
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var acquired = await _db.StringSetAsync(key, token, ttl, when: When.NotExists).ConfigureAwait(false);
+            return acquired ? token : null;
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine($"[RedisLock] Timeout acquiring lock for key {key}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[RedisLock] Error acquiring lock: {ex.Message}");
+            return null;
+        }
     }
 
     public async Task<bool> ReleaseLockAsync(string key, string token)

@@ -44,7 +44,9 @@ public class ReservationEventConsumer : BackgroundService
         {
             BootstrapServers = _kafkaOptions.BootstrapServers,
             GroupId = _kafkaOptions.ConsumerGroupId,
-            AutoOffsetReset = AutoOffsetReset.Latest,
+            // Use Earliest in smoke-tests / MVP so consumer reads messages
+            // that may have been published before the service subscribed.
+            AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = true
         };
 
