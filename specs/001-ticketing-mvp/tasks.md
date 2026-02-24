@@ -48,7 +48,7 @@ Ordering (cart + order persistence)
 - [X] T027 Unit tests for Ordering domain and cart flows (P1, Est: 6h) [Dependencias: T025]
 - [X] T028 Integration test: full flow reserve → add to cart → create order draft (Testcontainers) (P1, Est: 8h) [Dependencias: T022, T025]
 
-- [ ] T029 Phase 1 smoke test: run infra + catalog + inventory + ordering, execute end-to-end reservation → cart scenario (P1, Est: 3h) [Dependencias: T010, T013, T019, T025]
+- [X] T029 Phase 1 smoke test: run infra + catalog + inventory + ordering, execute end-to-end reservation → cart scenario (P1, Est: 3h) [Dependencias: T010, T013, T019, T025]
 
 ---
 

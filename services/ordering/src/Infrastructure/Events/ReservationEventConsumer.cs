@@ -40,12 +40,50 @@ public class ReservationEventConsumer : BackgroundService
             return;
         }
 
+        // Wait a bit for Kafka to be ready in Docker environments
+        await Task.Delay(2000, stoppingToken);
+
+        int retryCount = 0;
+        const int maxRetries = 5;
+        const int retryDelayMs = 3000;
+
+        while (!stoppingToken.IsCancellationRequested && retryCount < maxRetries)
+        {
+            try
+            {
+                await ConsumeMessagesAsync(stoppingToken);
+                retryCount = 0; // Reset on successful connection
+            }
+            catch (Exception ex)
+            {
+                retryCount++;
+                _logger.LogWarning(ex, "Kafka consumer error (attempt {RetryCount}/{MaxRetries}). Retrying in {DelayMs}ms...", 
+                    retryCount, maxRetries, retryDelayMs);
+                
+                if (retryCount < maxRetries)
+                {
+                    await Task.Delay(retryDelayMs, stoppingToken);
+                }
+            }
+        }
+
+        if (retryCount >= maxRetries)
+        {
+            _logger.LogError("Kafka consumer failed after {MaxRetries} attempts. Shutting down.", maxRetries);
+        }
+    }
+
+    private async Task ConsumeMessagesAsync(CancellationToken stoppingToken)
+    {
         var config = new ConsumerConfig
         {
             BootstrapServers = _kafkaOptions.BootstrapServers,
             GroupId = _kafkaOptions.ConsumerGroupId,
-            AutoOffsetReset = AutoOffsetReset.Latest,
-            EnableAutoCommit = true
+            // Use Earliest in smoke-tests / MVP so consumer reads messages
+            // that may have been published before the service subscribed.
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            EnableAutoCommit = true,
+            ConnectionsMaxIdleMs = 30000
         };
 
         using var consumer = new ConsumerBuilder<string, string>(config)
@@ -76,6 +114,10 @@ public class ReservationEventConsumer : BackgroundService
                 {
                     _logger.LogError(ex, "Error deserializing Kafka message");
                 }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Unexpected error processing Kafka message");
@@ -85,6 +127,7 @@ public class ReservationEventConsumer : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Fatal error in Kafka consumer");
+            throw;
         }
         finally
         {

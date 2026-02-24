@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Inventory.Domain.Ports;
+using Npgsql;
 
 namespace Inventory.Infrastructure.Persistence;
 
@@ -20,28 +21,57 @@ public class DbInitializer : IDbInitializer
             var connection = _db.Database.GetDbConnection();
             await connection.OpenAsync();
 
-            using var checkCommand = connection.CreateCommand();
-            checkCommand.CommandText = @"SELECT EXISTS (
-                SELECT 1 FROM information_schema.schemata 
-                WHERE schema_name = 'bc_inventory'
-            )";
-
-            var result = await checkCommand.ExecuteScalarAsync();
-            var schemaExists = (bool)(result ?? false);
-
-            if (!schemaExists)
+            try
             {
+                // Crear schema con permisos necesarios
                 using var createCommand = connection.CreateCommand();
-                createCommand.CommandText = @"CREATE SCHEMA IF NOT EXISTS bc_inventory;";
+                createCommand.CommandText = @"
+                    CREATE SCHEMA IF NOT EXISTS bc_inventory;
+                    ALTER SCHEMA bc_inventory OWNER TO postgres;
+                    GRANT ALL PRIVILEGES ON SCHEMA bc_inventory TO postgres;
+                ";
                 await createCommand.ExecuteNonQueryAsync();
-                Console.WriteLine("✓ Schema 'bc_inventory' creado exitosamente");
+                Console.WriteLine("✓ Schema 'bc_inventory' verificado/creado exitosamente");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Warning al crear schema: {ex.Message}");
             }
 
             await connection.CloseAsync();
 
-            await _db.Database.MigrateAsync();
-
-            Console.WriteLine("✓ Migraciones aplicadas correctamente en schema bc_inventory");
+            // Aplicar migraciones
+            try
+            {
+                await _db.Database.MigrateAsync();
+            }
+            catch (PostgresException pex) when (pex.SqlState == "42P01")
+            {
+                // Table doesn't exist, create migrations history table manually
+                Console.WriteLine("↻ Creando tabla de migraciones manualmente...");
+                await connection.OpenAsync();
+                try
+                {
+                    using var createTableCommand = connection.CreateCommand();
+                    createTableCommand.CommandText = @"
+                        SET search_path = bc_inventory, public;
+                        CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
+                            MigrationId CHARACTER VARYING(150) NOT NULL PRIMARY KEY,
+                            ProductVersion CHARACTER VARYING(32) NOT NULL
+                        );
+                        SET search_path = public;
+                    ";
+                    await createTableCommand.ExecuteNonQueryAsync();
+                    Console.WriteLine("✓ Tabla de migraciones creada");
+                }
+                finally
+                {
+                    await connection.CloseAsync();
+                }
+                
+                // Retry migrations after creating the history table
+                await _db.Database.MigrateAsync();
+            }
         }
         catch (Exception ex)
         {
