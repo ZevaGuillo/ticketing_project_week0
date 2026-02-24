@@ -25,7 +25,7 @@ using (var scope = app.Services.CreateScope())
     {
         var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
         await dbInitializer.InitializeAsync();
-        Console.WriteLine("✓ Inventory DB initialized");
+        Console.WriteLine("✓ Catalog DB initialized");
     }
     catch (Exception ex)
     {

@@ -14,7 +14,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<OrderingDbContext>(options =>
         {
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), 
+                npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "bc_ordering"));
         });
         
         services.AddScoped<IDbInitializer, DbInitializer>();

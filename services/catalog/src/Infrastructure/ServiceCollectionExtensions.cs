@@ -12,7 +12,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<CatalogDbContext>(options =>
         {
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+            options.UseNpgsql(configuration.GetConnectionString("Default"), 
+                npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "bc_catalog"));
         });
         
         services.AddScoped<ICatalogRepository, CatalogRepository>();

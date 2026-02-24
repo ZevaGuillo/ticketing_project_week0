@@ -17,7 +17,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<InventoryDbContext>(options =>
         {
-            options.UseNpgsql(configuration.GetConnectionString("Default"));
+            options.UseNpgsql(configuration.GetConnectionString("Default"), 
+                npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "bc_inventory"));
         });
 
         services.AddScoped<IDbInitializer, DbInitializer>();
