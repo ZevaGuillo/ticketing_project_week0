@@ -61,10 +61,10 @@ Payment (simulado)
 - [X] T033 Unit tests for Payment service (P1, Est: 4h) [Dependencias: T032]
 
 Fulfillment & Ticketing
-- [ ] T034 Crear proyecto `services/fulfillment/src` (P1, Est: 2h) [Dependencias: T005]
-- [ ] T035 Crear `FulfillmentDbContext` schema `bc_fulfillment` + migration (P1, Est: 3h) [Dependencias: T002]
-- [ ] T036 Implementar consumer para `payment-succeeded` → crea `Ticket` entidad, genera PDF+QR (QRCoder + PdfSharpCore), guarda `ticket_pdf_path`, publica `ticket-issued` (P1, Est: 12h) [Dependencias: T032]
-- [ ] T037 Unit tests for Ticket generation (mock PDF/QR libs) (P1, Est: 4h) [Dependencias: T036]
+- [X] T034 Crear proyecto `services/fulfillment/src` (P1, Est: 2h) [Dependencias: T005]
+- [X] T035 Crear `FulfillmentDbContext` schema `bc_fulfillment` + migration (P1, Est: 3h) [Dependencias: T002]
+- [X] T036 Implementar consumer para `payment-succeeded` → crea `Ticket` entidad, genera PDF+QR (QRCoder + PdfSharpCore), guarda `ticket_pdf_path`, publica `ticket-issued` (P1, Est: 12h) [Dependencias: T032]
+- [X] T037 Unit tests for Ticket generation (mock PDF/QR libs) (P1, Est: 4h) [Dependencias: T036]
 
 Notification
 - [ ] T038 Crear proyecto `services/notification/src` con consumer de `ticket-issued` y envío via SMTP adapter (dev) (P1, Est: 6h) [Dependencias: T036]
