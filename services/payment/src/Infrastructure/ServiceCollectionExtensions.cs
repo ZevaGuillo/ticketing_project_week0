@@ -1,8 +1,11 @@
 using Confluent.Kafka;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Payment.Application.Ports;
+using Payment.Application.UseCases.ProcessPayment;
 using Payment.Infrastructure.Events;
 using Payment.Infrastructure.EventConsumers;
 using Payment.Infrastructure.Messaging;
@@ -15,6 +18,12 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        // Add Controllers
+        services.AddControllers();
+
+        // Add MediatR
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ProcessPaymentHandler).Assembly));
+
         // Database services
         services.AddDbContext<PaymentDbContext>(options =>
         {
@@ -54,5 +63,40 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentSimulatorService, PaymentSimulatorService>();
 
         return services;
+    }
+
+    public static async Task<WebApplication> UseInfrastructure(this WebApplication app)
+    {
+        // Apply migrations automatically on startup
+        using (var scope = app.Services.CreateScope())
+        {
+            try
+            {
+                var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+                await dbInitializer.InitializeAsync();
+                Console.WriteLine("✓ Payment DB initialized");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Warning: Could not initialize database");
+                Console.WriteLine($"  Reason: {ex.Message}");
+                Console.WriteLine($"  Service will continue to run. DB will be initialized on next startup.");
+            }
+        }
+
+        // Configure the HTTP request pipeline
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
+        }
+
+        app.UseRouting();
+        app.MapControllers();
+
+        Console.WriteLine("🚀 Payment API is starting...");
+        Console.WriteLine("📍 Listening on http://0.0.0.0:5004");
+        Console.Out.Flush();
+
+        return app;
     }
 }
