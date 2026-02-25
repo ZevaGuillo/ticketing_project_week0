@@ -13,7 +13,32 @@ interface EventCardProps {
 }
 
 export function EventCard({ event }: EventCardProps) {
-  const eventDate = new Date(event.date)
+  // Parse date safely - handle both ISO strings and timestamps
+  const parseEventDate = () => {
+    try {
+      const date = new Date(event.date)
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        throw new Error("Invalid date")
+      }
+      return date
+    } catch {
+      // Return current date as fallback if parsing fails
+      console.warn(`Failed to parse date: ${event.date}`)
+      return new Date()
+    }
+  }
+
+  const eventDate = parseEventDate()
+
+  const formatEventDate = () => {
+    try {
+      return format(eventDate, "MMM d, yyyy 'at' h:mm a")
+    } catch {
+      // Fallback format if date-fns fails
+      return eventDate.toLocaleDateString()
+    }
+  }
 
   return (
     <Card className="bg-card border-border hover:border-accent/40 transition-colors group">
@@ -35,7 +60,7 @@ export function EventCard({ event }: EventCardProps) {
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Calendar className="size-4" />
-            <span>{format(eventDate, "MMM d, yyyy 'at' h:mm a")}</span>
+            <span>{formatEventDate()}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <MapPin className="size-4" />

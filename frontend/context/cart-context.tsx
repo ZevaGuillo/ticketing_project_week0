@@ -208,6 +208,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         userId: userId,
       })
       setOrder(result)
+      
+      // Clear cart and reservations after successful checkout
+      if (result && result.state && result.state !== "draft") {
+        setReservations([])
+        localStorage.removeItem(RESERVATIONS_STORAGE_KEY)
+        console.log("[doCheckout] Cart reservations cleared after successful checkout")
+      }
+      
       return result
     } catch (err) {
       const message =
