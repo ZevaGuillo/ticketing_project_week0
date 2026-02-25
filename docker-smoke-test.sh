@@ -64,7 +64,7 @@ check_result() {
 echo -e "${BLUE}[1/3] Checking Docker containers${NC}"
 echo ""
 
-containers=("postgres" "redis" "kafka" "identity" "catalog" "inventory" "ordering")
+containers=("postgres" "redis" "kafka" "identity" "catalog" "inventory" "ordering" "payment")
 for container in "${containers[@]}"; do
     if docker ps | grep "speckit-$container" > /dev/null 2>&1; then
         echo -e "${GREEN}✓${NC} Container speckit-$container is running"
@@ -187,6 +187,27 @@ if [ ! -z "$ORDER_ID" ]; then
     fi
 else
     echo -e "${YELLOW}⊘ SKIP${NC} - No order ID"
+fi
+
+# Test 5: Process payment in Payment service
+if [ ! -z "$ORDER_ID" ]; then
+    echo -n "5. Payment: POST /payments... "
+    PAYMENT_RESPONSE=$(curl -s --max-time 8 -X POST "http://localhost:5004/payments" \
+        -H "Content-Type: application/json" \
+        -d "{\"orderId\":\"$ORDER_ID\",\"customerId\":\"test-customer-001\",\"reservationId\":\"$RESERVATION_ID\",\"amount\":50.00,\"currency\":\"USD\",\"paymentMethod\":\"credit_card\"}" || echo "timeout")
+
+    if echo "$PAYMENT_RESPONSE" | grep -q '"success":true'; then
+        echo -e "${GREEN}✓${NC}"
+        PASSED=$((PASSED + 1))
+        PAYMENT_ID=$(echo "$PAYMENT_RESPONSE" | grep -o '"id":"[^"]*' | head -1 | cut -d'"' -f4)
+        echo "   Payment ID: $PAYMENT_ID"
+    else
+        echo -e "${RED}✗ FAIL${NC} - Payment service did not return success"
+        FAILED=$((FAILED + 1))
+        echo "   Response: $PAYMENT_RESPONSE"
+    fi
+else
+    echo -e "${YELLOW}⊘ SKIP${NC} - No order ID for payment"
 fi
 
 echo ""
