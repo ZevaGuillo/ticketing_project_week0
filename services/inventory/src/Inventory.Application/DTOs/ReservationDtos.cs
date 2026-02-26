@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Inventory.Application.DTOs;
 
 public record CreateReservationRequest(
@@ -14,14 +16,14 @@ public record CreateReservationResponse(
 );
 
 public record ReservationCreatedEvent(
-    string EventId,
-    string ReservationId,
-    string CustomerId,
-    string SeatId,
-    string SeatNumber,
-    string Section,
-    decimal BasePrice,
-    string CreatedAt,
-    string ExpiresAt,
-    string Status
+    [property: JsonPropertyName("eventId")] string EventId,
+    [property: JsonPropertyName("reservationId")] string ReservationId,
+    [property: JsonPropertyName("customerId")] string CustomerId,
+    [property: JsonPropertyName("seatId")] string SeatId,
+    [property: JsonPropertyName("seatNumber")] string SeatNumber,
+    [property: JsonPropertyName("section")] string Section,
+    [property: JsonPropertyName("basePrice")] decimal BasePrice,
+    [property: JsonPropertyName("createdAt")] string CreatedAt,
+    [property: JsonPropertyName("expiresAt")] string ExpiresAt,
+    [property: JsonPropertyName("status")] string Status
 );

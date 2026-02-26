@@ -13,7 +13,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<IdentityDbContext>(options =>
         {
-            options.UseNpgsql(configuration.GetConnectionString("Default"));
+            options.UseNpgsql(configuration.GetConnectionString("Default"), 
+                npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "bc_identity"));
         });
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITokenGenerator, JwtTokenGenerator>();

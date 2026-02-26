@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Identity.Domain.Ports;
+using Npgsql;
 
 namespace Identity.Infrastructure.Persistence;
 
@@ -28,29 +29,57 @@ public class DbInitializer : IDbInitializer
             var connection = _dbContext.Database.GetDbConnection();
             await connection.OpenAsync();
             
-            // Verificar si el schema "bc_identity" existe
-            using var checkCommand = connection.CreateCommand();
-            checkCommand.CommandText = @"SELECT EXISTS (
-                SELECT 1 FROM information_schema.schemata 
-                WHERE schema_name = 'bc_identity'
-            )";
-            
-            var result = await checkCommand.ExecuteScalarAsync();
-            var schemaExists = (bool)(result ?? false);
-            
-            // Si el schema no existe, crearlo
-            if (!schemaExists)
+            try
             {
+                // Crear schema con permisos necesarios
                 using var createCommand = connection.CreateCommand();
-                createCommand.CommandText = @"CREATE SCHEMA IF NOT EXISTS bc_identity;";
+                createCommand.CommandText = @"
+                    CREATE SCHEMA IF NOT EXISTS bc_identity;
+                    ALTER SCHEMA bc_identity OWNER TO postgres;
+                    GRANT ALL PRIVILEGES ON SCHEMA bc_identity TO postgres;
+                ";
                 await createCommand.ExecuteNonQueryAsync();
-                Console.WriteLine("✓ Schema 'bc_identity' creado exitosamente");
+                Console.WriteLine("✓ Schema 'bc_identity' verificado/creado exitosamente");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Warning al crear schema: {ex.Message}");
             }
             
             await connection.CloseAsync();
 
             // Aplicar migraciones
-            await _dbContext.Database.MigrateAsync();
+            try
+            {
+                await _dbContext.Database.MigrateAsync();
+            }
+            catch (PostgresException pex) when (pex.SqlState == "42P01")
+            {
+                // Table doesn't exist, create migrations history table manually
+                Console.WriteLine("↻ Creando tabla de migraciones manualmente...");
+                await connection.OpenAsync();
+                try
+                {
+                    using var createTableCommand = connection.CreateCommand();
+                    createTableCommand.CommandText = @"
+                        SET search_path = bc_identity, public;
+                        CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
+                            MigrationId CHARACTER VARYING(150) NOT NULL PRIMARY KEY,
+                            ProductVersion CHARACTER VARYING(32) NOT NULL
+                        );
+                        SET search_path = public;
+                    ";
+                    await createTableCommand.ExecuteNonQueryAsync();
+                    Console.WriteLine("✓ Tabla de migraciones creada");
+                }
+                finally
+                {
+                    await connection.CloseAsync();
+                }
+                
+                // Retry migrations after creating the history table
+                await _dbContext.Database.MigrateAsync();
+            }
             
             Console.WriteLine("✓ Migraciones aplicadas correctamente en schema bc_identity");
         }
@@ -61,4 +90,3 @@ public class DbInitializer : IDbInitializer
         }
     }
 }
-

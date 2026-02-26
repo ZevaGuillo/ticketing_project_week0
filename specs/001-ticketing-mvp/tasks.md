@@ -41,30 +41,30 @@ Inventory (reservation core)
 - [X] T022 Integration test (Testcontainers) que simula dos clientes intentando reservar el mismo seat y verifica sólo 1 reserva se crea (P1, Est: 10h) [Dependencias: T010, T019]
 
 Ordering (cart + order persistence)
-- [ ] T023 Crear proyecto `services/ordering/src` con estructura Hexagonal (P1, Est: 2h) [Dependencias: T005]
-- [ ] T024 Crear `OrderingDbContext` con schema `bc_ordering` y migration inicial (P1, Est: 3h) [Dependencias: T002]
-- [ ] T025 Implementar modelo `Order` y endpoints: `POST /cart/add`, `POST /orders/checkout` (P1, Est: 10h) [Dependencias: T023, T024, T019]
-- [ ] T026 Implementar listeners/validation in Ordering to validate reservation existence on add-to-cart (consumes `reservation-created` o consulta directa a Inventory) (P1, Est: 6h) [Dependencias: T019, T023]
-- [ ] T027 Unit tests for Ordering domain and cart flows (P1, Est: 6h) [Dependencias: T025]
-- [ ] T028 Integration test: full flow reserve → add to cart → create order draft (Testcontainers) (P1, Est: 8h) [Dependencias: T022, T025]
+- [X] T023 Crear proyecto `services/ordering/src` con estructura Hexagonal (P1, Est: 2h) [Dependencias: T005]
+- [X] T024 Crear `OrderingDbContext` con schema `bc_ordering` y migration inicial (P1, Est: 3h) [Dependencias: T002]
+- [X] T025 Implementar modelo `Order` y endpoints: `POST /cart/add`, `POST /orders/checkout` (P1, Est: 10h) [Dependencias: T023, T024, T019]
+- [X] T026 Implementar listeners/validation in Ordering to validate reservation existence on add-to-cart (consumes `reservation-created` o consulta directa a Inventory) (P1, Est: 6h) [Dependencias: T019, T023]
+- [X] T027 Unit tests for Ordering domain and cart flows (P1, Est: 6h) [Dependencias: T025]
+- [X] T028 Integration test: full flow reserve → add to cart → create order draft (Testcontainers) (P1, Est: 8h) [Dependencias: T022, T025]
 
-- [ ] T029 Phase 1 smoke test: run infra + catalog + inventory + ordering, execute end-to-end reservation → cart scenario (P1, Est: 3h) [Dependencias: T010, T013, T019, T025]
+- [X] T029 Phase 1 smoke test: run infra + catalog + inventory + ordering, execute end-to-end reservation → cart scenario (P1, Est: 3h) [Dependencias: T010, T013, T019, T025]
 
 ---
 
 ## Phase 2 — Payment (simulated), Fulfillment, Notification
 
 Payment (simulado)
-- [ ] T030 Crear proyecto `services/payment/src` (P1, Est: 2h) [Dependencias: T005]
-- [ ] T031 Crear `PaymentDbContext` with schema `bc_payment` and initial migration (P1, Est: 3h) [Dependencias: T002]
-- [ ] T032 Implementar endpoint `POST /payments` que valida order state, re-checks reservation, simula charge, persiste Payment record, y publica `payment-succeeded` o `payment-failed` (P1, Est: 10h) [Dependencias: T025, T019]
-- [ ] T033 Unit tests for Payment service (P1, Est: 4h) [Dependencias: T032]
+- [X] T030 Crear proyecto `services/payment/src` (P1, Est: 2h) [Dependencias: T005]
+- [X] T031 Crear `PaymentDbContext` with schema `bc_payment` and initial migration (P1, Est: 3h) [Dependencias: T002]
+- [X] T032 Implementar endpoint `POST /payments` que valida order state, re-checks reservation, simula charge, persiste Payment record, y publica `payment-succeeded` o `payment-failed` (P1, Est: 10h) [Dependencias: T025, T019]
+- [X] T033 Unit tests for Payment service (P1, Est: 4h) [Dependencias: T032]
 
 Fulfillment & Ticketing
-- [ ] T034 Crear proyecto `services/fulfillment/src` (P1, Est: 2h) [Dependencias: T005]
-- [ ] T035 Crear `FulfillmentDbContext` schema `bc_fulfillment` + migration (P1, Est: 3h) [Dependencias: T002]
-- [ ] T036 Implementar consumer para `payment-succeeded` → crea `Ticket` entidad, genera PDF+QR (QRCoder + PdfSharpCore), guarda `ticket_pdf_path`, publica `ticket-issued` (P1, Est: 12h) [Dependencias: T032]
-- [ ] T037 Unit tests for Ticket generation (mock PDF/QR libs) (P1, Est: 4h) [Dependencias: T036]
+- [X] T034 Crear proyecto `services/fulfillment/src` (P1, Est: 2h) [Dependencias: T005]
+- [X] T035 Crear `FulfillmentDbContext` schema `bc_fulfillment` + migration (P1, Est: 3h) [Dependencias: T002]
+- [X] T036 Implementar consumer para `payment-succeeded` → crea `Ticket` entidad, genera PDF+QR (QRCoder + PdfSharpCore), guarda `ticket_pdf_path`, publica `ticket-issued` (P1, Est: 12h) [Dependencias: T032]
+- [X] T037 Unit tests for Ticket generation (mock PDF/QR libs) (P1, Est: 4h) [Dependencias: T036]
 
 Notification
 - [ ] T038 Crear proyecto `services/notification/src` con consumer de `ticket-issued` y envío via SMTP adapter (dev) (P1, Est: 6h) [Dependencias: T036]

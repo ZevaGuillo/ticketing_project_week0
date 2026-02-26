@@ -17,7 +17,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<InventoryDbContext>(options =>
         {
-            options.UseNpgsql(configuration.GetConnectionString("Default"));
+            options.UseNpgsql(configuration.GetConnectionString("Default"), 
+                npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "bc_inventory"));
         });
 
         services.AddScoped<IDbInitializer, DbInitializer>();
@@ -38,7 +39,7 @@ public static class ServiceCollectionExtensions
         };
         var producer = new ProducerBuilder<string?, string>(kafkaConfig).Build();
         services.AddSingleton(producer);
-        services.AddScoped<IKafkaProducer, KafkaProducer>();
+        services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
         // Register expiry worker as hosted service (optional in tests)
         services.AddSingleton<IHostedService, Inventory.Infrastructure.Workers.ReservationExpiryWorker>(sp =>
