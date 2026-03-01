@@ -1,4 +1,4 @@
-using Catalog.Infrastructure;
+using Notification.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,8 +23,8 @@ var app = builder.Build();
 
 await app.UseInfrastructure();
 
-Console.WriteLine("🚀 Fulfillment API is starting...");
-Console.WriteLine("📍 Listening on http://0.0.0.0:5004");
+Console.WriteLine("🚀 Notification API is starting...");
+Console.WriteLine("📍 Listening on http://0.0.0.0:5005");
 Console.Out.Flush();
 
 try

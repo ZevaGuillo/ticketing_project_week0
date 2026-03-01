@@ -24,35 +24,55 @@ public class CatalogEventConsumer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var config = new ConsumerConfig
+        try
         {
-            BootstrapServers = _bootstrapServers,
-            GroupId = _groupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
-        };
+            // Give Kafka time to start up
+            _logger.LogInformation("CatalogEventConsumer: Waiting for Kafka to be ready...");
+            await Task.Delay(5000, stoppingToken);
 
-        using var consumer = new ConsumerBuilder<string, string>(config).Build();
-        consumer.Subscribe(_topics);
-
-        _logger.LogInformation("CatalogEventConsumer started and subscribed to topics: {Topics}", string.Join(", ", _topics));
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
+            var config = new ConsumerConfig
             {
-                var result = consumer.Consume(stoppingToken);
-                if (result != null)
+                BootstrapServers = _bootstrapServers,
+                GroupId = _groupId,
+                AutoOffsetReset = AutoOffsetReset.Earliest,
+                EnableAutoCommit = true,
+                SessionTimeoutMs = 30000
+            };
+
+            using var consumer = new ConsumerBuilder<string, string>(config).Build();
+            consumer.Subscribe(_topics);
+
+            _logger.LogInformation("CatalogEventConsumer started and subscribed to topics: {Topics}", string.Join(", ", _topics));
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
                 {
-                    await ProcessEventAsync(result.Topic, result.Message.Value);
+                    var result = consumer.Consume(TimeSpan.FromSeconds(10));
+                    if (result != null)
+                    {
+                        await ProcessEventAsync(result.Topic, result.Message.Value);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("CatalogEventConsumer: Cancellation requested");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error consuming Kafka message");
+                    await Task.Delay(1000, stoppingToken);
                 }
             }
-            catch (OperationCanceledException) { break; }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error consuming Kafka message");
-                await Task.Delay(1000, stoppingToken);
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("CatalogEventConsumer: Shutdown initiated");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "CatalogEventConsumer fatal error - service will continue without Kafka consumer");
         }
     }
 
