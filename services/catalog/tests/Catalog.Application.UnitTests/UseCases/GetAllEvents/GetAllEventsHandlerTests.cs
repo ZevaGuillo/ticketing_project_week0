@@ -32,7 +32,7 @@ public class GetAllEventsHandlerTests
         };
 
         _mockRepository
-            .Setup(r => r.GetAllEventsAsync(cancellationToken))
+            .Setup(r => r.GetAllEventsWithSeatsAsync(cancellationToken))
             .ReturnsAsync(events);
 
         // Act
@@ -45,7 +45,7 @@ public class GetAllEventsHandlerTests
         result.First().Name.Should().Be("Event B"); // Latest date (30 days)
         result.Last().Name.Should().Be("Event C");  // Earliest date (5 days)
         
-        _mockRepository.Verify(r => r.GetAllEventsAsync(cancellationToken), Times.Once);
+        _mockRepository.Verify(r => r.GetAllEventsWithSeatsAsync(cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class GetAllEventsHandlerTests
         var query = new GetAllEventsQuery();
 
         _mockRepository
-            .Setup(r => r.GetAllEventsAsync(cancellationToken))
+            .Setup(r => r.GetAllEventsWithSeatsAsync(cancellationToken))
             .ReturnsAsync(new List<Event>());
 
         // Act
@@ -64,7 +64,7 @@ public class GetAllEventsHandlerTests
 
         // Assert
         result.Should().BeEmpty();
-        _mockRepository.Verify(r => r.GetAllEventsAsync(cancellationToken), Times.Once);
+        _mockRepository.Verify(r => r.GetAllEventsWithSeatsAsync(cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class GetAllEventsHandlerTests
         var events = new List<Event> { eventEntity };
 
         _mockRepository
-            .Setup(r => r.GetAllEventsAsync(cancellationToken))
+            .Setup(r => r.GetAllEventsWithSeatsAsync(cancellationToken))
             .ReturnsAsync(events);
 
         // Act
@@ -102,7 +102,7 @@ public class GetAllEventsHandlerTests
 
         var expectedException = new InvalidOperationException("Database error");
         _mockRepository
-            .Setup(r => r.GetAllEventsAsync(cancellationToken))
+            .Setup(r => r.GetAllEventsWithSeatsAsync(cancellationToken))
             .ThrowsAsync(expectedException);
 
         // Act & Assert
@@ -110,7 +110,7 @@ public class GetAllEventsHandlerTests
         await action.Should().ThrowAsync<InvalidOperationException>()
                    .WithMessage("Database error");
         
-        _mockRepository.Verify(r => r.GetAllEventsAsync(cancellationToken), Times.Once);
+        _mockRepository.Verify(r => r.GetAllEventsWithSeatsAsync(cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -122,14 +122,14 @@ public class GetAllEventsHandlerTests
         var query = new GetAllEventsQuery();
 
         _mockRepository
-            .Setup(r => r.GetAllEventsAsync(cancellationToken))
+            .Setup(r => r.GetAllEventsWithSeatsAsync(cancellationToken))
             .ReturnsAsync(new List<Event>());
 
         // Act
         await _handler.Handle(query, cancellationToken);
 
         // Assert
-        _mockRepository.Verify(r => r.GetAllEventsAsync(cancellationToken), Times.Once);
+        _mockRepository.Verify(r => r.GetAllEventsWithSeatsAsync(cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class GetAllEventsHandlerTests
         };
 
         _mockRepository
-            .Setup(r => r.GetAllEventsAsync(cancellationToken))
+            .Setup(r => r.GetAllEventsWithSeatsAsync(cancellationToken))
             .ReturnsAsync(events);
 
         // Act

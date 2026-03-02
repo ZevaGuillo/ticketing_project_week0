@@ -91,5 +91,8 @@ export interface EventSummary {
   maxCapacity: number
   basePrice: number
   isActive: boolean
+  totalSeats: number
+  soldSeats: number
+  revenue: number
   imageUrl?: string
 }

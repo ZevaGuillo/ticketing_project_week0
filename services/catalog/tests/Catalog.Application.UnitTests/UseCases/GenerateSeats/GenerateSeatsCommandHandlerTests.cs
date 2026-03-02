@@ -9,12 +9,14 @@ namespace Catalog.Application.UnitTests.UseCases.GenerateSeats;
 public class GenerateSeatsCommandHandlerTests
 {
     private readonly Mock<ICatalogRepository> _mockRepository;
+    private readonly Mock<IKafkaProducer> _mockKafkaProducer;
     private readonly GenerateSeatsCommandHandler _handler;
 
     public GenerateSeatsCommandHandlerTests()
     {
         _mockRepository = new Mock<ICatalogRepository>();
-        _handler = new GenerateSeatsCommandHandler(_mockRepository.Object);
+        _mockKafkaProducer = new Mock<IKafkaProducer>();
+        _handler = new GenerateSeatsCommandHandler(_mockRepository.Object, _mockKafkaProducer.Object);
     }
 
     #region Generate Seats Tests - Following Gherkin Scenarios (T103)

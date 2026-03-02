@@ -14,12 +14,16 @@ public sealed class GetEventHandler : IRequestHandler<GetEventQuery, GetEventRes
 
     public async Task<GetEventResponse?> Handle(GetEventQuery request, CancellationToken cancellationToken)
     {
-        var eventEntity = await _repository.GetEventAsync(request.EventId, cancellationToken);
+        var eventEntity = await _repository.GetEventWithSeatsAsync(request.EventId, cancellationToken);
 
         if (eventEntity is null)
         {
             return null;
         }
+
+        var soldSeats = eventEntity.GetSoldSeatsCount();
+        var soldSeatsList = eventEntity.Seats.Where(s => s.IsSold());
+        var revenue = soldSeatsList.Sum(s => s.Price);
 
         return new GetEventResponse(
             eventEntity.Id,
@@ -29,7 +33,12 @@ public sealed class GetEventHandler : IRequestHandler<GetEventQuery, GetEventRes
             eventEntity.Venue,
             eventEntity.MaxCapacity,
             eventEntity.BasePrice,
-            eventEntity.Status == "active"
+            eventEntity.Status == "active",
+            eventEntity.Seats.Count,
+            eventEntity.GetAvailableSeatsCount(),
+            eventEntity.GetReservedSeatsCount(),
+            soldSeats,
+            revenue
         );
     }
 }

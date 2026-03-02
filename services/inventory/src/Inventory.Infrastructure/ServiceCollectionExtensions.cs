@@ -5,6 +5,7 @@ using Inventory.Domain.Ports;
 using Inventory.Infrastructure.Persistence;
 using Inventory.Infrastructure.Locking;
 using Inventory.Infrastructure.Messaging;
+using Inventory.Infrastructure.Consumers;
 using StackExchange.Redis;
 using Confluent.Kafka;
 using Microsoft.Extensions.Hosting;
@@ -47,6 +48,21 @@ public static class ServiceCollectionExtensions
             var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
             var kafka = sp.GetRequiredService<IKafkaProducer>();
             return new Inventory.Infrastructure.Workers.ReservationExpiryWorker(scopeFactory, kafka);
+        });
+
+        // Register seats-generated Kafka consumer as hosted service
+        var consumerConfig = new ConsumerConfig
+        {
+            BootstrapServers = kafkaBootstrapServers,
+            GroupId = "inventory-seats-consumer",
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            EnableAutoCommit = false
+        };
+        var consumer = new ConsumerBuilder<string?, string>(consumerConfig).Build();
+        services.AddSingleton<IHostedService, SeatsGeneratedConsumer>(sp =>
+        {
+            var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            return new SeatsGeneratedConsumer(scopeFactory, consumer);
         });
 
         return services;

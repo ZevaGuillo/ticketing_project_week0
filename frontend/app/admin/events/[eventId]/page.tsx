@@ -279,21 +279,21 @@ export default function EventDetailPage({
             <CardContent className="space-y-4">
               <Card>
                 <CardContent className="text-center p-4">
-                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-2xl font-bold">{event.totalSeats ?? 0}</p>
                   <p className="text-sm text-muted-foreground">Asientos Generados</p>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="text-center p-4">
-                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-2xl font-bold">{event.soldSeats ?? 0}</p>
                   <p className="text-sm text-muted-foreground">Tickets Vendidos</p>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="text-center p-4">
-                  <p className="text-2xl font-bold">{formatPrice(0)}</p>
+                  <p className="text-2xl font-bold">{formatPrice(event.revenue ?? 0)}</p>
                   <p className="text-sm text-muted-foreground">Ingresos</p>
                 </CardContent>
               </Card>

@@ -8,5 +8,10 @@ public record GetEventResponse(
     string Venue,
     int MaxCapacity,
     decimal BasePrice,
-    bool IsActive
+    bool IsActive,
+    int TotalSeats,
+    int AvailableSeats,
+    int ReservedSeats,
+    int SoldSeats,
+    decimal Revenue
 );

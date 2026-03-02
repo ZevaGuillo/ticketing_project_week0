@@ -8,5 +8,8 @@ public record EventDto(
     string Venue,
     int MaxCapacity,
     decimal BasePrice,
-    bool IsActive
+    bool IsActive,
+    int TotalSeats,
+    int SoldSeats,
+    decimal Revenue
 );

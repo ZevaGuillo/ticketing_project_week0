@@ -7,9 +7,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+using Confluent.Kafka;
 using Catalog.Application.Ports;
 using Catalog.Application.UseCases.GetEventSeatmap;
 using Catalog.Infrastructure.Persistence;
+using Catalog.Infrastructure.Messaging;
+using Catalog.Infrastructure.Consumers;
 
 namespace Catalog.Infrastructure;
 
@@ -33,6 +36,33 @@ public static class ServiceCollectionExtensions
         // Add Repository
         services.AddScoped<ICatalogRepository, CatalogRepository>();
         services.AddScoped<IDbInitializer, DbInitializer>();
+
+        // Configure Kafka producer
+        var kafkaBootstrapServers = configuration.GetConnectionString("Kafka") ?? configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
+        var kafkaConfig = new ProducerConfig
+        {
+            BootstrapServers = kafkaBootstrapServers,
+            AllowAutoCreateTopics = true,
+            Acks = Acks.All
+        };
+        var producer = new ProducerBuilder<string?, string>(kafkaConfig).Build();
+        services.AddSingleton(producer);
+        services.AddSingleton<IKafkaProducer, KafkaProducer>();
+
+        // Configure Kafka consumer for ticket-issued events
+        var consumerConfig = new ConsumerConfig
+        {
+            BootstrapServers = kafkaBootstrapServers,
+            GroupId = "catalog-ticket-issued-consumer",
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            EnableAutoCommit = false
+        };
+        var consumer = new ConsumerBuilder<string?, string>(consumerConfig).Build();
+        services.AddSingleton<IHostedService, TicketIssuedConsumer>(sp =>
+        {
+            var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            return new TicketIssuedConsumer(scopeFactory, consumer);
+        });
         
         // Add JWT Authentication
         var jwtKey = configuration["Jwt:Key"]!;

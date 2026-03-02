@@ -21,6 +21,15 @@ public class CatalogRepository : ICatalogRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<Event>> GetAllEventsWithSeatsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Events
+            .AsNoTracking()
+            .Include(e => e.Seats)
+            .OrderByDescending(e => e.EventDate)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Event?> GetEventAsync(Guid eventId, CancellationToken cancellationToken = default)
     {
         return await _context.Events
@@ -33,6 +42,12 @@ public class CatalogRepository : ICatalogRepository
         return await _context.Events
             .Include(e => e.Seats)
             .FirstOrDefaultAsync(e => e.Id == eventId, cancellationToken);
+    }
+
+    public async Task<Seat?> GetSeatAsync(Guid seatId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Seats
+            .FirstOrDefaultAsync(s => s.Id == seatId, cancellationToken);
     }
     
     public async Task<Event> CreateEventAsync(Event eventEntity, CancellationToken cancellationToken = default)

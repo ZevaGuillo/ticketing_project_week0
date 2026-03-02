@@ -69,17 +69,20 @@ export default function AdminDashboard() {
       
       // Calculate real statistics from events
       const totalEvents = events.length
-      // Estimated active/inactive since EventSummary doesn't include isActive
-      const activeEvents = Math.ceil(events.length * 0.8) // Estimate 80% active
+      const activeEvents = events.filter(e => e.isActive).length
       
-      // For now, use mock data for other statistics until other services are integrated
-      const mockStats: DashboardStats = {
+      // Aggregate real stats from API response
+      const totalSeats = events.reduce((sum, e) => sum + (e.totalSeats ?? 0), 0)
+      const soldSeats = events.reduce((sum, e) => sum + (e.soldSeats ?? 0), 0)
+      const totalRevenue = events.reduce((sum, e) => sum + (e.revenue ?? 0), 0)
+
+      const realStats: DashboardStats = {
         totalEvents,
         activeEvents,
-        totalSeats: totalEvents * 1000, // Estimated average capacity
-        soldSeats: Math.floor(totalEvents * 600), // Estimated 60% sold
-        totalRevenue: Math.floor(totalEvents * 45000), // Estimated revenue
-        pendingOrders: Math.floor(Math.random() * 10) + 1 // Random pending orders
+        totalSeats,
+        soldSeats,
+        totalRevenue,
+        pendingOrders: 0
       }
 
       const mockActivity: RecentActivity[] = [
@@ -113,7 +116,7 @@ export default function AdminDashboard() {
         }
       ]
 
-      setStats(mockStats)
+      setStats(realStats)
       setRecentActivity(mockActivity)
       
       // Show info toast about limited functionality
@@ -182,7 +185,7 @@ export default function AdminDashboard() {
     )
   }
 
-  const occupancyRate = Math.round((stats.soldSeats / stats.totalSeats) * 100)
+  const occupancyRate = stats.totalSeats > 0 ? Math.round((stats.soldSeats / stats.totalSeats) * 100) : 0
 
   return (
     <div className="space-y-8">

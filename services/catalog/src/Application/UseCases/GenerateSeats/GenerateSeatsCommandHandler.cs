@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Catalog.Application.Ports;
 using Catalog.Domain.Entities;
 using MediatR;
@@ -7,10 +8,12 @@ namespace Catalog.Application.UseCases.GenerateSeats;
 public class GenerateSeatsCommandHandler : IRequestHandler<GenerateSeatsCommand, GenerateSeatsResponse>
 {
     private readonly ICatalogRepository _catalogRepository;
+    private readonly IKafkaProducer _kafkaProducer;
 
-    public GenerateSeatsCommandHandler(ICatalogRepository catalogRepository)
+    public GenerateSeatsCommandHandler(ICatalogRepository catalogRepository, IKafkaProducer kafkaProducer)
     {
         _catalogRepository = catalogRepository;
+        _kafkaProducer = kafkaProducer;
     }
 
     public async Task<GenerateSeatsResponse> Handle(GenerateSeatsCommand request, CancellationToken cancellationToken)
@@ -51,6 +54,24 @@ public class GenerateSeatsCommandHandler : IRequestHandler<GenerateSeatsCommand,
         // Persist all seats
         await _catalogRepository.AddSeatsAsync(allSeats, cancellationToken);
         await _catalogRepository.SaveChangesAsync(cancellationToken);
+
+        // Publish seats-generated event to Kafka for inventory sync
+        var seatsEvent = new
+        {
+            eventId = request.EventId,
+            seats = allSeats.Select(s => new
+            {
+                seatId = s.Id,
+                section = s.SectionCode,
+                row = s.RowNumber.ToString(),
+                number = s.SeatNumber
+            }),
+            totalSeats = allSeats.Count,
+            generatedAt = DateTime.UtcNow
+        };
+
+        var message = JsonSerializer.Serialize(seatsEvent);
+        await _kafkaProducer.ProduceAsync("seats-generated", message, request.EventId.ToString());
 
         return new GenerateSeatsResponse(
             request.EventId,

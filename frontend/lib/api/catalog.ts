@@ -11,6 +11,11 @@ export interface Event {
   maxCapacity: number
   basePrice: number
   isActive: boolean
+  totalSeats: number
+  availableSeats: number
+  reservedSeats: number
+  soldSeats: number
+  revenue: number
   createdAt?: string
   updatedAt?: string
 }
