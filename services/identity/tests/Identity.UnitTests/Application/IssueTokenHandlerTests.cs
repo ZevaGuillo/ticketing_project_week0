@@ -59,6 +59,25 @@ public class IssueTokenHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command));
+        var exception = await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command));
+        exception.Message.Should().Be("Invalid credentials");
+    }
+
+    [Fact]
+    public async Task Handle_WithWrongPassword_ShouldThrowException()
+    {
+        // Arrange
+        var command = new IssueTokenCommand("test@example.com", "wrong_password");
+        var user = new User(command.Email, "hashed_password");
+        
+        _userRepositoryMock.Setup(r => r.GetByEmailAsync(command.Email))
+            .ReturnsAsync(user);
+        
+        _passwordHasherMock.Setup(h => h.VerifyPassword(command.Password, user.PasswordHash))
+            .Returns(false);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command));
+        exception.Message.Should().Be("Invalid credentials");
     }
 }
