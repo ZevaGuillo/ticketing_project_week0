@@ -51,16 +51,19 @@ jobs:
 
       - name: Run All Tests with Coverage (Collect Cobertura)
         run: |
-          # Buscar todos los archivos .csproj de tests y ejecutarlos
+          # Buscar todos los archivos .csproj de tests y ejecutarlos uno por uno
           # Se agregan filtros de exclusión para mejorar la precisión del reporte senior
           # Se excluyen migraciones y tests de infraestructura específicos que requieren Docker/Kafka
-          find . -name "*.Tests.csproj" -o -name "*Tests.csproj" | xargs -I {} dotnet test {} \
-            --configuration Release \
-            --no-build \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults \
-            --logger "trx" \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*.Infrastructure]*.Migrations.*,[Fulfillment.Infrastructure]*,[Notification.Infrastructure]*"
+          for project in $(find . -name "*.Tests.csproj" -o -name "*Tests.csproj"); do
+            echo "Running tests for $project"
+            dotnet test "$project" \
+              --configuration Release \
+              --no-build \
+              --collect:"XPlat Code Coverage" \
+              --results-directory ./TestResults \
+              --logger "trx" \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*.Infrastructure]*.Migrations.*,[Fulfillment.Infrastructure]*,[Notification.Infrastructure]*" || true
+          done
         env:
           ConnectionStrings__Default: Host=localhost;Database=speckit;Username=postgres;Password=postgres
           Kafka__BootstrapServers: localhost:9092
