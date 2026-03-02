@@ -51,10 +51,8 @@ jobs:
 
       - name: Run All Tests with Coverage (Collect Cobertura)
         run: |
-          # Buscar todos los archivos .csproj de tests y ejecutarlos uno por uno
-          # Se agregan filtros de exclusión para mejorar la precisión del reporte senior
-          # Se excluyen migraciones y tests de infraestructura específicos que requieren Docker/Kafka
-          for project in $(find . -name "*.Tests.csproj" -o -name "*Tests.csproj"); do
+          # Buscar todos los archivos .csproj que terminen en Tests.csproj para asegurar que se incluyan todos los servicios
+          for project in $(find . -type f -name "*Tests.csproj"); do
             echo "Running tests for $project"
             dotnet test "$project" \
               --configuration Release \
