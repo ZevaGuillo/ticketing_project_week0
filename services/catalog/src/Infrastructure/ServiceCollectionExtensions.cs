@@ -35,7 +35,6 @@ public static class ServiceCollectionExtensions
         
         // Add Repository
         services.AddScoped<ICatalogRepository, CatalogRepository>();
-        services.AddScoped<IDbInitializer, DbInitializer>();
 
         // Configure Kafka producer
         var kafkaBootstrapServers = configuration.GetConnectionString("Kafka") ?? configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
@@ -103,24 +102,9 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static async Task<WebApplication> UseInfrastructure(this WebApplication app)
+    public static WebApplication UseInfrastructure(this WebApplication app)
     {
-        // Apply migrations / DB initialization on startup
-        using (var scope = app.Services.CreateScope())
-        {
-            try
-            {
-                var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
-                await dbInitializer.InitializeAsync();
-                Console.WriteLine("✓ Catalog DB initialized");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Catalog DB initialization failed: {ex.Message}");
-                throw;
-            }
-        }
-
+        // DB initialization and migrations are now handled externally (pipeline)
         // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())
         {
