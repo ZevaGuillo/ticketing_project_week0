@@ -34,12 +34,13 @@ jobs:
           if [ -d "$TEST_DIR" ]; then
             echo "Running ${{ inputs.test_type }} tests in $TEST_DIR with Coverage"
             if [[ "${{ inputs.test_type }}" != "architecture" ]]; then
-              # Forzamos directorio de resultados absoluto
-              mkdir -p ${{ github.workspace }}/test-results
-              dotnet test $TEST_DIR --configuration Release                 --collect:"XPlat Code Coverage"                 --results-directory ${{ github.workspace }}/test-results                 -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+              # Usamos una carpeta local relativa al workspace para evitar problemas de permisos o rutas absolutas
+              mkdir -p test-results-output
               
-              echo "Contenido de ${{ github.workspace }}/test-results:"
-              ls -R ${{ github.workspace }}/test-results
+              dotnet test $TEST_DIR --configuration Release                 --collect:"XPlat Code Coverage"                 --results-directory ./test-results-output                 -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+              
+              echo "Contenido detectado en test-results-output:"
+              find test-results-output -type f -name "*.xml"
             else
               dotnet test $TEST_DIR --configuration Release
             fi
@@ -52,5 +53,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ inputs.service_name }}-${{ inputs.test_type }}
-          path: ${{ github.workspace }}/test-results/
+          # Usamos un wildcard para asegurar que suba los archivos aunque .NET cree subcarpetas con GUIDs
+          path: test-results-output/**/*.xml
+          if-no-files-found: error
           retention-days: 1
