@@ -42,7 +42,7 @@ jobs:
             frontend:
               - 'frontend/**'
 
-  # CATALOG SERVICE
+  # --- CATALOG SERVICE ---
   dotnet-build-catalog:
     needs: filter
     if: needs.filter.outputs.catalog == 'true'
@@ -51,15 +51,34 @@ jobs:
       service_name: "Catalog"
       service_path: "services/catalog/Catalog.sln"
 
-  dotnet-test-catalog:
+  dotnet-test-unit-catalog:
     needs: [filter, dotnet-build-catalog]
     if: needs.filter.outputs.catalog == 'true'
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Catalog"
       service_path: "services/catalog/Catalog.sln"
+      test_type: "unit"
 
-  # IDENTITY SERVICE
+  dotnet-test-arch-catalog:
+    needs: [filter, dotnet-build-catalog]
+    if: needs.filter.outputs.catalog == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Catalog"
+      service_path: "services/catalog/Catalog.sln"
+      test_type: "architecture"
+
+  dotnet-test-integration-catalog:
+    needs: [filter, dotnet-build-catalog]
+    if: needs.filter.outputs.catalog == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Catalog"
+      service_path: "services/catalog/Catalog.sln"
+      test_type: "integration"
+
+  # --- IDENTITY SERVICE ---
   dotnet-build-identity:
     needs: filter
     if: needs.filter.outputs.identity == 'true'
@@ -68,15 +87,34 @@ jobs:
       service_name: "Identity"
       service_path: "services/identity/Identity.sln"
 
-  dotnet-test-identity:
+  dotnet-test-unit-identity:
     needs: [filter, dotnet-build-identity]
     if: needs.filter.outputs.identity == 'true'
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Identity"
       service_path: "services/identity/Identity.sln"
+      test_type: "unit"
 
-  # FULFILLMENT SERVICE
+  dotnet-test-arch-identity:
+    needs: [filter, dotnet-build-identity]
+    if: needs.filter.outputs.identity == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Identity"
+      service_path: "services/identity/Identity.sln"
+      test_type: "architecture"
+
+  dotnet-test-integration-identity:
+    needs: [filter, dotnet-build-identity]
+    if: needs.filter.outputs.identity == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Identity"
+      service_path: "services/identity/Identity.sln"
+      test_type: "integration"
+
+  # --- FULFILLMENT SERVICE ---
   dotnet-build-fulfillment:
     needs: filter
     if: needs.filter.outputs.fulfillment == 'true'
@@ -85,15 +123,34 @@ jobs:
       service_name: "Fulfillment"
       service_path: "services/fulfillment/Fulfillment.sln"
 
-  dotnet-test-fulfillment:
+  dotnet-test-unit-fulfillment:
     needs: [filter, dotnet-build-fulfillment]
     if: needs.filter.outputs.fulfillment == 'true'
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Fulfillment"
       service_path: "services/fulfillment/Fulfillment.sln"
+      test_type: "unit"
 
-  # INVENTORY SERVICE
+  dotnet-test-arch-fulfillment:
+    needs: [filter, dotnet-build-fulfillment]
+    if: needs.filter.outputs.fulfillment == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Fulfillment"
+      service_path: "services/fulfillment/Fulfillment.sln"
+      test_type: "architecture"
+
+  dotnet-test-integration-fulfillment:
+    needs: [filter, dotnet-build-fulfillment]
+    if: needs.filter.outputs.fulfillment == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Fulfillment"
+      service_path: "services/fulfillment/Fulfillment.sln"
+      test_type: "integration"
+
+  # --- INVENTORY SERVICE ---
   dotnet-build-inventory:
     needs: filter
     if: needs.filter.outputs.inventory == 'true'
@@ -102,15 +159,34 @@ jobs:
       service_name: "Inventory"
       service_path: "services/inventory/Inventory.sln"
 
-  dotnet-test-inventory:
+  dotnet-test-unit-inventory:
     needs: [filter, dotnet-build-inventory]
     if: needs.filter.outputs.inventory == 'true'
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Inventory"
       service_path: "services/inventory/Inventory.sln"
+      test_type: "unit"
 
-  # NOTIFICATION SERVICE
+  dotnet-test-arch-inventory:
+    needs: [filter, dotnet-build-inventory]
+    if: needs.filter.outputs.inventory == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Inventory"
+      service_path: "services/inventory/Inventory.sln"
+      test_type: "architecture"
+
+  dotnet-test-integration-inventory:
+    needs: [filter, dotnet-build-inventory]
+    if: needs.filter.outputs.inventory == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Inventory"
+      service_path: "services/inventory/Inventory.sln"
+      test_type: "integration"
+
+  # --- NOTIFICATION SERVICE ---
   dotnet-build-notification:
     needs: filter
     if: needs.filter.outputs.notification == 'true'
@@ -119,15 +195,34 @@ jobs:
       service_name: "Notification"
       service_path: "services/notification/Notification.sln"
 
-  dotnet-test-notification:
+  dotnet-test-unit-notification:
     needs: [filter, dotnet-build-notification]
     if: needs.filter.outputs.notification == 'true'
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Notification"
       service_path: "services/notification/Notification.sln"
+      test_type: "unit"
 
-  # ORDERING SERVICE
+  dotnet-test-arch-notification:
+    needs: [filter, dotnet-build-notification]
+    if: needs.filter.outputs.notification == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Notification"
+      service_path: "services/notification/Notification.sln"
+      test_type: "architecture"
+
+  dotnet-test-integration-notification:
+    needs: [filter, dotnet-build-notification]
+    if: needs.filter.outputs.notification == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Notification"
+      service_path: "services/notification/Notification.sln"
+      test_type: "integration"
+
+  # --- ORDERING SERVICE ---
   dotnet-build-ordering:
     needs: filter
     if: needs.filter.outputs.ordering == 'true'
@@ -136,15 +231,34 @@ jobs:
       service_name: "Ordering"
       service_path: "services/ordering/Ordering.sln"
 
-  dotnet-test-ordering:
+  dotnet-test-unit-ordering:
     needs: [filter, dotnet-build-ordering]
     if: needs.filter.outputs.ordering == 'true'
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Ordering"
       service_path: "services/ordering/Ordering.sln"
+      test_type: "unit"
 
-  # PAYMENT SERVICE
+  dotnet-test-arch-ordering:
+    needs: [filter, dotnet-build-ordering]
+    if: needs.filter.outputs.ordering == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Ordering"
+      service_path: "services/ordering/Ordering.sln"
+      test_type: "architecture"
+
+  dotnet-test-integration-ordering:
+    needs: [filter, dotnet-build-ordering]
+    if: needs.filter.outputs.ordering == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Ordering"
+      service_path: "services/ordering/Ordering.sln"
+      test_type: "integration"
+
+  # --- PAYMENT SERVICE ---
   dotnet-build-payment:
     needs: filter
     if: needs.filter.outputs.payment == 'true'
@@ -153,15 +267,34 @@ jobs:
       service_name: "Payment"
       service_path: "services/payment/Payment.sln"
 
-  dotnet-test-payment:
+  dotnet-test-unit-payment:
     needs: [filter, dotnet-build-payment]
     if: needs.filter.outputs.payment == 'true'
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Payment"
       service_path: "services/payment/Payment.sln"
+      test_type: "unit"
 
-  # FRONTEND
+  dotnet-test-arch-payment:
+    needs: [filter, dotnet-build-payment]
+    if: needs.filter.outputs.payment == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Payment"
+      service_path: "services/payment/Payment.sln"
+      test_type: "architecture"
+
+  dotnet-test-integration-payment:
+    needs: [filter, dotnet-build-payment]
+    if: needs.filter.outputs.payment == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Payment"
+      service_path: "services/payment/Payment.sln"
+      test_type: "integration"
+
+  # --- FRONTEND ---
   npm-build-frontend:
     needs: filter
     if: needs.filter.outputs.frontend == 'true'

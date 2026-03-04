@@ -9,10 +9,13 @@ on:
       service_path:
         required: true
         type: string
+      test_type:
+        required: true
+        type: string # unit, integration, architecture
 
 jobs:
   test:
-    name: "dotnet test: ${{ inputs.service_name }}"
+    name: "dotnet test (${{ inputs.test_type }}): ${{ inputs.service_name }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,9 +26,18 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore ${{ inputs.service_path }}
-
-      - name: Run Tests
+      - name: Run Specific Tests
         run: |
-          dotnet test ${{ inputs.service_path }} --no-restore --configuration Release --verbosity normal --logger "console;verbosity=detailed"
+          # Use find to locate relevant test projects based on type
+          # If we're looking for unit tests, we look in services/<service>/tests/unit
+          # The path input is something like "services/catalog/Catalog.sln"
+          # We extract the base service directory from the sln path
+          SERVICE_DIR=$(dirname "${{ inputs.service_path }}")
+          TEST_DIR="$SERVICE_DIR/tests/${{ inputs.test_type }}"
+          
+          if [ -d "$TEST_DIR" ]; then
+            echo "Running ${{ inputs.test_type }} tests in $TEST_DIR"
+            dotnet test $TEST_DIR --configuration Release --verbosity normal --logger "console;verbosity=detailed"
+          else
+            echo "Skipping: No ${{ inputs.test_type }} tests found in $TEST_DIR"
+          fi
