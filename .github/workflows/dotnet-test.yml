@@ -1,0 +1,31 @@
+name: Dotnet Test
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      service_path:
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: "dotnet test: ${{ inputs.service_name }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ inputs.service_path }}
+
+      - name: Run Tests
+        run: |
+          dotnet test ${{ inputs.service_path }} --no-restore --configuration Release --verbosity normal --logger "console;verbosity=detailed"

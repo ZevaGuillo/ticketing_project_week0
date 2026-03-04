@@ -1,0 +1,183 @@
+name: CI - Monorepo Orchestrator
+
+on:
+  push:
+    branches: [ main, develop, master ]
+  pull_request:
+    branches: [ main, develop, master ]
+
+jobs:
+  filter:
+    name: Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      catalog: ${{ steps.filter.outputs.catalog }}
+      fulfillment: ${{ steps.filter.outputs.fulfillment }}
+      identity: ${{ steps.filter.outputs.identity }}
+      inventory: ${{ steps.filter.outputs.inventory }}
+      notification: ${{ steps.filter.outputs.notification }}
+      ordering: ${{ steps.filter.outputs.ordering }}
+      payment: ${{ steps.filter.outputs.payment }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            catalog:
+              - 'services/catalog/**'
+            fulfillment:
+              - 'services/fulfillment/**'
+            identity:
+              - 'services/identity/**'
+            inventory:
+              - 'services/inventory/**'
+            notification:
+              - 'services/notification/**'
+            ordering:
+              - 'services/ordering/**'
+            payment:
+              - 'services/payment/**'
+            frontend:
+              - 'frontend/**'
+
+  # CATALOG SERVICE
+  dotnet-build-catalog:
+    needs: filter
+    if: needs.filter.outputs.catalog == 'true'
+    uses: ./.github/workflows/dotnet-build.yml
+    with:
+      service_name: "Catalog"
+      service_path: "services/catalog/Catalog.sln"
+
+  dotnet-test-catalog:
+    needs: [filter, dotnet-build-catalog]
+    if: needs.filter.outputs.catalog == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Catalog"
+      service_path: "services/catalog/Catalog.sln"
+
+  # IDENTITY SERVICE
+  dotnet-build-identity:
+    needs: filter
+    if: needs.filter.outputs.identity == 'true'
+    uses: ./.github/workflows/dotnet-build.yml
+    with:
+      service_name: "Identity"
+      service_path: "services/identity/Identity.sln"
+
+  dotnet-test-identity:
+    needs: [filter, dotnet-build-identity]
+    if: needs.filter.outputs.identity == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Identity"
+      service_path: "services/identity/Identity.sln"
+
+  # FULFILLMENT SERVICE
+  dotnet-build-fulfillment:
+    needs: filter
+    if: needs.filter.outputs.fulfillment == 'true'
+    uses: ./.github/workflows/dotnet-build.yml
+    with:
+      service_name: "Fulfillment"
+      service_path: "services/fulfillment/Fulfillment.sln"
+
+  dotnet-test-fulfillment:
+    needs: [filter, dotnet-build-fulfillment]
+    if: needs.filter.outputs.fulfillment == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Fulfillment"
+      service_path: "services/fulfillment/Fulfillment.sln"
+
+  # INVENTORY SERVICE
+  dotnet-build-inventory:
+    needs: filter
+    if: needs.filter.outputs.inventory == 'true'
+    uses: ./.github/workflows/dotnet-build.yml
+    with:
+      service_name: "Inventory"
+      service_path: "services/inventory/Inventory.sln"
+
+  dotnet-test-inventory:
+    needs: [filter, dotnet-build-inventory]
+    if: needs.filter.outputs.inventory == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Inventory"
+      service_path: "services/inventory/Inventory.sln"
+
+  # NOTIFICATION SERVICE
+  dotnet-build-notification:
+    needs: filter
+    if: needs.filter.outputs.notification == 'true'
+    uses: ./.github/workflows/dotnet-build.yml
+    with:
+      service_name: "Notification"
+      service_path: "services/notification/Notification.sln"
+
+  dotnet-test-notification:
+    needs: [filter, dotnet-build-notification]
+    if: needs.filter.outputs.notification == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Notification"
+      service_path: "services/notification/Notification.sln"
+
+  # ORDERING SERVICE
+  dotnet-build-ordering:
+    needs: filter
+    if: needs.filter.outputs.ordering == 'true'
+    uses: ./.github/workflows/dotnet-build.yml
+    with:
+      service_name: "Ordering"
+      service_path: "services/ordering/Ordering.sln"
+
+  dotnet-test-ordering:
+    needs: [filter, dotnet-build-ordering]
+    if: needs.filter.outputs.ordering == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Ordering"
+      service_path: "services/ordering/Ordering.sln"
+
+  # PAYMENT SERVICE
+  dotnet-build-payment:
+    needs: filter
+    if: needs.filter.outputs.payment == 'true'
+    uses: ./.github/workflows/dotnet-build.yml
+    with:
+      service_name: "Payment"
+      service_path: "services/payment/Payment.sln"
+
+  dotnet-test-payment:
+    needs: [filter, dotnet-build-payment]
+    if: needs.filter.outputs.payment == 'true'
+    uses: ./.github/workflows/dotnet-test.yml
+    with:
+      service_name: "Payment"
+      service_path: "services/payment/Payment.sln"
+
+  # FRONTEND
+  npm-build-frontend:
+    needs: filter
+    if: needs.filter.outputs.frontend == 'true'
+    name: "npm build: Frontend"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
+      - name: Install dependencies
+        run: cd frontend && pnpm install
+      - name: Build
+        run: cd frontend && pnpm build
