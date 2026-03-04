@@ -26,18 +26,27 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Run Specific Tests
+      - name: Run Specific Tests with Coverage
         run: |
-          # Use find to locate relevant test projects based on type
-          # If we're looking for unit tests, we look in services/<service>/tests/unit
-          # The path input is something like "services/catalog/Catalog.sln"
-          # We extract the base service directory from the sln path
           SERVICE_DIR=$(dirname "${{ inputs.service_path }}")
           TEST_DIR="$SERVICE_DIR/tests/${{ inputs.test_type }}"
           
           if [ -d "$TEST_DIR" ]; then
-            echo "Running ${{ inputs.test_type }} tests in $TEST_DIR"
-            dotnet test $TEST_DIR --configuration Release --verbosity normal --logger "console;verbosity=detailed"
+            echo "Running ${{ inputs.test_type }} tests in $TEST_DIR with Coverage"
+            # Solo aplicamos cobertura a Unit e Integration. Architecture no suele requerirla.
+            if [[ "${{ inputs.test_type }}" != "architecture" ]]; then
+              dotnet test $TEST_DIR --configuration Release                 --collect:"XPlat Code Coverage"                 --results-directory ./coverage-results/${{ inputs.test_type }}                 -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+            else
+              dotnet test $TEST_DIR --configuration Release
+            fi
           else
-            echo "Skipping: No ${{ inputs.test_type }} tests found in $TEST_DIR"
+            echo "Skipping: No ${{ inputs.test_type }} tests found"
           fi
+
+      - name: Upload Coverage Artifacts
+        if: inputs.test_type != 'architecture'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.service_name }}-${{ inputs.test_type }}
+          path: ./coverage-results/
+          retention-days: 1

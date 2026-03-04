@@ -314,3 +314,41 @@ jobs:
         run: cd frontend && pnpm install
       - name: Build
         run: cd frontend && pnpm build
+
+  generate-coverage-report:
+    needs: 
+      - dotnet-test-unit-catalog
+      - dotnet-test-integration-catalog
+      - dotnet-test-unit-identity
+      - dotnet-test-integration-identity
+      - dotnet-test-unit-fulfillment
+      - dotnet-test-integration-fulfillment
+      - dotnet-test-unit-inventory
+      - dotnet-test-integration-inventory
+      - dotnet-test-unit-notification
+      - dotnet-test-integration-notification
+      - dotnet-test-unit-ordering
+      - dotnet-test-integration-ordering
+      - dotnet-test-unit-payment
+      - dotnet-test-integration-payment
+    if: always() # Queremos el reporte incluso si algunos tests fallan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: coverage-artifacts
+          pattern: coverage-*
+
+      - name: ReportGenerator
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+        with:
+          reports: 'coverage-artifacts/**/coverage.opencover.xml'
+          targetdir: 'merged-coverage'
+          reporttypes: 'HtmlSummary;MarkdownSummaryGitHub'
+
+      - name: Upload Merged Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged-coverage-report
+          path: merged-coverage
