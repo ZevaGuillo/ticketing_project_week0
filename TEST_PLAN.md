@@ -45,16 +45,18 @@ El enfoque de pruebas sigue la Pirámide de Testing adaptada al contexto de micr
            ─────────────────
 ```
 
-### 2.2 Tipos de Pruebas
+### 2.2 Tipos y Técnicas de Pruebas
 
-| Tipo | Propósito | Herramientas | Frecuencia |
-|------|-----------|--------------|------------|
-| **Unit Tests** | Verificar lógica de negocio aislada | xUnit, Moq, FluentAssertions | Cada commit |
-| **Integration Tests** | Validar interacción entre componentes | Testcontainers, Polly | Cada commit |
-| **Contract Tests** | Validar contratos API OpenAPI | Swashbuckle, Approval Tests | Pre-release |
-| **E2E Tests** | Validar flujos end-to-end | Playwright | Nightly |
-| **Performance Tests** | Validar SLAs de rendimiento | k6 | Weekly |
-| **Smoke Tests** | Validar despliegue exitoso | Docker Compose, Scripts bash | Post-deploy |
+En este proyecto se aplican tanto pruebas de **Caja Blanca** (White Box) como de **Caja Negra** (Black Box), utilizando técnicas específicas según el nivel y propósito:
+
+| Tipo de Prueba | Técnica | Tipo (Blanca/Negra) | Implementación (El Cómo) |
+|:---:|---|:---:|---|
+| **Unit Tests** | Partición de Equivalencia, Análisis de Valores Límite, Cobertura de Caminos | **Caja Blanca** | Uso de **xUnit** y **Moq**. Se inspecciona el código fuente de los *Handlers* y el *Dominio* para asegurar que cada rama lógica y condición sea validada, simulando dependencias externas. |
+| **Integration Tests** | Pruebas de Interfaz, Pruebas de Integración Descendente (Top-Down) | **Caja Blanca / Gris** | Uso de **Testcontainers** para levantar dependencias reales (PostgreSQL, Redis). Se valida la persistencia y la comunicación entre capas del microservicio, verificando que los esquemas y las consultas SQL funcionen correctamente. |
+| **Contract Tests** | Verificación de Esquema, Comparación de Snapshots | **Caja Negra** | Uso de **Approval Tests** y validadores de esquemas **OpenAPI**. Se valida que las respuestas de la API coincidan exactamente con la especificación definida en `contracts/openapi/`, sin preocuparse por la implementación interna. |
+| **E2E Tests** | Pruebas de Transacciones de Negocio, Pruebas de Escenarios de Usuario | **Caja Negra** | Uso de **Playwright**. Se simulan flujos completos desde la perspectiva del usuario final (ej. Compra de entrada), interactuando con las APIs expuestas y validando el estado final en el sistema sin conocer el código interno. |
+| **Performance Tests** | Pruebas de Carga, Pruebas de Estrés | **Caja Negra** | Uso de **k6**. Se envían ráfagas de peticiones HTTP a los endpoints públicos para medir tiempos de respuesta y tasas de error bajo presión, enfocándose en el comportamiento externo del sistema. |
+| **Smoke Tests** | Pruebas de Humo Sanity | **Caja Negra** | Scripts **Bash** que ejecutan pings de salud (`/health`) y verifican la conectividad básica post-despliegue en contenedores Docker para confirmar que los servicios están "vivos". |
 
 ### 2.3 Niveles de Prueba
 
