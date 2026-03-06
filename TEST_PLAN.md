@@ -51,15 +51,15 @@ En este proyecto se aplican tanto pruebas de **Caja Blanca** (White Box) como de
 
 #### 2.2.1 Tabla de Matriz de Pruebas
 
-| Nivel de Prueba | Técnica Específica | Tipo (B/N) | Implementación (El Cómo) | Historia de Usuario Relacionada |
-|:---:|---|:---:|---|:---:|
-| **Unit Tests** | **Análisis de Valores Límite:** Prueba de fronteras en TTL (ej. 0s, 1s, 899s, 900s, 901s). <br>**Partición de Equivalencia:** Entradas válidas/inválidas para montos y stocks. | **Blanca** | Uso de **xUnit** y **Moq** para validar la lógica de los *Domain Services* y *Handlers*. | [P1 - Compra de boleto](specs/001-ticketing-mvp/spec.md#p1--compra-de-boleto-end-to-end) |
-| **Integration Tests** | **Pruebas de Estado/Transición:** Validar que el asiento pase de `available` -> `reserved` -> `sold`. <br>**Pruebas de Consumo de Eventos:** Verificar que Fulfillment reaccione a `order-paid`. | **Gris** | **Testcontainers** con PostgreSQL y Redis. Se ejecutan comandos de MediatR y se verifica el cambio de estado en la base de datos real. | [P1 - Escenario 1, 3 y 4](specs/001-ticketing-mvp/spec.md#p1--compra-de-boleto-critical) |
-| **Contract Tests** | **Verificación de Esquema:** Asegurar campos requeridos y tipos de datos. <br>**Snapshot Testing:** Comparar JSON de respuesta contra el esquema esperado. | **Negra** | **Approval Tests** comparando las salidas de los controladores contra archivos `.json` maestros definidos en `contracts/openapi/`. | [P2 - Browse Events](specs/001-ticketing-mvp/spec.md#p2--browse-events) |
-| **E2E Tests** | **Pruebas de Escenario (Story-based):** Flujo completo: navegación -> reserva -> pago -> generación ticket -> notificación email. | **Negra** | **Playwright** interactuando con las APIs. Se valida que al final del flujo exista un registro en `NotificationLog` (FR-012). | [P1 - Compra de boleto](specs/001-ticketing-mvp/spec.md#p1--compra-de-boleto-end-to-end) |
-| **Performance Tests** | **Pruebas de Carga (Load):** Simular 100 usuarios concurrentes reservando el mismo evento. | **Negra** | **k6** enviando peticiones constantes a `/api/reservations` para medir el comportamiento bajo estrés. | [SC-001, SC-002](specs/001-ticketing-mvp/spec.md#success-criteria-measurable) |
+| Nivel de Prueba | Técnica Específica | Estrategia de Ejecución | Tipo (B/N) | Implementación (El Cómo) |
+|:---:|---|---|:---:|---|
+| **Unit Tests** | Análisis de Valores Límite, Partición de Equivalencia | **Aislamiento Total:** Uso estricto de Mocks para dependencias. Ejecución en cada Guardado/Commit. | **Blanca** | xUnit + Moq para Handlers y Dominio. |
+| **Integration Tests** | Pruebas de Estado, Event-driven Testing | **Persistencia Real:** Uso de contenedores efímeros para BD/Kafka. Valida transiciones de BD (`available` -> `sold`). | **Gris** | Testcontainers + Respawn para resetear DB entre tests. |
+| **Contract Tests** | Snapshot Testing, Schema Validation | **Consistencia de API:** Compara la salida JSON actual contra contratos OpenAPI definidos. | **Negra** | Approval Tests contra `contracts/openapi/`. |
+| **E2E Tests** | Story-based Testing, Notificación Asíncrona | **Escenario Real:** Flujo completo desde la reserva hasta el `NotificationLog`. Valida la experiencia final del usuario. | **Negra** | Playwright interactuando con las APIs de los microservicios. |
+| **Performance Tests** | Load/Stress Testing | **Saturación de Concurrencia:** Simulación de ráfagas de reserva para probar bloqueos de Redis/Postgres. | **Negra** | k6 con escenarios de rampa de usuarios. |
 
-#### 2.2.2 Definición de Técnicas Aplicadas
+#### 2.2.2 Definición de Técnicas y Estrategias Aplicadas
 
 1.  **Análisis de Valores Límite (Boundary Value Analysis):**
     *   *Definición:* Técnica de caja blanca/negra que se centra en los valores en los extremos de los rangos de entrada permitidos.
