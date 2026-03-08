@@ -8,14 +8,30 @@ Nuestra misión es garantizar la resiliencia del flujo de compra bajo alta concu
 
 ### 1.1 Alineación con los 7 Principios de QA
 1. **Las pruebas muestran la presencia de errores:** Diseñamos tests para encontrar fallos en la persistencia y bloqueos de Redis.
-2. **Pruebas tempranas:** Los tests unitarios se ejecutan en cada commit (Shift-Left).
+2. **Pruebas tempranas (Shift-Left):** Nuestra cultura de ingeniería desplaza las pruebas lo más a la izquierda posible en el ciclo de vida (SDLC), detectando errores en la fase de diseño/dominio antes de que lleguen a la infraestructura.
 3. **Agrupamiento de defectos:** Foco intensivo en `Inventory` y `Payment`.
 4. **Dependencia del contexto:** No usamos los mismos tests para `Catalog` (read-heavy) que para `Inventory` (write-heavy/concurrencia).
 5. **Paradoja del Pesticida:** Implementamos variabilidad en los datos de entrada para evitar que los tests se vuelvan obsoletos.
 
 ---
 
-## 2. Pirámide de Pruebas (Test Pyramid)
+## 2. Cultura Shift-Left en el Pipeline
+
+El enfoque **Shift-Left** no es solo una fase, sino una serie de capas de protección que se ejecutan antes del despliegue:
+
+### 2.1 Pre-Commit / Local Development
+- **Unit Testing:** Ejecución inmediata de la lógica de dominio.
+- **Validación de OpenAPI:** Validación local de que el código coincide con el contrato `/contracts/openapi/`.
+
+### 2.2 Continuous Integration (CI) - El Gatekeeper
+Nuestro pipeline implementa el Shift-Left mediante:
+- **Análisis Estático (SonarCloud):** Detección de `code smells` y deuda técnica en el momento del Pull Request.
+- **Escaneo de Seguridad (Trivy):** Identificación de vulnerabilidades en librerías ANTES de generar la imagen final de Docker.
+- **Feedback Loop Rápido:** Si una prueba falla en la capa de integración de componentes, el desarrollador recibe la notificación en minutos, no días.
+
+---
+
+## 3. Pirámide de Pruebas (Test Pyramid)
 
 Nuestra pirámide está diseñada para maximizar el ROI de las pruebas:
 
