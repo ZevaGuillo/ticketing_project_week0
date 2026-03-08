@@ -46,6 +46,7 @@ jobs:
   dotnet-build-catalog:
     needs: filter
     if: needs.filter.outputs.catalog == 'true'
+    name: "Build: Catalog"
     uses: ./.github/workflows/dotnet-build.yml
     with:
       service_name: "Catalog"
@@ -54,6 +55,7 @@ jobs:
   dotnet-test-unit-catalog:
     needs: [filter, dotnet-build-catalog]
     if: needs.filter.outputs.catalog == 'true'
+    name: "Unit Test: Catalog"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Catalog"
@@ -63,6 +65,7 @@ jobs:
   dotnet-test-arch-catalog:
     needs: [filter, dotnet-build-catalog]
     if: needs.filter.outputs.catalog == 'true'
+    name: "Arch Test: Catalog"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Catalog"
@@ -72,6 +75,7 @@ jobs:
   dotnet-test-integration-catalog:
     needs: [filter, dotnet-build-catalog]
     if: needs.filter.outputs.catalog == 'true'
+    name: "Integration Test: Catalog"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Catalog"
@@ -82,6 +86,7 @@ jobs:
   dotnet-build-identity:
     needs: filter
     if: needs.filter.outputs.identity == 'true'
+    name: "Build: Identity"
     uses: ./.github/workflows/dotnet-build.yml
     with:
       service_name: "Identity"
@@ -90,6 +95,7 @@ jobs:
   dotnet-test-unit-identity:
     needs: [filter, dotnet-build-identity]
     if: needs.filter.outputs.identity == 'true'
+    name: "Unit Test: Identity"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Identity"
@@ -99,6 +105,7 @@ jobs:
   dotnet-test-arch-identity:
     needs: [filter, dotnet-build-identity]
     if: needs.filter.outputs.identity == 'true'
+    name: "Arch Test: Identity"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Identity"
@@ -108,6 +115,7 @@ jobs:
   dotnet-test-integration-identity:
     needs: [filter, dotnet-build-identity]
     if: needs.filter.outputs.identity == 'true'
+    name: "Integration Test: Identity"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Identity"
@@ -118,6 +126,7 @@ jobs:
   dotnet-build-fulfillment:
     needs: filter
     if: needs.filter.outputs.fulfillment == 'true'
+    name: "Build: Fulfillment"
     uses: ./.github/workflows/dotnet-build.yml
     with:
       service_name: "Fulfillment"
@@ -126,6 +135,7 @@ jobs:
   dotnet-test-unit-fulfillment:
     needs: [filter, dotnet-build-fulfillment]
     if: needs.filter.outputs.fulfillment == 'true'
+    name: "Unit Test: Fulfillment"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Fulfillment"
@@ -135,6 +145,7 @@ jobs:
   dotnet-test-arch-fulfillment:
     needs: [filter, dotnet-build-fulfillment]
     if: needs.filter.outputs.fulfillment == 'true'
+    name: "Arch Test: Fulfillment"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Fulfillment"
@@ -144,6 +155,7 @@ jobs:
   dotnet-test-integration-fulfillment:
     needs: [filter, dotnet-build-fulfillment]
     if: needs.filter.outputs.fulfillment == 'true'
+    name: "Integration Test: Fulfillment"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Fulfillment"
@@ -154,6 +166,7 @@ jobs:
   dotnet-build-inventory:
     needs: filter
     if: needs.filter.outputs.inventory == 'true'
+    name: "Build: Inventory"
     uses: ./.github/workflows/dotnet-build.yml
     with:
       service_name: "Inventory"
@@ -162,6 +175,7 @@ jobs:
   dotnet-test-unit-inventory:
     needs: [filter, dotnet-build-inventory]
     if: needs.filter.outputs.inventory == 'true'
+    name: "Unit Test: Inventory"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Inventory"
@@ -171,6 +185,7 @@ jobs:
   dotnet-test-arch-inventory:
     needs: [filter, dotnet-build-inventory]
     if: needs.filter.outputs.inventory == 'true'
+    name: "Arch Test: Inventory"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Inventory"
@@ -180,6 +195,7 @@ jobs:
   dotnet-test-integration-inventory:
     needs: [filter, dotnet-build-inventory]
     if: needs.filter.outputs.inventory == 'true'
+    name: "Integration Test: Inventory"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Inventory"
@@ -190,6 +206,7 @@ jobs:
   dotnet-build-notification:
     needs: filter
     if: needs.filter.outputs.notification == 'true'
+    name: "Build: Notification"
     uses: ./.github/workflows/dotnet-build.yml
     with:
       service_name: "Notification"
@@ -198,6 +215,7 @@ jobs:
   dotnet-test-unit-notification:
     needs: [filter, dotnet-build-notification]
     if: needs.filter.outputs.notification == 'true'
+    name: "Unit Test: Notification"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Notification"
@@ -207,6 +225,7 @@ jobs:
   dotnet-test-arch-notification:
     needs: [filter, dotnet-build-notification]
     if: needs.filter.outputs.notification == 'true'
+    name: "Arch Test: Notification"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Notification"
@@ -216,6 +235,7 @@ jobs:
   dotnet-test-integration-notification:
     needs: [filter, dotnet-build-notification]
     if: needs.filter.outputs.notification == 'true'
+    name: "Integration Test: Notification"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Notification"
@@ -226,6 +246,7 @@ jobs:
   dotnet-build-ordering:
     needs: filter
     if: needs.filter.outputs.ordering == 'true'
+    name: "Build: Ordering"
     uses: ./.github/workflows/dotnet-build.yml
     with:
       service_name: "Ordering"
@@ -234,6 +255,7 @@ jobs:
   dotnet-test-unit-ordering:
     needs: [filter, dotnet-build-ordering]
     if: needs.filter.outputs.ordering == 'true'
+    name: "Unit Test: Ordering"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Ordering"
@@ -243,6 +265,7 @@ jobs:
   dotnet-test-arch-ordering:
     needs: [filter, dotnet-build-ordering]
     if: needs.filter.outputs.ordering == 'true'
+    name: "Arch Test: Ordering"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Ordering"
@@ -252,6 +275,7 @@ jobs:
   dotnet-test-integration-ordering:
     needs: [filter, dotnet-build-ordering]
     if: needs.filter.outputs.ordering == 'true'
+    name: "Integration Test: Ordering"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Ordering"
@@ -262,6 +286,7 @@ jobs:
   dotnet-build-payment:
     needs: filter
     if: needs.filter.outputs.payment == 'true'
+    name: "Build: Payment"
     uses: ./.github/workflows/dotnet-build.yml
     with:
       service_name: "Payment"
@@ -270,6 +295,7 @@ jobs:
   dotnet-test-unit-payment:
     needs: [filter, dotnet-build-payment]
     if: needs.filter.outputs.payment == 'true'
+    name: "Unit Test: Payment"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Payment"
@@ -279,6 +305,7 @@ jobs:
   dotnet-test-arch-payment:
     needs: [filter, dotnet-build-payment]
     if: needs.filter.outputs.payment == 'true'
+    name: "Arch Test: Payment"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Payment"
@@ -288,11 +315,121 @@ jobs:
   dotnet-test-integration-payment:
     needs: [filter, dotnet-build-payment]
     if: needs.filter.outputs.payment == 'true'
+    name: "Integration Test: Payment"
     uses: ./.github/workflows/dotnet-test.yml
     with:
       service_name: "Payment"
       service_path: "services/payment/Payment.sln"
       test_type: "integration"
+
+  # --- SHARED QUALITY & SECURITY ---
+
+  generate-coverage-report:
+    needs: 
+      - filter
+      - dotnet-test-integration-catalog
+      - dotnet-test-integration-identity
+      - dotnet-test-integration-fulfillment
+      - dotnet-test-integration-inventory
+      - dotnet-test-integration-notification
+      - dotnet-test-integration-ordering
+      - dotnet-test-integration-payment
+    if: always() && !cancelled()
+    name: "Final Quality Report"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: coverage-artifacts
+          pattern: coverage-*
+
+      - name: ReportGenerator
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+        with:
+          reports: 'coverage-artifacts/**/*.xml'
+          targetdir: 'merged-coverage'
+          reporttypes: 'HtmlSummary;MarkdownSummaryGitHub'
+
+      - name: Upload Merged Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged-coverage-report
+          path: merged-coverage
+
+  sonar-scan-unified:
+    needs: [filter, generate-coverage-report]
+    if: always() && !cancelled()
+    name: "SonarCloud Unified Scan"
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  trivy-scan-catalog:
+    needs: [filter, sonar-scan-unified]
+    if: needs.filter.outputs.catalog == 'true'
+    name: "Security Scan: Catalog"
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "catalog"
+      dockerfile_path: "services/catalog/src/Catalog.Api/Dockerfile"
+
+  trivy-scan-identity:
+    needs: [filter, sonar-scan-unified]
+    if: needs.filter.outputs.identity == 'true'
+    name: "Security Scan: Identity"
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "identity"
+      dockerfile_path: "services/identity/src/Identity.Api/Dockerfile"
+
+  trivy-scan-fulfillment:
+    needs: [filter, sonar-scan-unified]
+    if: needs.filter.outputs.fulfillment == 'true'
+    name: "Security Scan: Fulfillment"
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "fulfillment"
+      dockerfile_path: "services/fulfillment/src/Fulfillment.Api/Dockerfile"
+
+  trivy-scan-inventory:
+    needs: [filter, sonar-scan-unified]
+    if: needs.filter.outputs.inventory == 'true'
+    name: "Security Scan: Inventory"
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "inventory"
+      dockerfile_path: "services/inventory/src/Inventory.Api/Dockerfile"
+
+  trivy-scan-notification:
+    needs: [filter, sonar-scan-unified]
+    if: needs.filter.outputs.notification == 'true'
+    name: "Security Scan: Notification"
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "notification"
+      dockerfile_path: "services/notification/src/Notification.Api/Dockerfile"
+
+  trivy-scan-ordering:
+    needs: [filter, sonar-scan-unified]
+    if: needs.filter.outputs.ordering == 'true'
+    name: "Security Scan: Ordering"
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "ordering"
+      dockerfile_path: "services/ordering/src/Ordering.Api/Dockerfile"
+
+  trivy-scan-payment:
+    needs: [filter, sonar-scan-unified]
+    if: needs.filter.outputs.payment == 'true'
+    name: "Security Scan: Payment"
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "payment"
+      dockerfile_path: "services/payment/src/Payment.Api/Dockerfile"
 
   # --- FRONTEND ---
   npm-build-frontend:
@@ -314,41 +451,3 @@ jobs:
         run: cd frontend && pnpm install
       - name: Build
         run: cd frontend && pnpm build
-
-  generate-coverage-report:
-    needs: 
-      - dotnet-test-unit-catalog
-      - dotnet-test-integration-catalog
-      - dotnet-test-unit-identity
-      - dotnet-test-integration-identity
-      - dotnet-test-unit-fulfillment
-      - dotnet-test-integration-fulfillment
-      - dotnet-test-unit-inventory
-      - dotnet-test-integration-inventory
-      - dotnet-test-unit-notification
-      - dotnet-test-integration-notification
-      - dotnet-test-unit-ordering
-      - dotnet-test-integration-ordering
-      - dotnet-test-unit-payment
-      - dotnet-test-integration-payment
-    if: always() # Queremos el reporte incluso si algunos tests fallan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: coverage-artifacts
-          pattern: coverage-*
-
-      - name: ReportGenerator
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
-        with:
-          reports: 'coverage-artifacts/**/*.xml'
-          targetdir: 'merged-coverage'
-          reporttypes: 'HtmlSummary;MarkdownSummaryGitHub'
-
-      - name: Upload Merged Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: merged-coverage-report
-          path: merged-coverage

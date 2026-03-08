@@ -11,7 +11,7 @@ namespace Notification.Infrastructure.Events;
 
 public class TicketIssuedEventConsumer : BackgroundService
 {
-    private readonly IConsumer<string, string> _consumer;
+    private readonly IConsumer<string, string>? _consumer;
     private readonly KafkaOptions _kafkaOptions;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TicketIssuedEventConsumer> _logger;
@@ -20,39 +20,73 @@ public class TicketIssuedEventConsumer : BackgroundService
     public TicketIssuedEventConsumer(
         IOptions<KafkaOptions> kafkaOptions,
         IServiceProvider serviceProvider,
-        ILogger<TicketIssuedEventConsumer> logger)
+        ILogger<TicketIssuedEventConsumer> logger,
+        IConsumer<string, string>? consumer = null)
     {
         _kafkaOptions = kafkaOptions.Value;
         _serviceProvider = serviceProvider;
         _logger = logger;
 
-        var config = new ConsumerConfig
-        {
-            BootstrapServers = _kafkaOptions.BootstrapServers,
-            GroupId = _kafkaOptions.ConsumerGroupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true,
-        };
-
-        _consumer = new ConsumerBuilder<string, string>(config).Build();
         _topicName = _kafkaOptions.Topics.TryGetValue("TicketIssued", out var topic)
             ? topic
             : "ticket-issued";
+
+        if (consumer != null)
+        {
+            _consumer = consumer;
+        }
+        else
+        {
+            try
+            {
+                var config = new ConsumerConfig
+                {
+                    BootstrapServers = _kafkaOptions.BootstrapServers,
+                    GroupId = _kafkaOptions.ConsumerGroupId,
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    EnableAutoCommit = true,
+                };
+
+                _consumer = new ConsumerBuilder<string, string>(config).Build();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create Kafka consumer. Service will not be able to process events.");
+            }
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("TicketIssuedEventConsumer starting...");
-        _consumer.Subscribe(_topicName);
+        if (_consumer == null)
+        {
+            _logger.LogWarning("Kafka consumer is null. ExecuteAsync will exit.");
+            return;
+        }
+
+        _logger.LogInformation("TicketIssuedEventConsumer starting... (Topic: {Topic})", _topicName);
+        
+        try
+        {
+            _consumer.Subscribe(_topicName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to subscribe to Kafka topic {Topic}. Consumer will not run.", _topicName);
+            return;
+        }
 
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(10));
+                var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(1));
 
                 if (consumeResult == null)
+                {
+                    await Task.Delay(100, stoppingToken);
                     continue;
+                }
 
                 try
                 {
