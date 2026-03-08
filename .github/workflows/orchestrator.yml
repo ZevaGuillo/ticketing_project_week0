@@ -91,8 +91,8 @@ jobs:
     if: needs.filter.outputs.catalog == 'true'
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "Ticketing_Catalog"
-      organization: "TicketingOrg"
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
       solution_path: "services/catalog/Catalog.sln"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -147,8 +147,8 @@ jobs:
     if: needs.filter.outputs.identity == 'true'
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "Ticketing_Identity"
-      organization: "TicketingOrg"
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
       solution_path: "services/identity/Identity.sln"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -203,8 +203,8 @@ jobs:
     if: needs.filter.outputs.fulfillment == 'true'
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "Ticketing_Fulfillment"
-      organization: "TicketingOrg"
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
       solution_path: "services/fulfillment/Fulfillment.sln"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -259,8 +259,8 @@ jobs:
     if: needs.filter.outputs.inventory == 'true'
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "Ticketing_Inventory"
-      organization: "TicketingOrg"
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
       solution_path: "services/inventory/Inventory.sln"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -315,8 +315,8 @@ jobs:
     if: needs.filter.outputs.notification == 'true'
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "Ticketing_Notification"
-      organization: "TicketingOrg"
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
       solution_path: "services/notification/Notification.sln"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -371,8 +371,8 @@ jobs:
     if: needs.filter.outputs.ordering == 'true'
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "Ticketing_Ordering"
-      organization: "TicketingOrg"
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
       solution_path: "services/ordering/Ordering.sln"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -427,8 +427,8 @@ jobs:
     if: needs.filter.outputs.payment == 'true'
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "Ticketing_Payment"
-      organization: "TicketingOrg"
+      project_key: "JostinAlvaradoS_ticketing_project_week0"
+      organization: "jostinalvarados"
       solution_path: "services/payment/Payment.sln"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
