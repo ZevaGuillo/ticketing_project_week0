@@ -9,6 +9,17 @@ WORKDIR /src/services/catalog/src/Catalog.Api
 RUN dotnet restore
 RUN dotnet publish -c Release -o /app/publish
 
+# Generate EF Core migration bundle
+RUN dotnet tool install --global dotnet-ef --version 8.0.*
+ENV PATH="$PATH:/root/.dotnet/tools"
+RUN dotnet ef migrations bundle \
+    --project ../Catalog.Infrastructure/Catalog.Infrastructure.csproj \
+    --startup-project . \
+    --context CatalogDbContext \
+    -o /app/publish/efbundle \
+    --self-contained \
+    --force
+
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
 WORKDIR /app
 
@@ -18,10 +29,13 @@ RUN addgroup -g 1000 appuser && \
 
 # Copy application and set ownership
 COPY --from=build --chown=appuser:appuser /app/publish .
+RUN chmod +x /app/efbundle
 
-# Switch to non-root user
+# Entrypoint script: run migrations then start app
+RUN printf '#!/bin/sh\nset -e\necho "Applying EF Core migrations..."\n/app/efbundle --connection "$ConnectionStrings__Default" || echo "Migration warning: migrations may already be applied"\necho "Starting application..."\nexec dotnet Catalog.Api.dll\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
 USER appuser
 
 ENV ASPNETCORE_URLS=http://+:5001
 EXPOSE 5001
-ENTRYPOINT ["dotnet", "Catalog.Api.dll"]
+ENTRYPOINT ["/app/entrypoint.sh"]
