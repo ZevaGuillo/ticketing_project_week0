@@ -78,6 +78,26 @@ jobs:
       service_path: "services/catalog/Catalog.sln"
       test_type: "integration"
 
+  trivy-scan-catalog:
+    needs: [filter, dotnet-build-catalog]
+    if: needs.filter.outputs.catalog == 'true'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "Catalog"
+      dockerfile_path: "services/catalog/src/Catalog.Api/Dockerfile"
+
+  sonar-scan-catalog:
+    needs: [filter, dotnet-test-unit-catalog, dotnet-test-integration-catalog]
+    if: needs.filter.outputs.catalog == 'true'
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "Ticketing_Catalog"
+      organization: "TicketingOrg"
+      solution_path: "services/catalog/Catalog.sln"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
   # --- IDENTITY SERVICE ---
   dotnet-build-identity:
     needs: filter
@@ -113,6 +133,26 @@ jobs:
       service_name: "Identity"
       service_path: "services/identity/Identity.sln"
       test_type: "integration"
+
+  trivy-scan-identity:
+    needs: [filter, dotnet-build-identity]
+    if: needs.filter.outputs.identity == 'true'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "Identity"
+      dockerfile_path: "services/identity/src/Identity.Api/Dockerfile"
+
+  sonar-scan-identity:
+    needs: [filter, dotnet-test-unit-identity, dotnet-test-integration-identity]
+    if: needs.filter.outputs.identity == 'true'
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "Ticketing_Identity"
+      organization: "TicketingOrg"
+      solution_path: "services/identity/Identity.sln"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
 
   # --- FULFILLMENT SERVICE ---
   dotnet-build-fulfillment:
@@ -150,6 +190,26 @@ jobs:
       service_path: "services/fulfillment/Fulfillment.sln"
       test_type: "integration"
 
+  trivy-scan-fulfillment:
+    needs: [filter, dotnet-build-fulfillment]
+    if: needs.filter.outputs.fulfillment == 'true'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "Fulfillment"
+      dockerfile_path: "services/fulfillment/src/Fulfillment.Api/Dockerfile"
+
+  sonar-scan-fulfillment:
+    needs: [filter, dotnet-test-unit-fulfillment, dotnet-test-integration-fulfillment]
+    if: needs.filter.outputs.fulfillment == 'true'
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "Ticketing_Fulfillment"
+      organization: "TicketingOrg"
+      solution_path: "services/fulfillment/Fulfillment.sln"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
   # --- INVENTORY SERVICE ---
   dotnet-build-inventory:
     needs: filter
@@ -185,6 +245,26 @@ jobs:
       service_name: "Inventory"
       service_path: "services/inventory/Inventory.sln"
       test_type: "integration"
+
+  trivy-scan-inventory:
+    needs: [filter, dotnet-build-inventory]
+    if: needs.filter.outputs.inventory == 'true'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "Inventory"
+      dockerfile_path: "services/inventory/src/Inventory.Api/Dockerfile"
+
+  sonar-scan-inventory:
+    needs: [filter, dotnet-test-unit-inventory, dotnet-test-integration-inventory]
+    if: needs.filter.outputs.inventory == 'true'
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "Ticketing_Inventory"
+      organization: "TicketingOrg"
+      solution_path: "services/inventory/Inventory.sln"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
 
   # --- NOTIFICATION SERVICE ---
   dotnet-build-notification:
@@ -222,6 +302,26 @@ jobs:
       service_path: "services/notification/Notification.sln"
       test_type: "integration"
 
+  trivy-scan-notification:
+    needs: [filter, dotnet-build-notification]
+    if: needs.filter.outputs.notification == 'true'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "Notification"
+      dockerfile_path: "services/notification/src/Notification.Api/Dockerfile"
+
+  sonar-scan-notification:
+    needs: [filter, dotnet-test-unit-notification, dotnet-test-integration-notification]
+    if: needs.filter.outputs.notification == 'true'
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "Ticketing_Notification"
+      organization: "TicketingOrg"
+      solution_path: "services/notification/Notification.sln"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
   # --- ORDERING SERVICE ---
   dotnet-build-ordering:
     needs: filter
@@ -258,6 +358,26 @@ jobs:
       service_path: "services/ordering/Ordering.sln"
       test_type: "integration"
 
+  trivy-scan-ordering:
+    needs: [filter, dotnet-build-ordering]
+    if: needs.filter.outputs.ordering == 'true'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "Ordering"
+      dockerfile_path: "services/ordering/src/Ordering.Api/Dockerfile"
+
+  sonar-scan-ordering:
+    needs: [filter, dotnet-test-unit-ordering, dotnet-test-integration-ordering]
+    if: needs.filter.outputs.ordering == 'true'
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "Ticketing_Ordering"
+      organization: "TicketingOrg"
+      solution_path: "services/ordering/Ordering.sln"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
   # --- PAYMENT SERVICE ---
   dotnet-build-payment:
     needs: filter
@@ -293,6 +413,26 @@ jobs:
       service_name: "Payment"
       service_path: "services/payment/Payment.sln"
       test_type: "integration"
+
+  trivy-scan-payment:
+    needs: [filter, dotnet-build-payment]
+    if: needs.filter.outputs.payment == 'true'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      service_name: "Payment"
+      dockerfile_path: "services/payment/src/Payment.Api/Dockerfile"
+
+  sonar-scan-payment:
+    needs: [filter, dotnet-test-unit-payment, dotnet-test-integration-payment]
+    if: needs.filter.outputs.payment == 'true'
+    uses: ./.github/workflows/sonar-analysis.yml
+    with:
+      project_key: "Ticketing_Payment"
+      organization: "TicketingOrg"
+      solution_path: "services/payment/Payment.sln"
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
 
   # --- FRONTEND ---
   npm-build-frontend:
