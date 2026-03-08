@@ -83,16 +83,16 @@ jobs:
       test_type: "integration"
 
   trivy-scan-catalog:
-    needs: [filter, dotnet-build-catalog]
+    needs: [filter, generate-coverage-report]
     if: needs.filter.outputs.catalog == 'true'
     name: "Security Scan: Catalog"
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      service_name: "Catalog"
+      service_name: "catalog"
       dockerfile_path: "services/catalog/src/Catalog.Api/Dockerfile"
 
   sonar-scan-catalog:
-    needs: [filter, dotnet-test-unit-catalog, dotnet-test-integration-catalog]
+    needs: [filter, trivy-scan-catalog]
     if: needs.filter.outputs.catalog == 'true'
     name: "Sonar Analysis: Catalog"
     uses: ./.github/workflows/sonar-analysis.yml
@@ -145,16 +145,16 @@ jobs:
       test_type: "integration"
 
   trivy-scan-identity:
-    needs: [filter, dotnet-build-identity]
+    needs: [filter, generate-coverage-report]
     if: needs.filter.outputs.identity == 'true'
     name: "Security Scan: Identity"
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      service_name: "Identity"
+      service_name: "identity"
       dockerfile_path: "services/identity/src/Identity.Api/Dockerfile"
 
   sonar-scan-identity:
-    needs: [filter, dotnet-test-unit-identity, dotnet-test-integration-identity]
+    needs: [filter, trivy-scan-identity]
     if: needs.filter.outputs.identity == 'true'
     name: "Sonar Analysis: Identity"
     uses: ./.github/workflows/sonar-analysis.yml
@@ -207,16 +207,16 @@ jobs:
       test_type: "integration"
 
   trivy-scan-fulfillment:
-    needs: [filter, dotnet-build-fulfillment]
+    needs: [filter, generate-coverage-report]
     if: needs.filter.outputs.fulfillment == 'true'
     name: "Security Scan: Fulfillment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      service_name: "Fulfillment"
+      service_name: "fulfillment"
       dockerfile_path: "services/fulfillment/src/Fulfillment.Api/Dockerfile"
 
   sonar-scan-fulfillment:
-    needs: [filter, dotnet-test-unit-fulfillment, dotnet-test-integration-fulfillment]
+    needs: [filter, trivy-scan-fulfillment]
     if: needs.filter.outputs.fulfillment == 'true'
     name: "Sonar Analysis: Fulfillment"
     uses: ./.github/workflows/sonar-analysis.yml
@@ -269,16 +269,16 @@ jobs:
       test_type: "integration"
 
   trivy-scan-inventory:
-    needs: [filter, dotnet-build-inventory]
+    needs: [filter, generate-coverage-report]
     if: needs.filter.outputs.inventory == 'true'
     name: "Security Scan: Inventory"
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      service_name: "Inventory"
+      service_name: "inventory"
       dockerfile_path: "services/inventory/src/Inventory.Api/Dockerfile"
 
   sonar-scan-inventory:
-    needs: [filter, dotnet-test-unit-inventory, dotnet-test-integration-inventory]
+    needs: [filter, trivy-scan-inventory]
     if: needs.filter.outputs.inventory == 'true'
     name: "Sonar Analysis: Inventory"
     uses: ./.github/workflows/sonar-analysis.yml
@@ -331,16 +331,16 @@ jobs:
       test_type: "integration"
 
   trivy-scan-notification:
-    needs: [filter, dotnet-build-notification]
+    needs: [filter, generate-coverage-report]
     if: needs.filter.outputs.notification == 'true'
     name: "Security Scan: Notification"
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      service_name: "Notification"
+      service_name: "notification"
       dockerfile_path: "services/notification/src/Notification.Api/Dockerfile"
 
   sonar-scan-notification:
-    needs: [filter, dotnet-test-unit-notification, dotnet-test-integration-notification]
+    needs: [filter, trivy-scan-notification]
     if: needs.filter.outputs.notification == 'true'
     name: "Sonar Analysis: Notification"
     uses: ./.github/workflows/sonar-analysis.yml
@@ -393,16 +393,16 @@ jobs:
       test_type: "integration"
 
   trivy-scan-ordering:
-    needs: [filter, dotnet-build-ordering]
+    needs: [filter, generate-coverage-report]
     if: needs.filter.outputs.ordering == 'true'
     name: "Security Scan: Ordering"
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      service_name: "Ordering"
+      service_name: "ordering"
       dockerfile_path: "services/ordering/src/Ordering.Api/Dockerfile"
 
   sonar-scan-ordering:
-    needs: [filter, dotnet-test-unit-ordering, dotnet-test-integration-ordering]
+    needs: [filter, trivy-scan-ordering]
     if: needs.filter.outputs.ordering == 'true'
     name: "Sonar Analysis: Ordering"
     uses: ./.github/workflows/sonar-analysis.yml
@@ -455,16 +455,16 @@ jobs:
       test_type: "integration"
 
   trivy-scan-payment:
-    needs: [filter, dotnet-build-payment]
+    needs: [filter, generate-coverage-report]
     if: needs.filter.outputs.payment == 'true'
     name: "Security Scan: Payment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      service_name: "Payment"
+      service_name: "payment"
       dockerfile_path: "services/payment/src/Payment.Api/Dockerfile"
 
   sonar-scan-payment:
-    needs: [filter, dotnet-test-unit-payment, dotnet-test-integration-payment]
+    needs: [filter, trivy-scan-payment]
     if: needs.filter.outputs.payment == 'true'
     name: "Sonar Analysis: Payment"
     uses: ./.github/workflows/sonar-analysis.yml
