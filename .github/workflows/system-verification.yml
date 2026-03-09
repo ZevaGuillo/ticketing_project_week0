@@ -1,0 +1,64 @@
+name: System - E2E Verification
+
+on:
+  workflow_run:
+    workflows: ["CI - Monorepo Orchestrator"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  system-e2e:
+    name: "E2E: System Logic & Integration"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install EF Tool
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Docker Compose Up
+        run: |
+          cd infra
+          docker compose up -d --build
+          
+      - name: Wait for Infrastructure
+        run: |
+          echo "Waiting for Postgres..."
+          until docker exec speckit-postgres pg_isready -U postgres; do
+            sleep 2
+          done
+          echo "Waiting for services to be healthy..."
+          sleep 15 # Give time for .NET health checks to warm up
+
+      - name: Apply Database Migrations
+        run: |
+          chmod +x migrate-all-test.sh
+          # Set vars for the migration script to target docker
+          export DB_HOST="localhost"
+          export DB_PORT="5432"
+          ./migrate-all-test.sh
+
+      - name: Run E2E System Test
+        run: |
+          chmod +x system-e2e-test.sh
+          bash ./system-e2e-test.sh
+
+      - name: Docker Logs on Failure
+        if: failure()
+        run: |
+          cd infra
+          docker compose logs
+
+      - name: Docker Compose Down
+        if: always()
+        run: |
+          cd infra
+          docker compose down

@@ -17,6 +17,9 @@ export DB_NAME="${DB_NAME:-ticketing}"
 export DB_USER="${DB_USER:-postgres}"
 export DB_PASSWORD="${DB_PASSWORD:-postgres}"
 
+# Construir ConnectionString temporal para dotnet ef
+export ConnectionStrings__Default="Host=$DB_HOST;Port=$DB_PORT;Database=$DB_NAME;Username=$DB_USER;Password=$DB_PASSWORD;Include Error Detail=true"
+
 # Función para ejecutar migraciones de un servicio
 migrate_service() {
     local service_name=$1
