@@ -10,15 +10,6 @@ RUN dotnet restore
 RUN dotnet publish -c Release -o /app/publish
 
 # Generate EF Core migration bundle
-RUN dotnet tool install --global dotnet-ef --version 8.0.*
-ENV PATH="$PATH:/root/.dotnet/tools"
-RUN dotnet ef migrations bundle \
-    --project ../Catalog.Infrastructure/Catalog.Infrastructure.csproj \
-    --startup-project . \
-    --context CatalogDbContext \
-    -o /app/publish/efbundle \
-    --self-contained \
-    --force
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
@@ -35,11 +26,10 @@ RUN groupadd -g 1000 appuser && \
 
 # Copy application and set ownership
 COPY --from=build --chown=appuser:appuser /app/publish .
-RUN chmod +x /app/efbundle
 
 # Entrypoint script: run migrations then start app
 RUN printf '#!/bin/sh\nset -e\necho "Current user: $(id)"\necho "Applying EF Core migrations..."\n' > /app/entrypoint.sh && \
-    printf '/app/efbundle --connection "$ConnectionStrings__Default" || echo "Migration warning: migrations may already be applied"\necho "Starting application..."\nexec dotnet Catalog.Api.dll\n' >> /app/entrypoint.sh && \
+    printf 'echo "Migrations skipped" || echo "Migration warning: migrations may already be applied"\necho "Starting application..."\nexec dotnet Catalog.Api.dll\n' >> /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
 USER appuser

@@ -50,10 +50,11 @@ migrate_service() {
     # Restaurar paquetes NuGet
     echo "   - Restaurando paquetes NuGet..."
     cd "$startup_project_path/.."
-    if dotnet restore > /dev/null 2>&1; then
+    if dotnet restore; then
         echo -e "${GREEN}   ✓ Paquetes restaurados correctamente${NC}"
     else
         echo -e "${YELLOW}   ⚠️  Advertencia: No se pudieron restaurar algunos paquetes${NC}"
+        # No retornamos error aquí, a veces restore falla pero build/migrations funcionan si ya hay caché
     fi
     
     # Crear migración inicial si no existe (desde el directorio del startup project)
@@ -64,7 +65,7 @@ migrate_service() {
         echo "   - Migraciones existentes encontradas, omitiendo creación inicial"
     else
         echo "   - Creando migración inicial..."
-        if dotnet ef migrations add InitialCreate --project "$infrastructure_project_path" --startup-project . --context "$context_name" 2>/dev/null; then
+        if dotnet ef migrations add InitialCreate --project "$infrastructure_project_path" --startup-project . --context "$context_name"; then
             echo -e "${GREEN}   ✓ Migración inicial creada para ${service_name}${NC}"
         else
             echo -e "${YELLOW}   ⚠️  No se pudo crear migración inicial para ${service_name} (puede que ya exista)${NC}"
@@ -73,7 +74,7 @@ migrate_service() {
     
     # Aplicar migraciones a la base de datos
     echo "   - Aplicando migraciones para esquema: $schema_name"
-    if dotnet ef database update --project "$infrastructure_project_path" --startup-project . --context "$context_name" 2>/dev/null; then
+    if dotnet ef database update --project "$infrastructure_project_path" --startup-project . --context "$context_name"; then
         echo -e "${GREEN}   ✓ ${service_name} migrado correctamente${NC}"
         cd - > /dev/null
         return 0

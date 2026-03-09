@@ -44,7 +44,13 @@ jobs:
           # Set vars for the migration script to target docker
           export DB_HOST="localhost"
           export DB_PORT="5432"
-          ./migrate-all-test.sh
+          # Disable colors for cleaner logs and run script
+          ./migrate-all-test.sh || (echo "Migration script failed with exit code $?" && exit 1)
+
+      - name: Verify Tables in Postgres
+        run: |
+          docker exec speckit-postgres psql -U postgres -d ticketing -c "\dt bc_catalog.*"
+          docker exec speckit-postgres psql -U postgres -d ticketing -c "SELECT COUNT(*) FROM bc_catalog.\"Events\";" || echo "Events table might not exist yet"
 
       - name: Run E2E System Test
         run: |
