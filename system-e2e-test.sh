@@ -59,7 +59,9 @@ check_service $PAYMENT_URL "Payment"
 # CARGA DE DATOS INICIALES (Seed Data)
 # ==============================================================================
 echo -e "\n--- Cargando Datos Iniciales (Seed Data) ---"
-SEED_FILE="/Users/jostinalvarados/Dev/Sofka/ticketing_project_week0/infra/db/seed-data.sql"
+# Obtener el directorio donde se encuentra este script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SEED_FILE="$SCRIPT_DIR/infra/db/seed-data.sql"
 
 if [ -f "$SEED_FILE" ]; then
     echo "Ejecutando seed-data.sql en la base de datos PostgreSQL..."
