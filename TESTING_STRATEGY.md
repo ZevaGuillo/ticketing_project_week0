@@ -33,12 +33,12 @@ Nuestro pipeline implementa el Shift-Left mediante:
 
 ## 3. Pirámide de Pruebas (Test Pyramid)
 
-Nuestra pirámide está diseñada para maximizar el ROI de las pruebas:
+Nuestra pirámide está diseñada para maximizar el ROI de las pruebas y la eficiencia del CI:
 
 ```mermaid
 graph TD
     subgraph Pyramid
-    E2E[5% - Smoke/E2E: Scripts Bash + Docker-Compose]
+    E2E[5% - System Verification: Calidad + E2E Unificado]
     INT_SYS[10% - Pruebas de Sistema: Kafka Event-Flow]
     INT_COMP[15% - Integración de Componentes: Testcontainers/Repo]
     UNIT[70% - Unitarias: Domain/Application Logic]
@@ -52,6 +52,7 @@ graph TD
 - **Pruebas Unitarias (Caja Blanca):** Validamos la lógica interna de los Handlers y Entidades. Usamos **Mocks** para aislar dependencias.
 - **Integración de Componentes (Component Integration):** Validamos la comunicación entre el código y su base de datos/cache real usando **Testcontainers**.
 - **Pruebas de Sistema (System Integration):** Validamos el flujo asíncrono entre servicios vía **Kafka** (ej: `payment-succeeded` -> `ticket-issued`).
+- **Verificación de Sistema (Unified System Check):** Un solo paso de orquestación en CI que valida la infraestructura (Health) y el flujo de negocio (E2E) sobre la misma instancia de Docker Compose para optimizar tiempos.
 
 ---
 

@@ -30,7 +30,7 @@ Este documento define la estrategia, el alcance y los recursos para las activida
 | **Unitarias** | xUnit, Moq | Verificación de lógica pura en Dominio y Handlers de Aplicación. Cobertura objetivo: >85%. |
 | **Integración** | Testcontainers, Kafka, Redis, Postgres | Validación de adaptadores de infraestructura y persistencia en esquemas específicos. |
 | **Contrato** | OpenAPI Validator | Asegurar que los servicios cumplen con los esquemas definidos en `/contracts/openapi/`. |
-| **E2E / Smoke** | Scripts Bash, Docker-Compose | Validación de flujo completo en entorno pre-producción (Docker). |
+| **E2E / Smoke (Unified)** | Scripts Bash, Docker-Compose | Validación de infraestructura y flujo completo en un solo paso de orquestación en CI. |
 
 ### 3.2 Técnicas de Diseño de Pruebas
 1. **Análisis de Valores Límite:** Aplicado en los TTL de reserva (14:59s vs 15:01s) y stock de tickets.
