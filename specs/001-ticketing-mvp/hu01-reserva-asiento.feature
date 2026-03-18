@@ -10,24 +10,24 @@ Característica: Selección y Reserva Temporal de Asiento
     Y el cliente está visualizando el mapa de asientos
 
   Escenario: Reserva exitosa de un asiento disponible
-    Dado que el asiento "A-15" está en estado "disponible"
-    Cuando el cliente selecciona el asiento "A-15"
-    Entonces el sistema debe marcar el asiento como "reservado"
-    Y debe iniciar un temporizador de 15 minutos (TTL)
-    Y el asiento debe quedar bloqueado exclusivamente para este cliente
+    Dado que un asiento se encuentra en estado "disponible"
+    Cuando el cliente selecciona dicho asiento para reservarlo y agregarlo al carrito simultáneamente
+    Entonces el sistema debe confirmar la reserva y la adición al carrito del usuario de forma exitosa
+    Y debe iniciar automáticamente el conteo del tiempo de reserva temporal (TTL)
+    Y el asiento seleccionado debe quedar bloqueado para otros usuarios mientras el tiempo de reserva esté vigente
 
   Escenario: Liberación automática por expiración de tiempo (TTL)
-    Dado que el cliente tiene el asiento "B-10" reservado
-    Y el temporizador de 15 minutos ha expirado sin completar la compra
-    Cuando el sistema procesa la expiración
-    Entonces el asiento "B-10" debe volver a estado "disponible"
-    Y debe publicarse el evento "reservation-expired" en Kafka
+    Dado que el cliente ya tiene un asiento en su carrito con una reserva activa
+    Y el tiempo de reserva temporal permitido ha expirado sin que se complete la compra
+    Cuando el sistema procesa la expiración de dicha reserva
+    Entonces el asiento debe volver automáticamente al estado "disponible" en el mapa
+    Y el sistema debe notificar al cliente que su reserva ha expirado por tiempo agotado
 
-  Escenario: Intento de reserva de un asiento ya reservado (Concurrencia)
-    Dado que el cliente A ya tiene reservado el asiento "C-05"
-    Cuando el cliente B intenta seleccionar el mismo asiento "C-05"
-    Entonces el sistema debe rechazar la solicitud del cliente B
-    Y debe mostrar un mensaje "El asiento ya no está disponible"
+  Escenario: Intento de reserva de un asiento ya ocupado por otro cliente
+    Dado que un asiento ya ha sido reservado por otro usuario previamente
+    Cuando un nuevo cliente intenta seleccionar ese mismo asiento para comprarlo
+    Entonces el sistema debe rechazar la solicitud de selección de forma inmediata
+    Y debe mostrar un mensaje de error indicando que "El asiento ya no está disponible"
 
   Escenario: Visualización del tiempo restante
     Dado que el cliente tiene una reserva activa
