@@ -99,6 +99,33 @@ services:
       "
     restart: "no"
 
+  migrations:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: speckit-migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ..:/app
+      - ./db/seed-admin.sql:/seed-admin.sql:ro
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ticketing
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - PATH=/root/.dotnet/tools:${PATH}
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y postgresql-client &&
+        dotnet tool install --global dotnet-ef &&
+        cd /app &&
+        chmod +x migrate-all-test.sh &&
+        ./migrate-all-test.sh &&
+        PGPASSWORD=postgres psql -h postgres -U postgres -d ticketing -f /seed-admin.sql
+      "
+    restart: "no"
+
 # Application services (built from repo for local development)
   identity:
     build:
@@ -117,7 +144,12 @@ services:
       redis:
         condition: service_healthy
       kafka:
-        condition: service_healthy 
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
+
 
   catalog:
     build:
@@ -161,6 +193,8 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
 
   ordering:
     build:
@@ -183,6 +217,8 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
 
   fulfillment:
     build:
@@ -203,6 +239,8 @@ services:
       kafka:
         condition: service_healthy
       kafka-init:
+        condition: service_completed_successfully
+      migrations:
         condition: service_completed_successfully
     volumes:
       - fulfillment-data:/app/data/tickets
@@ -227,26 +265,9 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
 
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_CATALOG_URL=http://catalog:5001
-        - NEXT_PUBLIC_INVENTORY_URL=http://inventory:5002
-        - NEXT_PUBLIC_ORDERING_URL=http://ordering:5003
-        - NEXT_PUBLIC_PAYMENT_URL=http://payment:5004
-    container_name: speckit-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - catalog
-      - inventory
-      - ordering
-      - payment
   notification:
     build:
       context: ..
@@ -270,6 +291,8 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
+      migrations:
+        condition: service_completed_successfully
 
 # Useful environment variables (for .NET apps or local dev use)
 # Use these values when configuring your services' connection strings.
@@ -289,3 +312,10 @@ volumes:
 # - This compose file is targeted for local development only.
 # - Postgres data is mounted at ./data/postgres so it persists between restarts.
 # - Healthchecks use simple TCP or client commands; adjust per your environment.
+
+
+
+
+
+
+
