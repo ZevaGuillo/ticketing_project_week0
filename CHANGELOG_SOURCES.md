@@ -4,7 +4,9 @@
 
 ---
 
-## 1. Análisis del Proyecto (Contexto)
+## Consulta 1: Análisis del Proyecto e Investigación Inicial
+
+### 1.1 Análisis del Proyecto (Contexto)
 
 | Aspecto | Estado Actual |
 |---------|--------------|
@@ -15,9 +17,9 @@
 
 ---
 
-## 2. Propuesta IA
+### 1.2 Propuesta IA
 
-### Modelo de Datos
+#### Modelo de Datos
 
 ```csharp
 WaitlistEntry:
@@ -25,7 +27,7 @@ WaitlistEntry:
   - JoinedAt, Priority, Status, NotifiedAt, ExpiresAt
 ```
 
-### Flujo Propuesto
+#### Flujo Propuesto
 
 1. Usuario intenta reservar → Sin asientos → Agregar a waitlist
 2. Asiento liberado → Notificar siguiente usuario (prioridad por tiempo)
@@ -33,7 +35,7 @@ WaitlistEntry:
 
 ---
 
-## 3. Investigación Humano
+### 1.3 Investigación Humano
 
 *(COMPLETADO - Se encontró redundancia con implementación existente)*
 
@@ -49,7 +51,7 @@ WaitlistEntry:
 
 ---
 
-## 4. Cuadro Comparativo
+### 1.4 Cuadro Comparativo
 
 | Aspecto | Propuesta IA | Investigación Humano |
 |---------|-------------|---------------------|
@@ -58,9 +60,10 @@ WaitlistEntry:
 | Eventos Kafka | Nuevos topics | **REDUNDANTE:** Topics `reservation-created` y `reservation-expired` ya existen y funcionan. Se pueden reutilizar para waitlist. |
 | Prioridad | FIFO + prioridad manual | **NUEVO:** Waitlist necesita priorización (FIFO). Se puede implementar con Redis Sorted Sets o campo `Priority` en BD. |
 | Expiración | TTL en BD | **REDUNDANTE:** `ReservationExpiryWorker` ya implementa background job con poll interval de 1 min. TTL de 15 min ya existe. |
+
 ---
 
-## 5. Decisión
+### 1.5 Decisión
 
 | Aspecto | Decisión | Justificación |
 |----------|----------|---------------|
@@ -68,3 +71,85 @@ WaitlistEntry:
 | Storage | PostgreSQL (reservations) + Redis (locks) - mismo patrón | Ya está implementado y funciona. Para waitlist, se puede usar el mismo enfoque. |
 | Eventos | **Reutilizar** topics existentes | `reservation-created` y `reservation-expired` ya existen. No crear nuevos topics para evitar complejidad. |
 | Expiración | **YA EXISTE** - No es necesario implementar | `ReservationExpiryWorker` ya hace el trabajo. |
+
+---
+
+## Consulta 2: Análisis Arquitectural - Opciones de Waitlist
+
+### 2.1 Propuesta IA
+
+| Opción | Descripción |
+|--------|-------------|
+| **A. FIFO Redis (LIST)** | Cola simple con RPUSH/LPOP |
+| **B. Priority (Sorted Set)** | Redis ZADD/ZPOP con score por prioridad |
+| **C. Event Sourcing (Kafka)** | Waitlist como secuencia de eventos en topic |
+| **D. Backpressure (Token Bucket)** | Rate limiter para control de flujo |
+| **E. FIFO PostgreSQL** | Tabla con SELECT FOR UPDATE SKIP LOCKED |
+
+### 2.2 Investigación Humano
+
+| Pregunta | Respuesta |
+|---------|-----------|
+| ¿Mejor opción para MVP? | **B (Redis Sorted Set)** |
+|¿Por qué? | Porque es suficientemente simple para implementar rápido, pero ya deja abierta la posibilidad de priorizar (por ejemplo VIP o tipos de usuario) sin tener que rehacer todo después. Además ya usamos Redis, así que no introduce tecnología nueva.1 |
+| ¿Qué resuelve bien? | Permite manejar orden (FIFO o prioridad), responde rápido y no complica demasiado el flujo. También facilita manejar expiraciones sin lógica adicional compleja. |
+| ¿Qué problemas puede traer? | CNo es 100% consistente como una base de datos, entonces hay que cuidar duplicados o reintentos. Tampoco es tan fácil de inspeccionar como una tabla SQL.|
+| ¿Escalabilidad? | Sí. Redis permite escalar bastante bien, y como esto va por evento (eventId), se puede particionar naturalmente. |
+| ¿Necesito nuevos eventos en Kafka? | No necesariamente. Podemos empezar reutilizando eventos que ya existen como reservation-expired o payment-failed. Eso reduce bastante el esfuerzo inicial. |
+
+### 2.3 Decisión
+
+| Aspecto | Decisión | Justificación |
+|----------|----------|---------------|
+| **Opción** | **B (Redis Sorted Set) + PostgreSQL** | Es el mejor balance entre algo que funcione rápido y algo que no tengamos que rehacer en 2 meses. |
+| **Cola principal** | Redis Sorted Set | Nos da orden y flexibilidad sin complicarnos demasiado. |
+| **Persistencia** | PostgreSQL | Redis es rápido, pero no confiamos en él como fuente única. PostgreSQL nos sirve para auditoría y recuperación. |
+| **Notificaciones** | Kafka (reutilizar) | Ya lo tenemos funcionando. No vale la pena inventar otra cosa para esto. |
+
+---
+
+## Consulta 3: Análisis Staff Architect - Waitlist + Notificaciones
+
+### 3.1 Propuesta IA
+
+| Criterio | A | B | C | D | E |
+|----------|---|---|---|---|---|
+| **Complejidad** | Baja | Media | Alta | Media | Baja |
+| **Latencia** | <5s | <5s | 15-60s | <2s | 10-30s |
+| **Escalabilidad** | Media | Alta | Muy Alta | Muy Alta | Baja |
+| **Impacto conversión** | Alto | Muy Alto | Muy Alto | Bajo | Alto |
+
+### 3.2 Investigación Humano
+
+| Pregunta | Respuesta |
+|---------|-----------|
+| ¿Mejor opción? | B (Redis Sorted Set) |
+| ¿Por qué? | Porque es la única opción que combina buen rendimiento con flexibilidad sin volverse compleja. No necesitamos algo tan pesado como event sourcing, pero tampoco algo tan limitado como una lista simple. |
+| ¿Cómo manejar notificaciones? | Kafka |
+| ¿Por qué? | Ya está integrado en el sistema, maneja bien reintentos y evita acoplar servicios. Implementar otra cosa sería duplicar esfuerzo. |
+| ¿Qué es crítico cuidar? | Idempotencia |
+| ¿Por qué? | Porque Kafka puede reenviar eventos. Si no controlamos esto, vamos a notificar dos veces al mismo usuario, lo que es mala experiencia. |
+| ¿Cómo evitar spam? | Limitar notificaciones por usuario |
+| ¿Por qué? | En eventos muy demandados, podríamos terminar enviando demasiadas notificaciones. Eso afecta experiencia y puede generar bloqueos de email. |
+| ¿KPIs realistas? | Conversion uplift: +15-25%, Latencia p95: <30s, Duplicados: <0.1% |
+| ¿Por qué esos números? | Son objetivos alcanzables sin optimización extrema. No estamos buscando perfección, sino impacto real rápido. |
+
+
+#### Referencias
+- https://www.codestudy.net/blog/kafka-vs-redis-queue/
+- https://www.lanostechnologies.com/insights/event-driven-architecture-redis
+- https://medium.com/analytics-vidhya/redis-sorted-sets-explained-2d8b6302525
+
+
+### 3.3 Decisión
+
+| Aspecto | Decisión | Justificación |
+|--------|----------|---------------|
+| Opción | B (Redis Sorted Set) + PostgreSQL | Es suficientemente buena para producción sin sobreingeniería. |
+| Notificaciones | Kafka Event-Driven | Ya está en el sistema, es confiable y desacopla bien. |
+| MVP | 1. Nueva entidad WaitlistEntry | Mantenerlo simple al inicio |
+|  | 2. Sorted Set: waitlist:{eventId}:{section} | Permite segmentar naturalmente |
+|  | 3. Consumir reservation-expired | Reutilizamos lo que ya existe |
+|  | 4. Publicar waitlist.notification | Mantiene el flujo desacoplado |
+| Escala futura | Redis Cluster, Event Sourcing si crece mucho | No complicarse ahora, pero dejar camino claro |
+|  | Prioridades (VIP) con score | Evolución natural sin rediseño |
