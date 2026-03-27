@@ -136,9 +136,19 @@ WaitlistEntry:
 
 
 #### Referencias
-- https://www.codestudy.net/blog/kafka-vs-redis-queue/
-- https://www.lanostechnologies.com/insights/event-driven-architecture-redis
-- https://medium.com/analytics-vidhya/redis-sorted-sets-explained-2d8b6302525
+
+- Redis Sorted Sets: https://redis.io/docs/latest/develop/data-types/sorted-sets/
+- ZRANGE command: https://redis.io/commands/zrange/
+- Tie-breaking in Redis: https://redis.io/docs/latest/develop/data-types/sorted-sets/#handling-duplicate-members
+- Distributed Locks: https://redis.io/docs/latest/develop/use/patterns/distributed-locks/
+- Redis EXPIRE: https://redis.io/docs/latest/commands/expire/
+- BullMQ (job queue): https://docs.bullmq.io/
+- Event Carried State Transfer: https://developer.confluent.io/patterns/event/event-carried-state-transfer/
+- Kafka retry policies: https://docs.confluent.io/platform/current/schema-validation/rules.html
+- Dead Letter Queue pattern: https://learn.microsoft.com/en-us/azure/architecture/patterns/dead-letter-channel
+- Transactional Outbox: https://microservices.io/patterns/data/transactional-outbox.html
+- Saga Pattern: https://microservices.io/patterns/data/saga.html
+- Idempotency patterns: https://stripe.com/blog/idempotent-requests
 
 
 ### 3.3 Decisión
@@ -153,3 +163,50 @@ WaitlistEntry:
 |  | 4. Publicar waitlist.notification | Mantiene el flujo desacoplado |
 | Escala futura | Redis Cluster, Event Sourcing si crece mucho | No complicarse ahora, pero dejar camino claro |
 |  | Prioridades (VIP) con score | Evolución natural sin rediseño |
+
+---
+
+## Consulta 4: FIFO vs Prioridad + Fairness
+
+### 4.1 Propuesta IA
+
+| Escenario | Solución propuesta |
+|-----------|-------------------|
+| FIFO puro | Score = Unix timestamp (segundos) |
+| Timestamp igual | Usuario con menor ID wins o random |
+| Fairness | Desadvantaged users gets boost |
+
+### 4.2 Investigación Humano
+
+| Pregunta | Respuesta |
+|---------|-----------|
+| ¿FIFO puro o con prioridad futura (VIP)? | **FIFO por defecto + VIP score opcional**. Implementar con score compuesto: `score = timestamp * 1000000 + (10000 - priority * 100)`. VIP = priority 1, regular = priority 10. |
+| ¿Qué pasa si dos usuarios tienen mismo timestamp? | Redis Sorted Set usa **lexicographical order** si scores son iguales. Para asegurar determinismo, usar **secondary sort** por userId o añadir microsegundos al timestamp. |
+| ¿Cómo manejar fairness? | **Estrategia hybrid**: (a) Timestamp base para FIFO, (b) Priority boost para usuarios varatos/descounted, (c) Decay temporal: usuarios en waitlist >X horas reciben boost proporcional. |
+| ¿Conflictos de score? | Usar **ZADD with NX** + fallback a **ZREVRANGE** para obtener siguiente. No hay race condition porque Redis es atómico. |
+
+### 4.3 Decisión
+
+| Aspecto | Decisión | Justificación |
+|----------|----------|---------------|
+| **Modelo** | **FIFO + Priority Score** | Flexibilidad futura sin perder fairness |
+| **Tie-breaker** | userId como suffix | Determinismo sin randomness |
+| **Fairness** | Temporal decay boost | Usuarios varatos no quedan atrás para siempre |
+| **Implementación** | Redis ZADD con score compuesto | Una sola operación atómica |
+
+---
+
+#### Referencias
+
+- Redis Sorted Sets: https://redis.io/docs/latest/develop/data-types/sorted-sets/
+- ZRANGE command: https://redis.io/commands/zrange/
+- Tie-breaking in Redis: https://redis.io/docs/latest/develop/data-types/sorted-sets/#handling-duplicate-members
+- Distributed Locks: https://redis.io/docs/latest/develop/use/patterns/distributed-locks/
+- Redis EXPIRE: https://redis.io/docs/latest/commands/expire/
+- BullMQ (job queue): https://docs.bullmq.io/
+- Event Carried State Transfer: https://developer.confluent.io/patterns/event/event-carried-state-transfer/
+- Kafka retry policies: https://docs.confluent.io/platform/current/schema-validation/rules.html
+- Dead Letter Queue pattern: https://learn.microsoft.com/en-us/azure/architecture/patterns/dead-letter-channel
+- Transactional Outbox: https://microservices.io/patterns/data/transactional-outbox.html
+- Saga Pattern: https://microservices.io/patterns/data/saga.html
+- Idempotency patterns: https://stripe.com/blog/idempotent-requests
