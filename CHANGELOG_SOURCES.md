@@ -233,3 +233,38 @@ WaitlistEntry:
 - Dual Write Pattern: https://github.com/banbrando/dual-write
 - Transactional Outbox: https://microservices.io/patterns/data/transactional-outbox.html
 - Kafka Idempotent Producer: https://docs.confluent.io/platform/current/installation/producer-configs.html
+
+---
+
+## Diagrama de secuencia - Selección de usuario cuando se libera asiento
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant API as Waitlist API
+    participant Redis as Redis Sorted Set
+    participant DB as PostgreSQL
+    participant Kafka as Kafka
+    U->>API: POST /waitlist/join {eventId, section}
+    
+    alt Verificar disponibilidad
+        API->>Redis: EXISTS waitlist:{eventId}:{section}
+        Redis-->>API: true/false
+    end
+    
+    alt Verificar duplicado
+        API->>DB: SELECT * FROM waitlist_entries WHERE user_id=? AND event_id=? AND status='WAITING'
+        DB-->>API: entry (si existe)
+        alt Ya existe
+            API-->>U: 409 Conflict (ya está en waitlist)
+        end
+    end
+    
+    API->>DB: INSERT waitlist_entry (WAITING)
+    DB-->>API: entry created
+    
+    API->>Redis: ZADD waitlist:{eventId}:{section} score userId
+    Redis-->>API: OK
+    
+    API-->>U: 200 OK {position: N, estimatedWait: N*15min}
+```
