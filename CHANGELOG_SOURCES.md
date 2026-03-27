@@ -309,3 +309,124 @@ sequenceDiagram
     W->>Redis: SET notification:processed:{key} 1 EX 86400
     Redis-->>W: OK
 ```
+
+---
+
+## Diagrama ER - Schema de Base de Datos
+
+```mermaid
+erDiagram
+    USERS {
+        string id PK
+        string email UK
+        string name
+        int loyalty_tier
+        datetime created_at
+    }
+    
+    EVENTS {
+        string id PK
+        string name
+        datetime event_date
+        bool is_sold_out
+    }
+    
+    SECTIONS {
+        string id PK
+        string name
+        decimal base_price
+    }
+    
+    SEATS {
+        string id PK
+        string event_id FK
+        string section
+        string row
+        int number
+        bool is_reserved
+    }
+    
+    RESERVATIONS {
+        string id PK
+        string seat_id FK
+        string customer_id FK
+        string status
+        datetime created_at
+        datetime expires_at
+    }
+    
+    WAITLIST_ENTRIES {
+        string id PK
+        string event_id FK
+        string user_id FK
+        string seat_id FK
+        string section
+        datetime joined_at
+        int priority
+        string status
+        datetime notified_at
+        datetime expires_at
+        string idempotency_key UK
+        datetime created_at
+        datetime updated_at
+    }
+    
+    NOTIFICATION_TOKENS {
+        string id PK
+        string waitlist_entry_id FK
+        string token
+        datetime expires_at
+        bool is_used
+    }
+    
+    ORDERS {
+        string id PK
+        string user_id FK
+        string status
+        decimal total_amount
+        datetime created_at
+    }
+    
+    ORDER_ITEMS {
+        string id PK
+        string order_id FK
+        string seat_id FK
+        decimal price
+    }
+    
+    PAYMENTS {
+        string id PK
+        string order_id FK
+        decimal amount
+        string status
+        datetime created_at
+    }
+    
+    EMAIL_NOTIFICATIONS {
+        string id PK
+        string user_id FK
+        string recipient_email
+        string status
+        datetime created_at
+    }
+    
+    TICKETS {
+        string id PK
+        string order_id FK
+        string seat_id FK
+        string qr_code
+        datetime issued_at
+    }
+    USERS ||--o{ WAITLIST_ENTRIES : ""
+    USERS ||--o{ RESERVATIONS : ""
+    USERS ||--o{ ORDERS : ""
+    USERS ||--o{ EMAIL_NOTIFICATIONS : ""
+    EVENTS ||--o{ SEATS : ""
+    SEATS ||--o{ RESERVATIONS : ""
+    SEATS ||--o{ ORDER_ITEMS : ""
+    SEATS ||--o{ WAITLIST_ENTRIES : ""
+    WAITLIST_ENTRIES ||--|| NOTIFICATION_TOKENS : ""
+    ORDERS ||--o{ ORDER_ITEMS : ""
+    ORDERS ||--o{ PAYMENTS : ""
+    ORDERS ||--o{ TICKETS : ""
+```
