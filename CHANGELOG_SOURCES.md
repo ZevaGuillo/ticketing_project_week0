@@ -140,15 +140,6 @@ WaitlistEntry:
 - Redis Sorted Sets: https://redis.io/docs/latest/develop/data-types/sorted-sets/
 - ZRANGE command: https://redis.io/commands/zrange/
 - Tie-breaking in Redis: https://redis.io/docs/latest/develop/data-types/sorted-sets/#handling-duplicate-members
-- Distributed Locks: https://redis.io/docs/latest/develop/use/patterns/distributed-locks/
-- Redis EXPIRE: https://redis.io/docs/latest/commands/expire/
-- BullMQ (job queue): https://docs.bullmq.io/
-- Event Carried State Transfer: https://developer.confluent.io/patterns/event/event-carried-state-transfer/
-- Kafka retry policies: https://docs.confluent.io/platform/current/schema-validation/rules.html
-- Dead Letter Queue pattern: https://learn.microsoft.com/en-us/azure/architecture/patterns/dead-letter-channel
-- Transactional Outbox: https://microservices.io/patterns/data/transactional-outbox.html
-- Saga Pattern: https://microservices.io/patterns/data/saga.html
-- Idempotency patterns: https://stripe.com/blog/idempotent-requests
 
 
 ### 3.3 Decisión
@@ -198,15 +189,47 @@ WaitlistEntry:
 
 #### Referencias
 
-- Redis Sorted Sets: https://redis.io/docs/latest/develop/data-types/sorted-sets/
-- ZRANGE command: https://redis.io/commands/zrange/
-- Tie-breaking in Redis: https://redis.io/docs/latest/develop/data-types/sorted-sets/#handling-duplicate-members
 - Distributed Locks: https://redis.io/docs/latest/develop/use/patterns/distributed-locks/
-- Redis EXPIRE: https://redis.io/docs/latest/commands/expire/
-- BullMQ (job queue): https://docs.bullmq.io/
-- Event Carried State Transfer: https://developer.confluent.io/patterns/event/event-carried-state-transfer/
-- Kafka retry policies: https://docs.confluent.io/platform/current/schema-validation/rules.html
-- Dead Letter Queue pattern: https://learn.microsoft.com/en-us/azure/architecture/patterns/dead-letter-channel
+
+---
+
+## Consulta 5: Consistencia en Sistema Distribuido
+
+### 5.1 Propuesta IA
+
+| Problema | Solución propuesta |
+|----------|-------------------|
+| Usuario seleccionado 2 veces | Lock distribuido + idempotency key |
+| Doble notificación | Payload con idempotency key + DLQ |
+| Redis/DB desincronizados | Patron Dual Write o Transactional Outbox |
+
+### 5.2 Investigación Humano
+
+| Pregunta | Respuesta |
+|---------|-----------|
+| ¿Cómo garantizas que un usuario no sea seleccionado 2 veces? | **Patrón atómico**: Usar Lua script en Redis que hace ZPOPMAX + ZREM en una sola operación atómica. Si ZREM retorna 0, otro worker ya lo tomó → reintentar con siguiente. |
+| ¿Cómo evitar doble notificación? | **Idempotency key** en payload: `SHA256(userId + eventId + seatId + timestamp)`. El servicio de notificaciones verifica si ya procesó esa key antes de enviar. Store en Redis con TTL 24h. |
+| ¿Qué pasa si Redis y DB se desincronizan? | **Patrón Dual Write**: (1) Escribir primero en PostgreSQL (source of truth), (2) Luego en Redis. Si falla Redis, el background worker hace sync. También usar **Transactional Outbox** para consistencia eventual. |
+| ¿Qué pasa si el worker falla después de seleccionar usuario pero antes de notificar? | **Estado intermedio en DB**: Reservation con status `NOTIFIED_PENDING`. Si no recibe confirmación en 15min, el worker de expiración lo limpia. |
+| ¿Cómo manejar reintentos de Kafka? | **Exactly-once semantics** no es trivial. Usar **idempotent producer** en Kafka + consumer checkpointing. Alternativamente: processed flag en DB para evitar reprocesamiento. |
+
+### 5.3 Decisión
+
+| Aspecto | Decisión | Justificación |
+|----------|----------|---------------|
+| **Selección usuario** | Lua script atómico (ZPOPMAX + ZREM) | Garantiza que solo un worker seleccione |
+| **Doble notificación** | Idempotency key en Redis + DB | Prevenir reenvíos |
+| **Redis/DB sync** | PostgreSQL como source of truth + sync worker | Confiabilidad sin perder rendimiento |
+| **Estado intermedio** | Reservation status `NOTIFIED_PENDING` | Rastrear estado para recovery |
+| **Kafka reintentos** | Idempotent producer + DLQ | Minimizar duplicados |
+
+---
+
+*El análisis detallado de patrones de consistencia, código Lua, FSM y métricas se encuentran en: `CONSISTENCY_ANALYSIS_DETAIL.md`*
+
+#### Referencias
+
+- Lua Scripts in Redis: https://redis.io/docs/latest/develop/programming-guide/lua-guide/
+- Dual Write Pattern: https://github.com/banbrando/dual-write
 - Transactional Outbox: https://microservices.io/patterns/data/transactional-outbox.html
-- Saga Pattern: https://microservices.io/patterns/data/saga.html
-- Idempotency patterns: https://stripe.com/blog/idempotent-requests
+- Kafka Idempotent Producer: https://docs.confluent.io/platform/current/installation/producer-configs.html
