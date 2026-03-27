@@ -268,3 +268,44 @@ sequenceDiagram
     
     API-->>U: 200 OK {position: N, estimatedWait: N*15min}
 ```
+
+---
+
+## Diagrama de secuencia - Notificación cuando se libera asiento
+
+```mermaid
+sequenceDiagram
+    participant W as WaitlistConsumer
+    participant Redis as Redis
+    participant DB as PostgreSQL
+    participant Kafka as Kafka
+    Kafka->>W: reservation-expired event
+    
+    rect rgb(240, 248, 255)
+        note right of W: Lua Script Atómico
+        W->>Redis: EVAL "ZPOPMAX ..." waitlist:{eventId}:{section}
+        Redis-->>W: userId (atómico)
+        
+        alt Usuario encontrado
+            W->>Redis: ZREM waitlist:{eventId}:{section} userId
+            Redis-->>W: 1 (removed)
+        else Otro worker ya lo tomó
+            W->>W: Retry con siguiente usuario
+        end
+    end
+    
+    W->>DB: SELECT * FROM waitlist_entries WHERE user_id=? AND status='WAITING'
+    DB-->>W: entry
+    
+    W->>DB: UPDATE waitlist_entries SET status='NOTIFIED', notified_at=NOW()
+    DB-->>W: OK
+    
+    W->>DB: INSERT reservation (NOTIFIED_PENDING, expires_at +15min)
+    DB-->>W: reservation created
+    
+    W->>Kafka: PRODUCE waitlist.notification {userId, eventId, seatId, token}
+    Kafka-->>W: OK
+    
+    W->>Redis: SET notification:processed:{key} 1 EX 86400
+    Redis-->>W: OK
+```
