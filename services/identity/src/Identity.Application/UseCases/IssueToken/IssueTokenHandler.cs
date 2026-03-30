@@ -21,20 +21,16 @@ public class IssueTokenHandler
 
     public async Task<TokenResult> Handle(IssueTokenCommand command)
     {
-        // Buscar usuario por email
         var user = await _userRepository.GetByEmailAsync(command.Email);
 
         if (user is null)
             throw new Exception("Invalid credentials");
 
-        // Validar que la contraseña coincide con el hash almacenado
         if (!_passwordHasher.VerifyPassword(command.Password, user.PasswordHash))
             throw new Exception("Invalid credentials");
 
-        // Generar token
-        var expiresAt = DateTime.UtcNow.AddHours(2);
-        var token = _tokenGenerator.Generate(user);
+        var tokenResult = _tokenGenerator.GenerateWithExpiration(user);
 
-        return new TokenResult(token, expiresAt, user.Role, user.Email);
+        return new TokenResult(tokenResult.Token, tokenResult.ExpiresAt, user.Role, user.Email);
     }
 }

@@ -2,6 +2,7 @@ using FluentAssertions;
 using Identity.Application.UseCases.IssueToken;
 using Identity.Domain.Entities;
 using Identity.Domain.Ports;
+using Identity.Domain.ValueObjects;
 using Moq;
 using Xunit;
 
@@ -28,7 +29,6 @@ public class IssueTokenHandlerTests
     [Fact]
     public async Task Handle_WithValidCredentials_ShouldReturnToken()
     {
-        // Arrange
         var command = new IssueTokenCommand("test@example.com", "password123");
         var user = new User(command.Email, "hashed_password");
         
@@ -38,27 +38,23 @@ public class IssueTokenHandlerTests
         _passwordHasherMock.Setup(h => h.VerifyPassword(command.Password, user.PasswordHash))
             .Returns(true);
             
-        _tokenGeneratorMock.Setup(g => g.Generate(user))
-            .Returns("valid_token");
+        _tokenGeneratorMock.Setup(g => g.GenerateWithExpiration(user))
+            .Returns(new TokenGeneratorResult("valid_token", DateTime.UtcNow.AddHours(2)));
 
-        // Act
         var result = await _handler.Handle(command);
 
-        // Assert
         result.Should().NotBeNull();
         result.AccessToken.Should().Be("valid_token");
-        _tokenGeneratorMock.Verify(g => g.Generate(user), Times.Once);
+        _tokenGeneratorMock.Verify(g => g.GenerateWithExpiration(user), Times.Once);
     }
 
     [Fact]
     public async Task Handle_WithInvalidUser_ShouldThrowException()
     {
-        // Arrange
         var command = new IssueTokenCommand("nonexistent@example.com", "password");
         _userRepositoryMock.Setup(r => r.GetByEmailAsync(command.Email))
             .ReturnsAsync((User?)null);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command));
         exception.Message.Should().Be("Invalid credentials");
     }
@@ -66,7 +62,6 @@ public class IssueTokenHandlerTests
     [Fact]
     public async Task Handle_WithWrongPassword_ShouldThrowException()
     {
-        // Arrange
         var command = new IssueTokenCommand("test@example.com", "wrong_password");
         var user = new User(command.Email, "hashed_password");
         
@@ -76,7 +71,6 @@ public class IssueTokenHandlerTests
         _passwordHasherMock.Setup(h => h.VerifyPassword(command.Password, user.PasswordHash))
             .Returns(false);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command));
         exception.Message.Should().Be("Invalid credentials");
     }
