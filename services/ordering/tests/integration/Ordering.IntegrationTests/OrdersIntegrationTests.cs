@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Ordering.Application.DTOs;
 using Ordering.Domain.Entities;
@@ -22,7 +23,6 @@ public class OrdersIntegrationTests : IClassFixture<OrderingApiFactory>
     [Fact]
     public async Task GetOrderDetails_WhenOrderExists_ReturnsSuccess()
     {
-        // Arrange: Seed an order in the In-Memory DB
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
         
@@ -38,23 +38,64 @@ public class OrdersIntegrationTests : IClassFixture<OrderingApiFactory>
         db.Orders.Add(testOrder);
         await db.SaveChangesAsync();
 
-        // Act
         var response = await _client.GetAsync($"/Orders/{orderId}");
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<dynamic>();
-        // Check partial properties since it's an anonymous object in the controller
         Assert.NotNull(result);
     }
 
     [Fact]
     public async Task GetOrderDetails_WhenOrderDoesNotExist_ReturnsNotFound()
     {
-        // Act
         var response = await _client.GetAsync($"/Orders/{Guid.NewGuid()}");
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostCartAdd_WithoutXUserIdHeader_ShouldReturn400()
+    {
+        var request = new
+        {
+            reservationId = Guid.NewGuid(),
+            seatId = Guid.NewGuid(),
+            price = 99.99m
+        };
+
+        var response = await _client.PostAsJsonAsync("/cart/add", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task PostCartAdd_WithXUserIdHeader_ShouldUseUserId()
+    {
+        var userId = Guid.NewGuid().ToString();
+        _client.DefaultRequestHeaders.Add("X-User-Id", userId);
+
+        var request = new
+        {
+            reservationId = Guid.NewGuid(),
+            seatId = Guid.NewGuid(),
+            price = 99.99m
+        };
+
+        var response = await _client.PostAsJsonAsync("/cart/add", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task PostCheckout_WithoutXUserIdHeader_ShouldReturn400()
+    {
+        var request = new
+        {
+            orderId = Guid.NewGuid()
+        };
+
+        var response = await _client.PostAsJsonAsync("/orders/checkout", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

@@ -25,14 +25,18 @@ public class OrdersController : ControllerBase
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(request.UserId) && string.IsNullOrEmpty(request.GuestToken))
+        var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+        
+        if (string.IsNullOrEmpty(request.UserId) && string.IsNullOrEmpty(request.GuestToken) && string.IsNullOrEmpty(userId))
         {
             return BadRequest("Either UserId or GuestToken must be provided");
         }
 
+        var effectiveUserId = !string.IsNullOrEmpty(userId) ? userId : request.UserId;
+
         var command = new CheckoutOrderCommand(
             request.OrderId,
-            request.UserId,
+            effectiveUserId,
             request.GuestToken
         );
 

@@ -20,6 +20,11 @@ public sealed class AddToCartHandler : IRequestHandler<AddToCartCommand, AddToCa
 
     public async Task<AddToCartResponse> Handle(AddToCartCommand request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(request.UserId) && string.IsNullOrEmpty(request.GuestToken))
+        {
+            return new AddToCartResponse(false, "Either UserId or GuestToken must be provided", null);
+        }
+
         try 
         {
             // Validate reservation before adding to cart

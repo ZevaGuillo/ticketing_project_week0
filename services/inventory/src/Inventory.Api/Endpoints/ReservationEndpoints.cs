@@ -1,12 +1,10 @@
 using MediatR;
 using Inventory.Application.DTOs;
 using Inventory.Application.UseCases.CreateReservation;
+using UserContext;
 
 namespace Inventory.Api.Endpoints;
 
-/// <summary>
-/// Endpoints for reservation management in the Inventory service.
-/// </summary>
 public static class ReservationEndpoints
 {
     public static void MapReservationEndpoints(this WebApplication app)
@@ -21,6 +19,7 @@ public static class ReservationEndpoints
     }
 
     private static async Task<IResult> CreateReservation(
+        HttpContext context,
         CreateReservationRequest request,
         IMediator mediator,
         CancellationToken cancellationToken)
@@ -28,12 +27,13 @@ public static class ReservationEndpoints
         if (request.SeatId == Guid.Empty)
             return Results.BadRequest("SeatId must not be empty");
 
-        if (string.IsNullOrEmpty(request.CustomerId))
-            return Results.BadRequest("CustomerId must not be empty");
+        var userId = context.Request.Headers[UserContextExtensions.UserIdHeader].FirstOrDefault();
+        if (string.IsNullOrEmpty(userId))
+            return Results.BadRequest($"{UserContextExtensions.UserIdHeader} header is required");
 
         try
         {
-            var command = new CreateReservationCommand(request.SeatId, request.CustomerId);
+            var command = new CreateReservationCommand(request.SeatId, userId);
             var response = await mediator.Send(command, cancellationToken);
             
             return Results.Created($"/reservations/{response.ReservationId}", response);
@@ -55,4 +55,3 @@ public static class ReservationEndpoints
         }
     }
 }
-

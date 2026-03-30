@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Ordering.Application.DTOs;
 using Ordering.Application.UseCases.AddToCart;
+using UserContext;
 
 namespace Ordering.Api.Controllers;
 
@@ -24,16 +25,20 @@ public class CartController : ControllerBase
     [HttpPost("add")]
     public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(request.UserId) && string.IsNullOrEmpty(request.GuestToken))
+        var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+        
+        if (string.IsNullOrEmpty(request.UserId) && string.IsNullOrEmpty(request.GuestToken) && string.IsNullOrEmpty(userId))
         {
             return BadRequest("Either UserId or GuestToken must be provided");
         }
+
+        var effectiveUserId = !string.IsNullOrEmpty(userId) ? userId : request.UserId;
 
         var command = new AddToCartCommand(
             request.ReservationId,
             request.SeatId,
             request.Price,
-            request.UserId,
+            effectiveUserId,
             request.GuestToken
         );
 

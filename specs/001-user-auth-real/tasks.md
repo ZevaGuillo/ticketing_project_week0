@@ -85,35 +85,35 @@ Esta phase crea el proyecto gateway desde cero como punto de entrada único.
 ## Phase 3 · Inventory Service — Red → Green → Refactor
 
 ### Red
-- [ ] T040 Escribir pruebas unitarias fallidas para `CreateReservationCommandHandler` exigiendo `userId` no vacío (`Inventory.UnitTests`).
-- [ ] T041 Crear pruebas de integración fallidas: `POST /reservations` recibe header `X-User-Id` y persiste el `userId` en `Reservation` (`Inventory.IntegrationTests`).
-- [ ] T042 Definir prueba de contrato Kafka fallida verificando que el evento `reservation-created` incluya campo `userId`.
+- [X] T040 Escribir pruebas unitarias fallidas para `CreateReservationCommandHandler` exigiendo `userId` no vacío (`Inventory.UnitTests`).
+- [X] T041 Crear pruebas de integración fallidas: `POST /reservations` recibe header `X-User-Id` y persiste el `userId` en `Reservation` (`Inventory.IntegrationTests`).
+- [X] T042 Definir prueba de contrato Kafka fallida verificando que el evento `reservation-created` incluya campo `userId`.
 
 ### Green
-- [ ] T043 Actualizar `CreateReservationCommandHandler` para leer `userId` del header `X-User-Id` y pasar T040/T041.
-- [ ] T044 Añadir `userId` a la entidad `Reservation` + migración EF Core y pasar T041/T042.
-- [ ] T045 Eliminar autenticación JWT directa de `Inventory.Api` (ahora la valida el gateway); el servicio solo lee headers de confianza.
+- [X] T043 Actualizar `CreateReservationCommandHandler` para leer `userId` del header `X-User-Id` y pasar T040/T041.
+- [X] T044 Añadir `userId` a la entidad `Reservation` + migración EF Core y pasar T041/T042.
+- [X] T045 Eliminar autenticación JWT directa de `Inventory.Api` (ahora la valida el gateway); el servicio solo lee headers de confianza.
 
 ### Refactor
-- [ ] T046 Extraer `UserContextMiddleware` que lea `X-User-Id`/`X-User-Role` y los exponga via `IUserContext` en toda la aplicación.
+- [X] T046 Extraer `UserContextMiddleware` que lea `X-User-Id`/`X-User-Role` y los exponga via `IUserContext` en toda la aplicación.
 
 ---
 
 ## Phase 4 · Ordering Service — Red → Green → Refactor
 
 ### Red
-- [ ] T050 Añadir pruebas unitarias fallidas para `CreateDraftOrderCommandHandler` que rechacen `userId` vacío (`Ordering.Application.UnitTests`).
-- [ ] T051 Crear pruebas de integración fallidas: `POST /orders` sin header `X-User-Id` → 400 (`Ordering.IntegrationTests`).
-- [ ] T052 Crear prueba de consumidor Kafka fallida verificando que al consumir `reservation-created` se mapee `userId` a la orden.
+- [X] T050 Añadir pruebas unitarias fallidas para `CreateDraftOrderCommandHandler` que rechacen `userId` vacío (`Ordering.Application.UnitTests`).
+- [X] T051 Crear pruebas de integración fallidas: `POST /orders` sin header `X-User-Id` → 400 (`Ordering.IntegrationTests`).
+- [X] T052 Crear prueba de consumidor Kafka fallida verificando que al consumir `reservation-created` se mapee `userId` a la orden.
 
 ### Green
-- [ ] T053 Ajustar `Ordering.Domain/Order` y handlers para exigir `userId` hasta pasar T050.
-- [ ] T054 Leer `X-User-Id` desde headers en `Ordering.Api` y pasarlo al command hasta pasar T051.
-- [ ] T055 Mapear `userId` desde evento `reservation-created` a la orden draft hasta pasar T052.
-- [ ] T056 Eliminar autenticación JWT directa de `Ordering.Api`; validación queda en gateway.
+- [X] T053 Ajustar `Ordering.Domain/Order` y handlers para exigir `userId` hasta pasar T050.
+- [X] T054 Leer `X-User-Id` desde headers en `Ordering.Api` y pasarlo al command hasta pasar T051.
+- [X] T055 Mapear `userId` desde evento `reservation-created` a la orden draft hasta pasar T052.
+- [X] T056 Eliminar autenticación JWT directa de `Ordering.Api`; validación queda en gateway.
 
 ### Refactor
-- [ ] T057 Compartir `UserContextMiddleware` e `IUserContext` entre Inventory y Ordering extrayéndolos a `services/shared/UserContext/`.
+- [X] T057 Compartir `UserContextMiddleware` e `IUserContext` entre Inventory y Ordering extrayéndolos a `services/shared/UserContext/`.
 
 ---
 
