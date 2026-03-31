@@ -10,6 +10,7 @@
 
 - [ ] T001 Create EF Core migration for waitlist tables in services/inventory/src/Inventory.Infrastructure/Persistence/Migrations/
 - [ ] T002 [P] Configure Kafka consumer for reservation-expired topic in services/inventory/src/Inventory.Infrastructure/Messaging/
+- [ ] T002b [P] Configure Kafka DLQ topic for failed messages in services/inventory/src/Inventory.Infrastructure/Messaging/
 - [ ] T003 [P] Configure Kafka producer for waitlist.opportunity-granted topic in services/inventory/src/Inventory.Infrastructure/Messaging/
 - [ ] T004 Add Redis configuration for waitlist queue (Sorted Set) in services/inventory/src/Inventory.Infrastructure/Configuration/
 
@@ -67,6 +68,7 @@
 
 - [ ] T022 [US4] Implement ReservationExpiredEventConsumer in services/inventory/src/Inventory.Infrastructure/Messaging/Consumers/
 - [ ] T023 [US4] Add idempotency check for event processing in services/inventory/src/Inventory.Infrastructure/Services/
+- [ ] T023b [US4] Configure Kafka DLQ for failed messages in services/inventory/src/Inventory.Infrastructure/Messaging/
 
 ### Integration Tests
 
@@ -88,6 +90,8 @@
 
 - [ ] T026 [US5] Implement WaitlistSelectionService with FIFO logic in services/inventory/src/Inventory.Infrastructure/Services/
 - [ ] T027 [US5] Implement Lua script for atomic user selection (ZPOPMAX + ZREM) in services/inventory/src/Inventory.Infrastructure/Services/
+- [ ] T027b [US5] Add distributed lock for atomic selection in services/inventory/src/Inventory.Infrastructure/Services/
+- [ ] T027c [US5] Add Redis idempotency cache for processed events in services/inventory/src/Inventory.Infrastructure/Services/
 - [ ] T028 [US5] Create WaitlistOpportunityGrantedEvent publisher in services/inventory/src/Inventory.Infrastructure/Messaging/Producers/
 - [ ] T029 [US5] Implement opportunity window creation with 10-min TTL in services/inventory/src/Inventory.Infrastructure/Persistence/
 
@@ -112,6 +116,7 @@
 - [ ] T032 [US6] Implement WaitlistNotificationHandler in services/inventory/src/Inventory.Application/Handlers/
 - [ ] T033 [US6] Add user status validation (active account + verified email) in services/inventory/src/Inventory.Application/Handlers/
 - [ ] T034 [US6] Create email composition logic in services/inventory/src/Inventory.Application/Services/
+- [ ] T034b [US6] Add retry policy with exponential backoff for failed notifications in services/inventory/src/Inventory.Application/Handlers/
 
 ---
 
@@ -132,6 +137,20 @@
 - [ ] T038 [US7] Add opportunity status validation (OFFERED, not expired) in services/inventory/src/Inventory.Application/Handlers/
 - [ ] T039 [US7] Create reservation with 15-min TTL in services/inventory/src/Inventory.Application/Services/
 - [ ] T040 [US7] Create GET /api/waitlist/opportunity/{token} endpoint in services/inventory/src/Inventory.Api/Endpoints/
+
+---
+
+## Phase 7b: Opportunity Expiration & Re-selection (CRITICAL)
+
+**Story Goal**: When opportunity expires → release for next user in queue
+
+**Independent Test Criteria**: Opportunity expires → Next user selected → New opportunity created
+
+### Implementation
+
+- [ ] T040b [US7] Implement OpportunityExpiryWorker (BackgroundService) in services/inventory/src/Inventory.Infrastructure/Workers/
+- [ ] T040c [US7] Add automatic re-selection trigger in OpportunityExpiryWorker in services/inventory/src/Inventory.Infrastructure/Workers/
+- [ ] T040d [US7] Add Redis-DB consistency check after re-selection in services/inventory/src/Inventory.Infrastructure/Workers/
 
 ---
 
@@ -164,6 +183,8 @@ Phase 5 (HU-005) ─────────────────────
     ↓
 Phase 7 (HU-007)
     ↓
+Phase 7b (Opportunity Expiry & Re-selection)
+    ↓
 Phase 8 (HU-002, HU-003)
 ```
 
@@ -173,21 +194,23 @@ Phase 8 (HU-002, HU-003)
 
 | Task Set | Parallel Tasks |
 |----------|----------------|
-| Setup | T002, T003, T004 |
+| Setup | T002, T002b, T003, T004 |
 | Foundational | T009, T010 |
 | HU-004 parallel with HU-001 | T021-T024 with T013-T020 |
+| Expiry & Re-selection | T040b, T040c, T040d |
 | UI Components | T041-T045 |
 
 ---
 
 ## MVP Scope
 
-**Recommended MVP**: Phase 3 (HU-001) + Phase 4 (HU-004) + Phase 5 (HU-005) + Phase 6 (HU-006) + Phase 7 (HU-007)
+**Recommended MVP**: Phase 3 (HU-001) + Phase 4 (HU-004) + Phase 5 (HU-005) + Phase 6 (HU-006) + Phase 7 (HU-007) + Phase 7b (Expiry Worker)
 
 This delivers complete waitlist-to-purchase flow:
 1. User joins waitlist
 2. Seat releases → user selected (FIFO)
 3. Email notification sent
 4. User validates opportunity → reservation created
+5. Opportunity expires → next user selected automatically
 
-**Total MVP Tasks**: T001-T040 (exclude T041-T045)
+**Total MVP Tasks**: T001-T040d (exclude T041-T045)

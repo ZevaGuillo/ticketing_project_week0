@@ -106,6 +106,47 @@ Al revisar si el proyecto implementa observabilidad, se encontró que:
 
 ---
 
+## Corrección 5: Gaps Críticos en Tareas de Concurrencia y Expiración
+
+### Problema Identificado
+
+Análisis de `/speckit.analyze` identificó gaps críticos en el sistema distribuido:
+
+| Riesgo | Descripción | Cobertura Actual |
+|--------|-------------|------------------|
+| R1 | Doble selección (múltiples consumidores) | Parcial - Lua script sin distributed lock |
+| R2 | Pérdida de eventos | NONE - No DLQ configurado |
+| R3 | Inconsistencia Redis vs DB | NONE - No sync worker |
+| R4 | Expiración no manejada (RF-023) | NONE - No worker para re-selección |
+
+### Decisión Tomada
+
+**Agregar tareas** para cubrir gaps:
+
+| Nueva Tarea | Descripción |
+|-------------|-------------|
+| T002b | Configurar Kafka DLQ topic para mensajes fallidos |
+| T023b | Configurar Kafka DLQ para consumer |
+| T027b | Distributed lock para selección atómica |
+| T027c | Redis idempotency cache para eventos |
+| T034b | Retry policy con exponential backoff para notificaciones |
+| T040b | OpportunityExpiryWorker (BackgroundService) |
+| T040c | Re-selección automática post-expiración |
+| T040d | Redis-DB consistency check post-re-selección |
+
+### Archivos Modificados
+
+- `specs/002-demand-recovery-waitlist/tasks.md`: Agregadas 8 tareas nuevas
+- Total tareas: 45 → 53
+
+### Justificación
+
+- RF-023 requiere "liberar oportunidad tras expiración para siguiente usuario"
+- Constitución requiere Redis para distributed locks (sección 5)
+- Sistema distribuido necesita DLQ para manejo de mensajes fallidos
+
+---
+
 ## Consulta 1: Análisis del Proyecto e Investigación Inicial
 
 **Fecha:** 2026-03-25 | **Feature:** Waitlist + Notificaciones Event-Driven
