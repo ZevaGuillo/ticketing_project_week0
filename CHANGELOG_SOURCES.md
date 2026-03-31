@@ -72,6 +72,40 @@ El Executive Summary del spec mencionaba "immediate in-app notification" pero la
 
 ---
 
+## Corrección 4: Eliminación de Phase 9 (Observabilidad)
+
+### Problema Identificado
+
+Al revisar si el proyecto implementa observabilidad, se encontró que:
+
+| Aspecto | Estado |
+|---------|--------|
+| Inventory service | Solo ILogger básico |
+| Identity service | Serilog + OpenTelemetry |
+| Phase 9 tasks (T047-T050) | No ejecutables sin infraestructura |
+
+### Decisión Tomada
+
+**Eliminar Phase 9** del tasks.md ya que:
+
+1. La infraestructura de observabilidad no existe en Inventory service
+2. Agregar Serilog + OpenTelemetry requiere trabajo de arquitectura previo
+3. Las tareas T047-T050 dependían de infraestructura inexistente
+
+### Archivos Modificados
+
+- `specs/002-demand-recovery-waitlist/tasks.md`: Eliminada Phase 9 (4 tareas)
+- Total tareas reducidas: 50 → 46
+
+### Justificación
+
+- El proyecto usa ILogger básico en Inventory service
+- Serilog y OpenTelemetry están presentes solo en Identity y Gateway
+- La observabilidad debe ser un epic separado, no parte del feature de waitlist
+- El focus permanece en funcionalidad core (MVP: T001-T040)
+
+---
+
 ## Consulta 1: Análisis del Proyecto e Investigación Inicial
 
 **Fecha:** 2026-03-25 | **Feature:** Waitlist + Notificaciones Event-Driven
