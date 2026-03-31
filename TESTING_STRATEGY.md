@@ -172,6 +172,103 @@ Validamos la coreografía de microservicios:
 ## 5. Gestión de Datos de Prueba
 - **Datos Estáticos:** Archivos JSON para mapas de asientos predefinidos.
 - **Datos Dinámicos:** Generados en tiempo de ejecución para evitar colisiones entre ejecuciones de CI/CD.
+---
+
+**Firmado:** GitHub Copilot (QA Senior AI)
 
 ---
-**Firmado:** GitHub Copilot (QA Senior AI)
+
+## Apéndice: Estrategia de Pruebas para Waitlist Feature
+
+### A.1 Contexto de la Feature
+
+| Aspecto | Valor |
+|---------|-------|
+| **Feature** | Demand Recovery Waitlist |
+| **HU Mapping** | 7 User Stories (HU-001 a HU-007) |
+| **Reqs** | 23 Funcional Requirements (RF-001 a RF-023) |
+| **Arquitectura** | Hexagonal (Ports & Adapters) |
+| **TDD** | OBLIGATORIO |
+
+### A.2 Pirámide de Pruebas para Waitlist
+
+```mermaid
+graph TD
+    subgraph WaitlistPyramid
+    E2E[5% - E2E: Compra completa Waitlist]
+    INT_KAFKA[10% - Kafka: waitlist.opportunity-granted]
+    INT_COMP[15% - Componentes: API + Handlers]
+    UNIT[70% - Unitarias: WaitlistEntry, OpportunityWindow]
+    end
+    style UNIT fill:#4CAF50,stroke:#333
+    style INT_COMP fill:#FFC107,stroke:#333
+    style INT_KAFKA fill:#FF9800,stroke:#333
+    style E2E fill:#F44336,stroke:#333
+```
+
+### A.3 Cobertura por User Story
+
+| HU | Descripción | Tipo Prueba Prioritaria | Entidades Clave |
+|----|-------------|------------------------|-----------------|
+| HU-001 | Registro en waitlist | Unit + Component | WaitlistEntry |
+| HU-002 | Visualizar suscripción activa | Component | WaitlistEntry |
+| HU-003 | Cancelar suscripción | Unit + Component | WaitlistEntry |
+| HU-004 | Publicar evento de liberación | Integration (Kafka) | ReservationExpiredEvent |
+| HU-005 | Procesar liberación y asignar oportunidad | Unit + Integration | WaitlistEntry, OpportunityWindow |
+| HU-006 | Enviar notificación por email | Integration | WaitlistOpportunityGranted |
+| HU-007 | Validar oportunidad y crear reserva | Unit + Component | OpportunityWindow, Reservation |
+
+### A.4 Estrategia TDD para Waitlist (Workflow)
+
+```mermaid
+flowchart LR
+    A[RED: Escribir test] --> B[GREEN: Implementar mínimo]
+    B --> C[REFACTOR: Limpiar código]
+    C --> A
+```
+
+**Flujo por cada RF:**
+
+1. **RED:** Escribir test unitario fallando para el requisito
+2. **GREEN:** Implementar código mínimo para pasar
+3. **REFACTOR:** Aplicar SOLID, mantener tests verdes
+
+### A.5 Estrategias de Prueba por Capa
+
+| Capa | Estrategia | Enfoque |
+|------|-----------|---------|
+| **Unit** | TDD puro | Tests para Handlers, Services, Entidades. Mocks para puertos (IRepository, IEventPublisher). Validación de reglas de negocio. |
+| **Component** | API Testing | Tests de endpoints REST con WebApplicationFactory. Validación de contratos JSON y códigos HTTP. |
+| **Integration** | Testcontainers | Tests de repositorios con PostgreSQL real. Validación de constraints y migraciones. |
+| **Kafka** | Event-Flow Testing | Tests de consumo/publicación de eventos. Validación de idempotencia y coreografía. |
+| **E2E** | Docker Compose | Flujo completo: usuario → waitlist → notificación → checkout. |
+
+### A.6 Herramientas de Testing
+
+| Capa | Herramienta | Uso |
+|------|------------|-----|
+| Unit | xUnit + Moq + FluentAssertions | Lógica de dominio, Handlers |
+| Component | WebApplicationFactory + In-Memory | Endpoints API |
+| Integration | Testcontainers (PostgreSQL + Redis) | Persistencia real |
+| Kafka | Testcontainers + Confluent | Event flow |
+| E2E | Docker Compose | Flujo completo |
+
+### A.7 Métricas de Cobertura Objetivo
+
+| Métrica | Target |
+|---------|--------|
+| Unit Test Coverage | ≥ 80% |
+| Integration Test Coverage | ≥ 60% |
+| All Tests Pass | 100% |
+| TDD Compliance | 100% (RED → GREEN → REFACTOR) |
+
+### A.8 Estrategias de Mitigación de Riesgos de Testing
+
+| Riesgo de Testing | Estrategia de Mitigación |
+|-------------------|--------------------------|
+| Race condition en selección FIFO | Lua script atómico en Redis (operación ZPOPMAX + ZREM atómica) |
+| Doble notificación por Kafka replay | Idempotency key en Redis (SHA256 payload + TTL 24h) |
+| Desincronización Redis/DB | PostgreSQL como source of truth + background sync worker |
+| Oportunidad otorgada a múltiples usuarios | Estado OFFERED previene re-selección, validación antes de crear reserva |
+| Expiración de oportunidad no propagada | Background worker de expiración de oportunidades |
+
