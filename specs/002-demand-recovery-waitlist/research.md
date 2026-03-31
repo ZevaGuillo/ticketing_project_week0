@@ -1,8 +1,8 @@
 # Research: Demand Recovery Waitlist
 
 **Feature**: Waitlist with Internal Notifications  
-**Date**: 2026-03-30  
-**Source**: spec.md + CHANGELOG_SOURCES.md
+**Date**: 2026-03-31  
+**Source**: spec.md (updated with 7 User Stories)
 
 ---
 
@@ -12,12 +12,11 @@
 |--------|----------|-----------|
 | **Waitlist Queue** | Redis Sorted Sets + PostgreSQL | Redis for fast FIFO selection (ZPOPMAX), PostgreSQL for persistence and audit |
 | **Source of Truth** | PostgreSQL | Ensures data durability and recovery capability |
-| **Event Storage** | Kafka (reused topics) | No new topics needed; reuse `reservation-expired` |
+| **Kafka Events** | Consume from reused `reservation-expired` topic, publish `WaitlistOpportunityGranted` | New topic for waitlist opportunity events |
 
 **Alternatives Considered**:
 - PostgreSQL-only with `SELECT FOR UPDATE SKIP LOCKED`: Higher latency than Redis
 - Redis-only: Data loss risk on Redis failure
-- New Kafka topics: Unnecessary complexity; existing topics suffice
 
 ---
 
@@ -40,7 +39,7 @@
 | Aspect | Decision | Rationale |
 |--------|----------|-----------|
 | **Default Order** | FIFO by timestamp | Simple, fair, expected by users |
-| **Score Composition** | `timestamp * 1000000 + (10000 - priority * 100)` | Allows future priority boost without breaking FIFO |
+| **Score Composition** | `timestamp * 1000000 + (priority_modifier)` | Allows future priority boost without breaking FIFO |
 | **Tie-breaker** | userId as secondary sort | Deterministic ordering |
 
 **Alternatives Considered**:
@@ -49,13 +48,14 @@
 
 ---
 
-## Decision 4: Purchase Window
+## Decision 4: Opportunity Window Timing
 
 | Aspect | Decision | Rationale |
 |--------|----------|-----------|
-| **Duration** | 15 minutes (existing TTL) | Already configured in reservation system |
+| **Opportunity TTL** | 10 minutes | Per HU-005 acceptance criteria |
+| **Reservation TTL** | 15 minutes (existing) | Per HU-007, standard reservation |
 | **Expiration Handling** | Re-select next user in queue | Automatic demand reactivation |
-| **State Tracking** | `NOTIFIED_PENDING` status in DB | Enables recovery on worker failure |
+| **State Tracking** | `offered` → `in_progress` → `used/expired` | Per HU-007 acceptance criteria |
 
 ---
 
@@ -77,18 +77,29 @@
 
 ## Decision 6: Integration with Existing System
 
-| Integration Point | Approach |
-|-------------------|----------|
-| **Inventory Service** | Extend `CreateReservationCommandHandler` to check waitlist on reservation expiry |
-| **Reservation Expiry Worker** | Reuse existing worker; add waitlist notification logic |
-| **Kafka Topics** | Reuse `reservation-expired`, publish to `waitlist-notification` |
-| **Notification Service** | Reuse existing internal notification infrastructure |
+| Integration Point | Approach | User Story |
+|-------------------|----------|------------|
+| **Inventory Service** | Extend reservation expiry worker to check waitlist | HU-004 |
+| **Kafka Topics** | Consume from reused `reservation-expired`, publish to new `waitlist.opportunity-granted` | HU-005 |
+| **Notification Service** | Consume `WaitlistOpportunityGranted`, send email | HU-006 |
+| **Checkout Flow** | Validate opportunity token, create reservation | HU-007 |
+
+---
+
+## Decision 7: Email Notification vs In-App (Updated from Clarifications)
+
+| Aspect | Decision | Rationale |
+|--------|----------|-----------|
+| **Notification Channel** | Email (via notification service) | Per HU-006 - "Enviar Notificación por Email" |
+| **Retry Logic** | Single attempt, no retries | Per clarification session |
+| **User Validation** | Check active account + verified email | Per HU-006 Scenario 3 |
 
 ---
 
 ## Summary
 
-- **No NEEDS CLARIFICATION markers** - All requirements are clear from spec and CHANGELOG_SOURCES.md
+- **No NEEDS CLARIFICATION markers** - All requirements are clear from updated spec
 - **Architecture**: Hexagonal (ports/adapters), PostgreSQL + Redis, Kafka for async
 - **Testing**: TDD mandatory with xUnit + Testcontainers
-- **Existing infrastructure**: Reused wherever possible (reservation expiry, Redis locks, Kafka topics)
+- **User Stories**: 7 HUs mapped to specific integration points
+- **Key Flow**: Seat Release → FIFO Selection → Opportunity Granted → Email → Checkout Reservation

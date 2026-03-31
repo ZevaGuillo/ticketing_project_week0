@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The Demand Recovery Waitlist feature transforms lost conversion opportunities into recoverable revenue by capturing user purchase intent when seats are unavailable and reactivating it the moment inventory is freed. This internal notification system targets authenticated users who encounter sold-out events, enabling them to join a waitlist and receive immediate in-app notification when their desired seat becomes available. This feature addresses a critical gap in the current platform where users simply leave when inventory is unavailable, permanently losing their purchase intent. Expected outcomes include measurable conversion uplift from recovered demand, improved sell-through rates for event organizers, and reduced inventory waste from expired reservations.
+The Demand Recovery Waitlist feature transforms lost conversion opportunities into recoverable revenue by capturing user purchase intent when seats are unavailable and reactivating it the moment inventory is freed. This notification system targets authenticated users who encounter sold-out events, enabling them to join a waitlist and receive email notification when their desired seat becomes available. This feature addresses a critical gap in the current platform where users simply leave when inventory is unavailable, permanently losing their purchase intent. Expected outcomes include measurable conversion uplift from recovered demand, improved sell-through rates for event organizers, and reduced inventory waste from expired reservations.
 
 ---
 
@@ -132,7 +132,8 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 
 ### HU-001 — Registro de Usuario en Lista de Espera para Eventos Agotados (Priority: P1)
 
-**Scenario**: Authenticated user attempts to purchase a ticket but finds their desired seat unavailable due to sold-out status or active temporary reservation.
+**Historia de Usuario**:  
+Como usuario autenticado que intenta adquirir un asiento en un evento sin disponibilidad, quiero poder registrarme en una lista de espera asociada a ese contexto específico (evento y sección), para ser considerado cuando se liberen asientos y recibir una notificación sobre la disponibilidad.
 
 **Acceptance Scenarios**:
 
@@ -173,30 +174,41 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 
 ---
 
-### HU-002 — Visualización del estado de suscripción en lista de espera (Priority: P2)
+### HU-002 — Visualizar Suscripción Activa en Lista de Espera en la Página del Evento (Priority: P2)
 
-**Scenario**: User wants to see their waitlist subscription status for a specific event or context.
+**Historia de Usuario**:  
+Como usuario autenticado, quiero ver una confirmación visual de que estoy en la lista de espera directamente en la página del evento agotado, para que tenga la certeza de que mi registro fue exitoso y no necesite buscar esta información en otro lugar.
 
 **Acceptance Scenarios**:
 
-1. **Usuario con suscripción activa**  
-   **Given** el usuario está autenticado  
-   **And** tiene una suscripción activa en la lista de espera para un contexto específico (evento o sección)  
-   **When** consulta la vista del evento o contexto correspondiente  
-   **Then** el sistema debe mostrar que está en la lista de espera  
-   **And** debe indicar el contexto asociado a la suscripción
+1. **Visualización de estado activo en contexto**  
+   **Given** un usuario autenticado tiene una suscripción activa en la lista de espera para una sección específica de un evento  
+   **When** el usuario navega a la página de ese evento y visualiza esa sección  
+   **Then** el sistema NO debe mostrar la opción para unirse a la lista de espera  
+   **And** en su lugar, el sistema debe mostrar un componente visual informativo (ej. un banner o alerta)  
+   **And** este componente debe contener el texto: "Ya estás en la lista de espera para esta sección. Te notificaremos si se liberan asientos."
 
-2. **Usuario con suscripción expirada**  
-   **Given** el usuario tuvo una suscripción en la lista de espera que ha expirado  
-   **When** consulta el contexto correspondiente  
-   **Then** el sistema debe mostrar que su suscripción ya no está activa  
-   **And** debe permitirle registrarse nuevamente si el contexto continúa sin disponibilidad
+2. **Otro usuario visualiza el mismo evento**  
+   **Given** "ClienteA" tiene una suscripción activa para el "Evento A", "Sección VIP"  
+   **And** el usuario "ClienteC" está autenticado en una sesión diferente  
+   **When** "ClienteC" navega a la página de detalles del "Evento A"  
+   **Then** el sistema NO debe mostrar el banner informativo de suscripción a "ClienteC"  
+   **And** el sistema DEBE mostrar el botón "Unirme a la lista de espera" a "ClienteC"
 
-3. **Usuario con suscripción utilizada**  
-   **Given** el usuario tuvo una suscripción en la lista de espera que ya fue utilizada  
-   **When** consulta el contexto correspondiente  
-   **Then** el sistema debe mostrar que su oportunidad ya fue utilizada  
-   **And** no debe considerarlo como parte activa de la lista de espera
+3. **Usuario no autenticado (invitado)**  
+   **Given** un usuario invitado (no autenticado) navega por el sitio  
+   **And** el "Evento A", "Sección VIP" tiene 0 asientos disponibles  
+   **When** el usuario invitado navega a la página de detalles del "Evento A"  
+   **Then** el sistema NO debe mostrar el banner informativo de suscripción  
+   **And** el sistema DEBE mostrar el botón "Unirme a la lista de espera"
+
+4. **La suscripción del usuario no está en estado activa**  
+   **Given** "ClienteA" está autenticado  
+   **And** tuvo una suscripción para el "Evento A", "Sección VIP", pero su estado ahora es expirada o utilizada  
+   **And** la "Sección VIP" sigue con 0 asientos disponibles  
+   **When** "ClienteA" navega a la página de detalles del "Evento A"  
+   **Then** el sistema NO debe mostrar el banner informativo de suscripción activa  
+   **And** el sistema DEBE mostrar nuevamente el botón "Unirme a la lista de espera"
 
 **Business Rules**:
 - El sistema debe mostrar el estado actual de la suscripción (activa, expirada, consumida).
@@ -204,27 +216,37 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 
 **Why this priority**: Users need visibility into their waitlist status to make informed decisions about their purchase intent.
 
-**Independent Test**: Can be tested by creating waitlist entries in different states and verifying correct status display.
+**Independent Test**: Can be tested by creating waitlist entries in different states and verifying correct status display in event page.
 
 ---
 
-### HU-003 — Cancelación de suscripción en lista de espera (Priority: P2)
+### HU-003 — Cancelar Suscripción Activa desde la Página del Evento (Priority: P2)
 
-**Scenario**: User decides they no longer want to wait for a seat and wants to cancel their waitlist subscription.
+**Historia de Usuario**:  
+Como usuario autenticado con una suscripción activa en la lista de espera para un evento, sección o categoría específica, quiero poder cancelar mi suscripción, para dejar de participar en la lista de espera y no recibir notificaciones relacionadas con la disponibilidad de asientos.
 
 **Acceptance Scenarios**:
 
-1. **Cancelación exitosa**  
-   **Given** el usuario está autenticado  
-   **And** tiene una suscripción activa en la lista de espera para un contexto específico  
-   **When** solicita cancelar su suscripción  
-   **Then** el sistema debe eliminar o desactivar la suscripción  
-   **And** el usuario debe dejar de formar parte de la lista de espera
+1. **Inicio de la cancelación desde la UI del evento**  
+   **Given** el usuario está autenticado y visualiza la página de un evento para el cual tiene una suscripción activa  
+   **And** el sistema muestra el banner informativo "Ya estás en la lista de espera..."  
+   **When** el usuario hace clic en el enlace o botón "Cancelar suscripción" ubicado dentro o junto a dicho banner  
+   **Then** el sistema debe mostrar un modal de confirmación con el título "Confirmar Cancelación" y el texto "¿Estás seguro de que quieres abandonar la lista de espera? Perderás tu lugar actual."  
+   **And** el modal debe contener dos botones: "Confirmar" y "Cerrar"
 
-2. **Confirmación al usuario**  
-   **Given** la cancelación fue realizada exitosamente  
-   **When** el sistema procesa la solicitud  
-   **Then** debe mostrar una confirmación indicando que el usuario ya no está en la lista de espera
+2. **Cancelación exitosa tras confirmación**  
+   **Given** el usuario tiene abierto el modal de confirmación de cancelación  
+   **When** el usuario hace clic en el botón "Confirmar"  
+   **Then** el sistema debe actualizar el estado de la suscripción en la base de datos a cancelled  
+   **And** el sistema debe mostrar una notificación "toast" de éxito con el mensaje: "Has cancelado tu suscripción a la lista de espera."  
+   **And** la interfaz de la página del evento debe actualizarse inmediatamente: el banner informativo desaparece y el botón "Unirme a la lista de espera" vuelve a estar visible y activo
+
+3. **Abandono del flujo de cancelación**  
+   **Given** el usuario tiene abierto el modal de confirmación de cancelación  
+   **When** el usuario hace clic en el botón "Cerrar" o cierra el modal por otros medios (ej. tecla Esc)  
+   **Then** el modal debe cerrarse  
+   **And** la suscripción del usuario debe permanecer en estado activa  
+   **And** la interfaz de la página del evento no debe sufrir ningún cambio
 
 **Business Rules**:
 - Solo se pueden cancelar suscripciones en estado activo.
@@ -240,9 +262,10 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 
 ---
 
-### HU-004 — Detección de liberación de asiento por cambio de estado (Priority: P1)
+### HU-004 — Publicar Evento de Liberación de Asiento por Expiración de Reserva (Priority: P1)
 
-**Scenario**: System needs to detect when a seat transitions from reserved to available.
+**Historia de Usuario**:  
+Como sistema de inventario, quiero que la expiración de una reserva temporal de asiento genere y publique un evento de negocio, para que otros sistemas, como el de la lista de espera, puedan reaccionar a la nueva disponibilidad de inventario y maximizar las oportunidades de venta.
 
 **Acceptance Scenarios**:
 
@@ -256,6 +279,12 @@ The feature also provides valuable demand signal data—waitlist volume indicate
    **When** se registra el cambio  
    **Then** el sistema no debe considerarlo como una liberación de inventario
 
+3. **No se genera evento en una compra exitosa**  
+   **Given** un asiento específico tiene el estado reserved  
+   **When** el usuario completa la compra exitosamente antes de que el TTL expire  
+   **Then** el estado del asiento debe cambiar de reserved a sold  
+   **And** el sistema NO debe publicar un evento SeatReleased en el topic inventory-events
+
 **Business Rules**:
 - Solo la transición "reservado → disponible" se considera liberación.
 - Otras transiciones no activan procesos de reactivación.
@@ -267,58 +296,32 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 
 ---
 
-### HU-005 — Notificación de liberación de asiento (Priority: P1)
-
-**Scenario**: System needs to generate an internal notification when a seat becomes available.
-
-**Acceptance Scenarios**:
-
-1. **Notificación de liberación**  
-   **Given** un asiento pasa de reservado a disponible  
-   **When** ocurre la liberación  
-   **Then** el sistema debe generar una notificación interna de liberación
-
-2. **Notificación única**  
-   **Given** múltiples cambios sobre el mismo asiento  
-   **When** ocurre la liberación efectiva  
-   **Then** el sistema debe generar una única notificación
-
-3. **Disponibilidad para otros procesos**  
-   **Given** la notificación es generada  
-   **Then** debe estar disponible para que otros módulos la utilicen
-
-**Business Rules**:
-- Cada liberación válida debe generar un único evento.
-- El evento debe contener contexto suficiente para identificar el inventario.
-- El sistema debe garantizar idempotencia en la emisión de eventos.
-
-**Why this priority**: This event enables downstream processes to select waitlisted users for notification.
-
-**Independent Test**: Can be tested by triggering seat releases and verifying event generation with idempotency.
-
----
-
 ### EPIC-003: Notificación y Reactivación de Demanda
 
 ---
 
-### HU-006 — Selección de usuarios en lista de espera para reactivación de demanda (Priority: P1)
+### HU-005 — Procesar Liberación de Asiento y Asignar Oportunidad al Siguiente en la Cola (Priority: P1)
 
-**Scenario**: System needs to select users from the waitlist in FIFO order when seats become available.
+**Historia de Usuario**:  
+Como sistema de lista de espera, quiero consumir eventos de liberación de asientos para seleccionar al primer usuario elegible (FIFO) y cambiar el estado de su suscripción, para que se le asigne formalmente una oportunidad de compra y se inicie el flujo de notificación.
 
 **Acceptance Scenarios**:
 
-1. **Selección en orden de registro**  
-   **Given** existe una lista de usuarios en la lista de espera para un evento o sección  
-   **And** se libera al menos un asiento en ese contexto  
-   **When** el sistema realiza la selección  
-   **Then** debe seleccionar al usuario con mayor antigüedad en la lista  
-   **And** debe respetar el orden de registro
+1. **Asignación exitosa al primer usuario en la cola**  
+   **Given** el servicio consume un evento SeatReleased para un asiento en el "Evento A", "Sección VIP"  
+   **And** la lista de espera para ese contexto tiene varios usuarios con suscripción activa  
+   **And** "UsuarioX" es el usuario con la fecha de suscripción más antigua (FIFO)  
+   **When** el evento es procesado  
+   **Then** el sistema debe seleccionar únicamente a "UsuarioX"  
+   **And** el estado de la suscripción de "UsuarioX" debe cambiar de activa a ofrecida  
+   **And** el sistema debe publicar un nuevo evento WaitlistOpportunityGranted que contenga el userId de "UsuarioX", los detalles del evento/sección y un TTL para la oportunidad (ej. 10 minutos)
 
-2. **Selección por contexto específico**  
-   **Given** existen múltiples listas de espera para diferentes eventos o secciones  
-   **When** se libera un asiento en un contexto específico  
-   **Then** el sistema debe seleccionar usuarios únicamente de la lista correspondiente a ese contexto
+2. **No hay usuarios elegibles en la lista de espera**  
+   **Given** el servicio consume un evento SeatReleased  
+   **And** no hay ningún usuario con suscripción activa en la lista de espera para ese contexto  
+   **When** el evento es procesado  
+   **Then** el sistema no debe realizar ninguna selección ni cambiar ningún estado  
+   **And** no se debe publicar ningún evento WaitlistOpportunityGranted
 
 **Business Rules**:
 - La selección se realiza en orden FIFO basado en timestamp.
@@ -331,22 +334,32 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 
 ---
 
-### HU-007 — Notificación de disponibilidad (Priority: P1)
+### HU-006 — Enviar Notificación por Email de Oportunidad de Compra (Priority: P1)
 
-**Scenario**: System needs to notify selected users when seat inventory becomes available.
+**Historia de Usuario**:  
+Como sistema de notificaciones, quiero consumir eventos de oportunidad de la lista de espera para componer y enviar un correo electrónico al usuario seleccionado, para que el usuario sea informado de inmediato sobre su oportunidad de compra por tiempo limitado y pueda actuar rápidamente.
 
 **Acceptance Scenarios**:
 
-1. **Envío de notificación a usuario seleccionado**  
-   **Given** se libera uno o más asientos en un contexto específico  
-   **And** existen usuarios seleccionados en la lista de espera para ese contexto  
-   **When** el sistema procesa la liberación  
-   **Then** debe enviar una notificación a cada usuario seleccionado
+1. **Envío de email tras recibir evento de oportunidad**  
+   **Given** el servicio de notificaciones consume un evento WaitlistOpportunityGranted del topic de Kafka  
+   **And** el evento contiene userId, eventId, sectionId y un opportunityTTL  
+   **And** el usuario asociado al userId tiene una cuenta activa y un correo electrónico verificado  
+   **When** el evento es procesado  
+   **Then** el sistema debe componer un correo electrónico dirigido al usuario  
+   **And** el correo debe ser entregado a un proveedor de servicios de email para su envío
 
 2. **Vigencia de la oportunidad**  
    **Given** el usuario recibe una notificación  
    **When** accede después de un periodo definido  
    **Then** el sistema debe validar si la oportunidad sigue vigente antes de permitir continuar con la compra
+
+3. **No se notifica a usuarios inactivos**  
+   **Given** el servicio consume un evento WaitlistOpportunityGranted  
+   **But** el usuario asociado al userId tiene su cuenta en estado inactiva o suspendida  
+   **When** el evento es procesado  
+   **Then** el sistema NO debe enviar ningún correo electrónico  
+   **And** el evento debe ser marcado como procesado para evitar reintentos
 
 **Business Rules**:
 - Solo usuarios seleccionados reciben notificación.
@@ -355,20 +368,24 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 
 **Why this priority**: This is the communication step that informs users about available seats and enables purchase completion.
 
-**Independent Test**: Can be tested by creating waitlist entries, triggering seat release, and verifying notifications are sent.
+**Independent Test**: Can be tested by creating waitlist entries, triggering seat release, and verifying email notifications are sent.
 
 ---
 
-### HU-008 — Gestión de la ventana de oportunidad de compra (Priority: P1)
+### HU-007 — Validar Oportunidad de Compra y Crear Reserva para Checkout (Priority: P1)
 
-**Scenario**: User who receives notification needs a time-limited window to complete their purchase.
+**Historia de Usuario**:  
+Como un usuario que ha hecho clic en el enlace de notificación de la lista de espera, quiero que el sistema valide mi oportunidad de compra y me reserve el asiento automáticamente, para que pueda proceder al pago de forma segura y sin el riesgo de que alguien más compre el asiento.
 
 **Acceptance Scenarios**:
 
-1. **Asignación de ventana de oportunidad**  
-   **Given** el usuario recibe una notificación de disponibilidad  
-   **When** se le habilita la oportunidad de compra  
-   **Then** el sistema debe asignar un tiempo límite para utilizar dicha oportunidad
+1. **Acceso exitoso con oportunidad válida**  
+   **Given** un usuario accede a la URL de oportunidad con un token válido  
+   **And** la oportunidad asociada al token está en estado offered y su TTL no ha expirado  
+   **When** el sistema procesa la solicitud  
+   **Then** el sistema debe cambiar el estado de la oportunidad a in_progress (o similar) para prevenir su reutilización  
+   **And** el sistema debe crear una reserva temporal estándar (TTL de 15 minutos) para el asiento asociado a nombre del usuario  
+   **And** el usuario debe ser redirigido a la página de checkout con el asiento ya en su carrito
 
 2. **Acceso dentro del tiempo permitido**  
    **Given** el usuario accede dentro del tiempo límite establecido  
@@ -396,7 +413,7 @@ The feature also provides valuable demand signal data—waitlist volume indicate
    **And** permitir que otros usuarios en la lista de espera puedan ser considerados
 
 **Business Rules**:
-- Cada oportunidad de compra tiene un tiempo limitado de validez.
+- Cada oportunidad de compra tiene un tiempo limitado de validez
 - El tiempo comienza desde el momento en que se notifica al usuario.
 - Solo durante ese periodo el usuario tiene prioridad.
 
@@ -425,51 +442,49 @@ The feature also provides valuable demand signal data—waitlist volume indicate
 - **RF-002**: El sistema validará que el usuario no tenga una suscripción activa previa para el mismo contexto.
 - **RF-003**: El sistema registrará la suscripción del usuario asociada al evento y sección correspondientes.
 
-#### HU-002: Visualización de Estado
+#### HU-002: Visualización de Suscripción en Página del Evento
 
-- **RF-004**: El sistema consultará el estado de la suscripción del usuario en el contexto específico.
-- **RF-005**: El sistema mostrará si el usuario pertenece a la lista de espera para el evento o sección.
-- **RF-006**: El sistema permitirá la reinscripción si la suscripción está expirada y no existe disponibilidad.
+- **RF-004**: El sistema mostrará un banner informativo "Ya estás en la lista de espera..." cuando el usuario autenticado tenga suscripción activa.
+- **RF-005**: El sistema no mostrará el banner a otros usuarios sin suscripción activa.
+- **RF-006**: El sistema mostrará el botón "Unirme a la lista de espera" a usuarios sin suscripción activa.
 
 #### HU-003: Cancelación de Suscripción
 
-- **RF-007**: El sistema validará que la suscripción esté activa antes de permitir la cancelación.
-- **RF-008**: El sistema eliminará o desactivará la suscripción del usuario en el contexto correspondiente.
+- **RF-007**: El sistema mostrará un modal de confirmación antes de cancelar la suscripción.
+- **RF-008**: El sistema actualizará el estado a cancelled tras confirmación del usuario.
+- **RF-009**: El sistema mostrará una notificación toast de éxito tras cancelación.
 
-#### HU-004: Detección de Liberación de Asiento
+#### HU-004: Publicar Evento de Liberación
 
-- **RF-009**: El sistema identificará como liberación únicamente la transición de estado "reservado" a "disponible".
-- **RF-010**: El sistema generará una señal interna cuando se confirme una liberación válida.
+- **RF-010**: El sistema publicará un evento SeatReleased solo en transición "reservado → disponible".
+- **RF-011**: El sistema NO publicará evento en transición "reservado → vendido".
+- **RF-012**: El sistema garantizará idempotencia en la emisión de eventos.
 
-#### HU-005: Notificación de Liberación de Asiento
+#### HU-005: Procesar Liberación y Asignar Oportunidad
 
-- **RF-011**: El sistema generará una única notificación por cada liberación efectiva de inventario.
-- **RF-012**: La notificación incluirá el contexto (evento y sección).
+- **RF-013**: El sistema seleccionará usuarios activos en orden FIFO.
+- **RF-014**: El sistema cambiará el estado de suscripción de activa a ofrecida.
+- **RF-015**: El sistema publicará un evento WaitlistOpportunityGranted con TTL.
 
-#### HU-006: Selección de Usuarios en Lista de Espera
+#### HU-006: Enviar Notificación por Email
 
-- **RF-013**: El sistema seleccionará usuarios activos en la lista de espera del contexto correspondiente.
-- **RF-014**: La selección se realizará en orden de registro.
-- **RF-015**: El sistema asignará la oportunidad al usuario con mayor antigüedad.
+- **RF-016**: El sistema enviará email al usuario seleccionado tras recibir evento de oportunidad.
+- **RF-017**: El sistema validará que el usuario tenga cuenta activa y email verificado.
+- **RF-018**: El sistema no enviará email a usuarios inactivos.
 
-#### HU-007: Notificación de Disponibilidad
+#### HU-007: Validar Oportunidad y Crear Reserva
 
-- **RF-016**: El sistema enviará una notificación individual a cada usuario que haya sido previamente seleccionado de la lista de espera en el momento en que se procese la liberación de asientos en su contexto específico.
-- **RF-017**: El sistema verificará el estado de actividad de la suscripción del usuario antes del despacho, omitiendo el envío de notificaciones a aquellos registros catalogados como inactivos.
-
-#### HU-008: Gestión de la Ventana de Oportunidad de Compra
-
-- **RF-018**: El sistema asignará un tiempo límite para el uso de la oportunidad de compra.
-- **RF-019**: El sistema permitirá la compra dentro del tiempo establecido.
-- **RF-020**: El sistema bloqueará la compra si el tiempo ha expirado.
-- **RF-021**: El sistema marcará la oportunidad como utilizada tras su consumo.
-- **RF-022**: El sistema liberará la oportunidad si no es utilizada dentro del tiempo límite.
+- **RF-019**: El sistema validará la vigencia de la oportunidad antes de crear reserva.
+- **RF-020**: El sistema creará una reserva temporal de 15 minutos.
+- **RF-021**: El sistema bloqueará el acceso si la oportunidad expiró.
+- **RF-022**: El sistema marcará la oportunidad como utilizada tras consumo.
+- **RF-023**: El sistema liberará la oportunidad tras expiración para siguiente usuario.
 
 ### Key Entities
 
-- **Waitlist Subscription**: Represents a user's request to be notified when seats become available for a specific context (user + event + section). Contains user identification, event reference, section, registration timestamp, status (active, expired, consumed), notification timestamps.
-- **Inventory Release Event**: Represents the transition of a seat from reserved to available state. Contains seat identification, event reference, section, release timestamp.
-- **Opportunity Window**: Represents the time-limited opportunity granted to a user after notification, containing start timestamp, expiration timestamp, status (pending, used, expired).
+- **Waitlist Subscription**: Represents a user's request to be notified when seats become available for a specific context (user + event + section). Contains user identification, event reference, section, registration timestamp, status (active, offered, expired, consumed, cancelled), notification timestamps.
+- **Reservation Expired Event**: Represents the transition of a seat from reserved to available state (consumed from existing Kafka topic). Contains seat identification, event reference, section, release timestamp.
+- **Opportunity Window**: Represents the time-limited opportunity granted to a user after notification, containing start timestamp, expiration timestamp, status (offered, in_progress, used, expired), token.
 
 ---
 

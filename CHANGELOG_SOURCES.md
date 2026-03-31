@@ -1,5 +1,79 @@
 # CHANGELOG SOURCES - Sistema de Waitlist + Notificaciones
 
+**Fecha:** 2026-03-31 | **Feature:** Waitlist + Notificaciones - Correcciones post-análisis
+
+---
+
+## Corrección 1: Inconsistencia en Kafka Topic
+
+### Problema Identificado
+
+Durante la revisión del plan (`/speckit.analyze`), se detectó una inconsistencia en el nombre del topic de Kafka:
+
+| Ubicación | Estado Anterior | Estado Correcto |
+|-----------|-----------------|----------------|
+| plan.md Phase 0 | "Consume `SeatReleased`" | "Consume from reused `reservation-expired`" |
+| plan.md Constitution Check | "Consumes `SeatReleased`" | "Consumes `reservation-expired` (reused)" |
+| research.md | "Consume `SeatReleased`" | "Consume from reused `reservation-expired` topic" |
+| data-model.md | "SeatReleaseEvent" | "ReservationExpiredEvent" |
+
+### Decisión Tomada
+
+**Recomendada:** Reutilizar el topic existente `reservation-expired` en lugar de crear un nuevo topic `SeatReleased`.
+
+| Aspecto | Decisión | Justificación |
+|----------|----------|---------------|
+| **Topic** | `reservation-expired` (reused) | Ya existe y funciona. No crear nuevos topics para evitar complejidad. |
+| **Nuevo topic** | `waitlist.opportunity-granted` | Solo crear nuevo topic para publicar la oportunidad otorgada. |
+
+### Archivos Modificados
+
+- `plan.md`: Actualizado Phase 0 Research y Constitution Check
+- `spec.md`: Actualizado Key Entities - renombrado a "Reservation Expired Event"
+- `research.md`: Actualizado Kafka events
+- `data-model.md`: Renombrado entity de "SeatReleaseEvent" a "ReservationExpiredEvent"
+
+---
+
+## Corrección 2: Canal de Notificación
+
+### Problema Identificado
+
+El Executive Summary del spec mencionaba "immediate in-app notification" pero la HU-006 específica "Enviar Notificación por Email".
+
+| Ubicación | Texto Anterior | Texto Corregido |
+|-----------|----------------|-----------------|
+| spec.md Executive Summary | "immediate in-app notification" | "email notification" |
+
+### Justificación
+
+- HU-006 establece claramente: "Enviar Notificación por Email de Oportunidad de Compra"
+- La clarificación de sesión confirmó: "Single notification attempt per seat release"
+- Email es el canal preferido para MVP (reduce complejidad y riesgo de spam)
+
+---
+
+## Corrección 3: Análisis de Consistencia (Resumen)
+
+### Hallazgos delAnálisis
+
+| ID | Categoría | Severidad | Resolución |
+|----|------------|-----------|------------|
+| A1 | Inconsistencia | CRITICAL | Corregido - Kafka topic unificado |
+| A2 | Terminología | MEDIUM | Corregido - Normalizado a `reservation-expired` |
+| A4 | Ambigüedad | MEDIUM | Corregido - Canal de notificación aclarado |
+
+### Métricas Finales
+
+- **Total Requisitos**: 23 (RF-001 a RF-023)
+- **Cobertura**: 100% de requisitos mapeados a User Stories
+- **Issues Críticos**: 0 (todos resueltos)
+- **Estado**: SPEC, PLAN, RESEARCH, DATA-MODEL consistentes
+
+---
+
+## Consulta 1: Análisis del Proyecto e Investigación Inicial
+
 **Fecha:** 2026-03-25 | **Feature:** Waitlist + Notificaciones Event-Driven
 
 ---
