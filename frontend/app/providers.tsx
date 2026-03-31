@@ -1,23 +1,28 @@
 "use client"
 
 import { SWRConfig } from "swr"
-import { usePathname } from "next/navigation" 
+import { usePathname, useRouter } from "next/navigation" 
 import { AuthProvider, useAuth } from "@/context/auth-context"
 import { AdminAuthProvider } from "@/context/admin-auth-context"
 import { CartProvider } from "@/context/cart-context"
 import { Navbar } from "@/components/navbar"
-import { LoginScreen } from "@/components/login-screen"
 import type { ReactNode } from "react"
 
 function AuthenticatedApp({ children }: { children: ReactNode }) {
-  // Hardcoded authentication for automation development
-  const userId = "00000000-0000-0000-0000-000000000001"
-  const isAuthenticated = true
+  const { isAuthenticated, isLoading } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
 
-  // Don't apply regular auth to admin routes
-  if (pathname?.startsWith('/admin')) {
-    return <>{children}</>
+  console.log("[AuthenticatedApp] isLoading:", isLoading, "isAuthenticated:", isAuthenticated)
+
+  // Don't apply regular auth to admin routes or auth pages
+  if (pathname?.startsWith('/admin') || pathname === '/login' || pathname === '/register') {
+    return (
+      <CartProvider>
+        <Navbar />
+        {children}
+      </CartProvider>
+    )
   }
 
   return (

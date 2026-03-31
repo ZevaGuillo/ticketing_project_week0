@@ -4,21 +4,22 @@ using Gateway.Api.Constants;
 
 namespace Gateway.Api.Transforms;
 
-public class ClaimsForwardingTransform
+public class ClaimsForwardingTransform : RequestTransform
 {
-    public static ValueTask ApplyAsync(HttpContext context, RequestTransformContext transformContext)
+    public override ValueTask ApplyAsync(RequestTransformContext context)
     {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userRole = context.User.FindFirstValue(ClaimTypes.Role);
+        var httpContext = context.HttpContext;
+        var userId = httpContext.User.FindFirstValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        var userRole = httpContext.User.FindFirstValue("http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
 
         if (!string.IsNullOrEmpty(userId))
         {
-            transformContext.ProxyRequest.Headers.Add(GatewayHeaders.UserId, userId);
+            context.ProxyRequest.Headers.Add(GatewayHeaders.UserId, userId);
         }
 
         if (!string.IsNullOrEmpty(userRole))
         {
-            transformContext.ProxyRequest.Headers.Add(GatewayHeaders.UserRole, userRole);
+            context.ProxyRequest.Headers.Add(GatewayHeaders.UserRole, userRole);
         }
 
         return ValueTask.CompletedTask;

@@ -3,15 +3,28 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Yarp.ReverseProxy;
 using Yarp.ReverseProxy.Transforms;
-using Gateway.Api.Transforms;
 using Gateway.Api.Constants;
+using Gateway.Api.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
 var jwtAudience = builder.Configuration["Jwt:Audience"]!;
+
+Console.WriteLine($"[JWT CONFIG] Key: {jwtKey.Substring(0, 10)}..., Issuer: {jwtIssuer}, Audience: {jwtAudience}");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -25,18 +38,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            NameClaimType = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
         };
     });
 
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy =>
-        policy.RequireClaim(GatewayClaims.Role, "Admin"));
+        policy.RequireRole("Admin"));
 });
 
-builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+var proxyBuilder = builder.Services.AddReverseProxy();
+proxyBuilder.LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -46,53 +61,14 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseCors();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "gateway" }));
 
-app.MapGet("/catalog/events", () => Results.Ok(new { events = new[] { new { id = Guid.NewGuid(), name = "Test Event" } } }));
-
-app.MapPost("/inventory/reservations", (HttpContext context) =>
-{
-    var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-    var userRole = context.User.FindFirstValue(ClaimTypes.Role);
-
-    return Results.Ok(new { reservationId = Guid.NewGuid(), userId = userId });
-}).RequireAuthorization();
-
-app.MapGet("/admin/users", (HttpContext context) =>
-{
-    var userRole = context.User.FindFirstValue(ClaimTypes.Role);
-    
-    if (userRole != "Admin")
-    {
-        return Results.Forbid();
-    }
-    
-    return Results.Ok(new { users = new[] { new { id = Guid.NewGuid(), email = "admin@example.com" } } });
-}).RequireAuthorization("AdminOnly");
-
-app.MapReverseProxy(proxyPipeline =>
-{
-    proxyPipeline.Use(async (context, next) =>
-    {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userRole = context.User.FindFirstValue(ClaimTypes.Role);
-
-        if (!string.IsNullOrEmpty(userId))
-        {
-            context.Request.Headers[GatewayHeaders.UserId] = userId;
-        }
-        
-        if (!string.IsNullOrEmpty(userRole))
-        {
-            context.Request.Headers[GatewayHeaders.UserRole] = userRole;
-        }
-
-        await next();
-    });
-});
+app.MapReverseProxy();
 
 app.Run();
 

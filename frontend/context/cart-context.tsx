@@ -114,8 +114,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const reserveSeatAndAddToCart = useCallback(
     async (seat: Seat) => {
-      // Step 0: Initial validation - remove restrictive auth check if we want to allow guest flow
-      // if (!userId) throw new Error("User not authenticated")
+      if (!userId) {
+        throw new Error("Debes iniciar sesión para reservar asientos")
+      }
       
       // Check if seat is already in cart
       const seatAlreadyInCart = reservations.some(r => r.seatId === seat.id)
@@ -131,8 +132,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.log(`[reserveSeatAndAddToCart] Creating reservation for seat ${seat.id}`)
         const reservation = await createReservation({
           seatId: seat.id,
-          customerId: userId || "guest-user", // Fallback for guest
-        })
+        }, userId)
         console.log(`[reserveSeatAndAddToCart] Reservation created:`, reservation)
 
         const reservationInfo: ReservationInfo = {
