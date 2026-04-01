@@ -110,14 +110,14 @@
 
 ### Tests (TDD - RED first)
 
-- [ ] T031 [US6] Write failing unit test for WaitlistNotificationHandler in services/inventory/tests/Inventory.Unit/Handlers/
+- [X] T031 [US6] Write failing unit test for WaitlistNotificationHandler in services/inventory/tests/Inventory.Unit/Handlers/
 
 ### Implementation
 
-- [ ] T032 [US6] Implement WaitlistNotificationHandler in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T033 [US6] Add user status validation (active account + verified email) in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T034 [US6] Create email composition logic in services/inventory/src/Inventory.Application/Services/
-- [ ] T034b [US6] Add retry policy with exponential backoff for failed notifications in services/inventory/src/Inventory.Application/Handlers/
+- [X] T032 [US6] Implement WaitlistNotificationHandler in services/inventory/src/Inventory.Application/Handlers/
+- [X] T033 [US6] Add user status validation (active account + verified email) in services/inventory/src/Inventory.Application/Handlers/
+- [X] T034 [US6] Create email composition logic in services/inventory/src/Inventory.Application/Services/
+- [X] T034b [US6] Add retry policy with exponential backoff for failed notifications in services/inventory/src/Inventory.Application/Handlers/
 
 ---
 
