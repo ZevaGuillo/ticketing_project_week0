@@ -2,6 +2,7 @@ using MediatR;
 using Inventory.Application.UseCases.JoinWaitlist;
 using Inventory.Application.UseCases.GetWaitlistStatus;
 using Inventory.Application.UseCases.CreateReservation;
+using Inventory.Application.UseCases.CancelWaitlist;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inventory.Api.Controllers;
@@ -88,6 +89,42 @@ public class WaitlistController : ControllerBase
         try
         {
             var command = new ValidateOpportunityCommand(token);
+            var response = await _mediator.Send(command, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpDelete("/api/waitlist/cancel")]
+    [ProducesResponseType(typeof(CancelWaitlistResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelWaitlist(
+        [FromQuery] Guid eventId,
+        [FromQuery] string section,
+        CancellationToken cancellationToken)
+    {
+        var userIdHeader = Request.Headers["X-User-Id"].FirstOrDefault();
+        if (string.IsNullOrEmpty(userIdHeader) || !Guid.TryParse(userIdHeader, out var userId))
+            return BadRequest("X-User-Id header is required and must be a valid GUID");
+
+        if (eventId == Guid.Empty)
+            return BadRequest("EventId must not be empty");
+
+        if (string.IsNullOrWhiteSpace(section))
+            return BadRequest("Section must not be empty");
+
+        try
+        {
+            var command = new CancelWaitlistCommand(userId, eventId, section);
             var response = await _mediator.Send(command, cancellationToken);
 
             return Ok(response);

@@ -163,11 +163,11 @@
 
 ### Implementation
 
-- [ ] T041 [US2] Implement GetWaitlistStatusQuery in services/inventory/src/Inventory.Application/Queries/
-- [ ] T042 [US2] Create GET /api/waitlist/status endpoint in services/inventory/src/Inventory.Api/Endpoints/
-- [ ] T043 [US3] Implement CancelWaitlistCommand in services/inventory/src/Inventory.Application/Commands/
-- [ ] T044 [US3] Implement CancelWaitlistCommandHandler in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T045 [US3] Create DELETE /api/waitlist/cancel endpoint in services/inventory/src/Inventory.Api/Endpoints/
+- [X] T041 [US2] Implement GetWaitlistStatusQuery in services/inventory/src/Inventory.Application/Queries/
+- [X] T042 [US2] Create GET /api/waitlist/status endpoint in services/inventory/src/Inventory.Api/Endpoints/
+- [X] T043 [US3] Implement CancelWaitlistCommand in services/inventory/src/Inventory.Application/Commands/
+- [X] T044 [US3] Implement CancelWaitlistCommandHandler in services/inventory/src/Inventory.Application/Handlers/
+- [X] T045 [US3] Create DELETE /api/waitlist/cancel endpoint in services/inventory/src/Inventory.Api/Endpoints/
 
 ---
 
