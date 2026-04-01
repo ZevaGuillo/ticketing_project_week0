@@ -3,6 +3,7 @@ using Inventory.Application.UseCases.JoinWaitlist;
 using Inventory.Application.UseCases.GetWaitlistStatus;
 using Inventory.Application.UseCases.CreateReservation;
 using Inventory.Application.UseCases.CancelWaitlist;
+using Inventory.Application.UseCases.GetUserOpportunities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inventory.Api.Controllers;
@@ -137,6 +138,26 @@ public class WaitlistController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    [HttpGet("/api/waitlist/my-opportunities")]
+    [ProducesResponseType(typeof(List<OpportunityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetUserOpportunities(
+        [FromQuery] Guid eventId,
+        CancellationToken cancellationToken)
+    {
+        var userIdHeader = Request.Headers["X-User-Id"].FirstOrDefault();
+        if (string.IsNullOrEmpty(userIdHeader) || !Guid.TryParse(userIdHeader, out var userId))
+            return BadRequest("X-User-Id header is required and must be a valid GUID");
+
+        if (eventId == Guid.Empty)
+            return BadRequest("EventId must not be empty");
+
+        var query = new GetUserOpportunitiesQuery(userId, eventId);
+        var response = await _mediator.Send(query, cancellationToken);
+
+        return Ok(response);
     }
 }
 

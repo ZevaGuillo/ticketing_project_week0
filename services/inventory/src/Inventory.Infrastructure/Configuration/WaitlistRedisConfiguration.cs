@@ -116,6 +116,27 @@ public class WaitlistRedisConfiguration
         return await db.SortedSetLengthAsync(key);
     }
 
+    public async Task<Guid?> FifoPopAsync(Guid eventId, string section)
+    {
+        var db = GetDatabase();
+        var key = GetWaitlistKey(eventId, section);
+        
+        // Get the first element (lowest score = earliest joined)
+        var results = await db.SortedSetRangeByRankAsync(key, 0, 0, Order.Ascending);
+        
+        if (results.Length > 0)
+        {
+            var userIdStr = results[0].ToString();
+            if (Guid.TryParse(userIdStr, out var userId))
+            {
+                // Remove from queue after getting
+                await db.SortedSetRemoveAsync(key, userIdStr);
+                return userId;
+            }
+        }
+        return null;
+    }
+
     public async Task SetIdempotencyAsync(string key, TimeSpan expiry)
     {
         var db = GetDatabase();

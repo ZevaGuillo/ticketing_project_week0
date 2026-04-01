@@ -19,6 +19,19 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        // Configure Reservation settings
+        services.AddSingleton<ReservationSettings>(sp =>
+        {
+            var options = new ReservationSettings();
+            configuration.GetSection("Reservation").Bind(options);
+            var envValue = Environment.GetEnvironmentVariable("Reservation__TTLMinutes");
+            if (int.TryParse(envValue, out var ttlMinutes) && ttlMinutes > 0)
+            {
+                options.TTLMinutes = ttlMinutes;
+            }
+            return options;
+        });
+        
         services.AddDbContext<InventoryDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("Default"), 
@@ -34,6 +47,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConn));
         services.AddScoped<IRedisLock, RedisLock>();
         services.AddScoped<WaitlistRedisConfiguration>();
+        services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IWaitlistRepository, WaitlistRepository>();
         services.AddScoped<IOpportunityWindowRepository, OpportunityWindowRepository>();
 

@@ -140,7 +140,7 @@ public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSe
         };
 
         var json = System.Text.Json.JsonSerializer.Serialize(waitlistEvent);
-        await _kafkaProducer.ProduceAsync("waitlist.opportunity-granted", json, waitlistEntry.UserId.ToString());
+        await _kafkaProducer.ProduceAsync("waitlist-opportunity", json, waitlistEntry.UserId.ToString());
 
         return new ProcessWaitlistSelectionResult
         {

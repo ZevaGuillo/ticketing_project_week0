@@ -101,3 +101,34 @@ export async function cancelWaitlist(
     throw new Error(error.error || "Failed to cancel waitlist")
   }
 }
+
+export interface UserOpportunity {
+  opportunityId: string
+  seatId: string
+  section: string
+  token: string
+  status: string
+  expiresAt: string
+}
+
+export async function getUserOpportunities(
+  eventId: string,
+  userId: string
+): Promise<UserOpportunity[]> {
+  const params = new URLSearchParams({ eventId })
+  const res = await fetch(`${WAITLIST_API}/my-opportunities?${params}`, {
+    method: "GET",
+    headers: {
+      "X-User-Id": userId,
+      "Cache-Control": "no-cache",
+    },
+    cache: "no-store",
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}))
+    throw new Error(error.error || "Failed to get user opportunities")
+  }
+
+  return res.json()
+}

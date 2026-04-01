@@ -22,6 +22,7 @@ export interface Seat {
 
 export interface CreateReservationRequest {
   seatId: string
+  eventId: string
   customerId: string
 }
 

@@ -71,12 +71,14 @@ public class ReservationExpiryWorker : BackgroundService
 
             db.Reservations.Update(res);
 
-            // publish event
+            // publish event with complete information for waitlist processing
             var @event = new
             {
-                eventId = Guid.NewGuid().ToString("D"),
-                reservationId = res.Id.ToString("D"),
-                seatId = res.SeatId.ToString("D")
+                EventId = res.EventId,
+                ReservationId = res.Id.ToString("D"),
+                SeatId = res.SeatId.ToString("D"),
+                Section = seat?.Section,
+                ExpiredAt = res.ExpiresAt
             };
 
             var json = JsonSerializer.Serialize(@event);
@@ -87,6 +89,24 @@ public class ReservationExpiryWorker : BackgroundService
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to publish reservation-expired for {res.Id}: {ex.Message}");
+            }
+
+            // Publish seat-released event to notify Catalog service to update seat status
+            var seatReleasedEvent = new
+            {
+                seatId = res.SeatId.ToString("D"),
+                eventId = res.EventId.ToString("D"),
+                status = "available"
+            };
+
+            var seatReleasedJson = JsonSerializer.Serialize(seatReleasedEvent);
+            try
+            {
+                await _producer.ProduceAsync("seat-released", seatReleasedJson, res.SeatId.ToString("N")).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to publish seat-released for {res.SeatId}: {ex.Message}");
             }
         }
 

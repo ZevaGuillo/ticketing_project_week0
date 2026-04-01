@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/context/auth-context"
 import { getWaitlistStatus } from "@/lib/api/waitlist"
+import { useOpportunities } from "@/hooks/use-opportunities"
 
 interface EventDetailClientProps {
   eventId: string
@@ -26,6 +27,7 @@ interface WaitlistInfo {
 export function EventDetailClient({ eventId }: EventDetailClientProps) {
   const { user, isAuthenticated } = useAuth()
   const { data: seatmap, error, isLoading, mutate } = useSeatmap(eventId)
+  const { data: opportunities, isLoading: loadingOpportunities } = useOpportunities(eventId, user?.id || "")
   const [waitlistSections, setWaitlistSections] = useState<WaitlistInfo[]>([])
   const [loadingWaitlist, setLoadingWaitlist] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -125,6 +127,34 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
               </div>
             ) : null}
 
+            {/* Opportunity Banner - Show if user has active purchase opportunity */}
+            {isAuthenticated && user && opportunities && opportunities.length > 0 && (
+              <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Bell className="size-4 text-green-600" />
+                  <span className="font-medium text-green-900 dark:text-green-100">
+                    ¡Tienes una oportunidad de compra!
+                  </span>
+                  {loadingOpportunities && <Loader2 className="size-4 animate-spin text-green-600" />}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {opportunities.map(opp => (
+                    <Badge 
+                      key={opp.opportunityId} 
+                      variant="outline"
+                      className="border-green-500 text-green-700 dark:text-green-300 bg-green-100/50 dark:bg-green-900/30"
+                    >
+                      <CheckCircle className="size-3 mr-1" />
+                      Sección {opp.section} • Expira: {new Date(opp.expiresAt).toLocaleTimeString()}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-3">
+                  Los asientos resaltados en verde son tuyos. ¡Completa tu compra antes de que expire!
+                </p>
+              </div>
+            )}
+
             {/* Waitlist Status Banner - Only show if user is on waitlist */}
             {isAuthenticated && user && !isLoading && waitlistSections.length > 0 && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
@@ -178,6 +208,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
               <Seatmap 
                 seatmap={seatmap} 
                 eventId={eventId} 
+                opportunities={opportunities}
                 onSeatReserved={() => mutate()} 
                 onWaitlistJoined={loadWaitlistStatus}
               />

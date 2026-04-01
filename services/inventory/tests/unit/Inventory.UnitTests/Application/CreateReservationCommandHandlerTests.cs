@@ -3,6 +3,7 @@ using FluentAssertions;
 using Inventory.Application.UseCases.CreateReservation;
 using Inventory.Domain.Entities;
 using Inventory.Domain.Ports;
+using Inventory.Infrastructure.Configuration;
 using Inventory.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -27,10 +28,13 @@ public class CreateReservationCommandHandlerTests
         _redisLockMock = new Mock<IRedisLock>();
         _kafkaProducerMock = new Mock<IKafkaProducer>();
         
+        var reservationSettings = new ReservationSettings { TTLMinutes = 15 };
+        
         _handler = new CreateReservationCommandHandler(
             _context,
             _redisLockMock.Object,
-            _kafkaProducerMock.Object);
+            _kafkaProducerMock.Object,
+            reservationSettings);
     }
 
     [Fact]

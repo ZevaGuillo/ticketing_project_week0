@@ -1,5 +1,102 @@
 # CHANGELOG SOURCES - Sistema de Waitlist + Notificaciones
 
+**Fecha:** 2026-04-01 | **Feature:** Waitlist + Notificaciones - Sincronización Catalog-Inventory
+
+---
+
+## Corrección 12: Case Sensitivity en Eventos Kafka - Sincronización de Asientos
+
+### Problema Identificado
+
+El sistema de waitlist publicaba eventos `seat-released` a Kafka para notificar al servicio Catalog que actualice el estado del asiento, pero los asientos no se liberaban en `bc_catalog.Seats.Status`.
+
+### Diagnóstico
+
+1. El evento se publicaba correctamente en Kafka (verificado con `kafka-console-consumer`)
+2. El consumidor en Catalog recibía el mensaje (verificado en consumer group offset)
+3. Pero el código buscaba `"seatId"` (minúscula) cuando el JSON tenía `"SeatId"` (capital)
+
+El `JsonDocument.TryGetProperty()` es **case-sensitive**, por lo que la propiedad nunca se encontraball
+
+### Código Afectado
+
+```csharp
+// Inventory - evento publicado (incorrecto - capital S)
+var seatReleasedEvent = new {
+    SeatId = res.SeatId.ToString("D"),
+    EventId = res.EventId.ToString("D"),
+    Status = "available"
+};
+
+// Catalog - consumidor buscaba (incorrecto - minúscula s)
+if (root.TryGetProperty("seatId", out var seatIdProp) && ...)
+```
+
+### Solución Implementada
+
+| Archivo | Cambio |
+|---------|--------|
+| `services/inventory/src/Inventory.Infrastructure/Workers/ReservationExpiryWorker.cs` | Cambiado a lowercase: `seatId`, `eventId`, `status` |
+| `services/catalog/src/Catalog.Infrastructure/Messaging/CatalogEventConsumer.cs` | Corregido a buscar `seatId` (ya estaba en lowercase, el problema era el publisher) |
+
+### Problema Adicional Descubierto
+
+El topic `seat-released` no estaba creado en el inicializador de Kafka (`kafka-init`), causando errores de suscripción en Catalog al inicio.
+
+| Archivo | Cambio |
+|---------|--------|
+| `infra/docker-compose.yml` | Agregado `seat-released` y `waitlist-opportunity` a la lista de topics creados |
+
+### Verificación
+
+Después del fix:
+- El evento `seat-released` se publica con `{"seatId":"...","eventId":"...","status":"available"}`
+- El consumidor en Catalog procesa correctamente el evento
+- `bc_catalog.Seats.Status` se actualiza a `"available"`
+
+---
+
+**Fecha:** 2026-04-01 | **Feature:** Waitlist + Notificaciones - Frontend Integration
+
+---
+
+## Corrección 11: Integración de eventId en CreateReservation (Frontend)
+
+### Problema Identificado
+
+El backend fue actualizado para requerir `EventId` en el comando de creación de reserva (`CreateReservationCommand`), pero el frontend no estaba enviando este campo.
+
+### Errores Resultantes
+
+- `CreateReservationCommand` en backend requiere `EventId` como campo obligatorio
+- Frontend `CreateReservationRequest` no incluía `eventId`
+- `cart-context.tsx` no pasaba `eventId` al llamar `createReservation`
+- `seatmap.tsx` no pasaba `eventId` al llamar `reserveSeatAndAddToCart`
+
+### Decisión Tomada
+
+**Actualizar el frontend** para enviar `eventId` en todas las llamadas de reserva:
+
+| Archivo | Cambio |
+|---------|--------|
+| `frontend/lib/types/index.ts` | Agregado `eventId: string` a `CreateReservationRequest` |
+| `frontend/context/cart-context.tsx` | Actualizada firma `reserveSeatAndAddToCart(seat, eventId)` |
+| `frontend/components/seatmap.tsx` | Pasa `eventId` al llamar `reserveSeatAndAddToCart(selectedSeat, eventId)` |
+
+### Justificación
+
+- El campo `EventId` es necesario en el backend para que `ReservationExpiredEventConsumer` pueda identificar a qué evento pertenece la reserva expirada
+- Sin `EventId`, el sistema de waitlist no puede encontrar las entradas de waitlist正确 para un evento específico
+- La integración end-to-end del waitlist requiere que cada reserva esté asociada a su evento
+
+### Archivos Modificados
+
+- `frontend/lib/types/index.ts`
+- `frontend/context/cart-context.tsx`
+- `frontend/components/seatmap.tsx`
+
+---
+
 **Fecha:** 2026-03-31 | **Feature:** Waitlist + Notificaciones - Correcciones post-análisis
 
 ---

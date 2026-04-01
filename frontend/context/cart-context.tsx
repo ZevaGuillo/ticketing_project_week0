@@ -24,7 +24,7 @@ interface CartContextType {
   isCheckingOut: boolean
   isProcessingPayment: boolean
   error: string | null
-  reserveSeatAndAddToCart: (seat: Seat) => Promise<void>
+  reserveSeatAndAddToCart: (seat: Seat, eventId: string) => Promise<void>
   removeSeatFromCart: (seatId: string) => void
   isSeatInCart: (seatId: string) => boolean
   doCheckout: () => Promise<Order>
@@ -113,7 +113,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const reserveSeatAndAddToCart = useCallback(
-    async (seat: Seat) => {
+    async (seat: Seat, eventId: string) => {
       if (!userId) {
         throw new Error("Debes iniciar sesión para reservar asientos")
       }
@@ -132,6 +132,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.log(`[reserveSeatAndAddToCart] Creating reservation for seat ${seat.id}`)
         const reservation = await createReservation({
           seatId: seat.id,
+          eventId: eventId,
         }, userId)
         console.log(`[reserveSeatAndAddToCart] Reservation created:`, reservation)
 

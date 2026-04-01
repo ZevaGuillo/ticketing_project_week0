@@ -6,7 +6,7 @@ import { SeatButton, SeatLegend } from "@/components/seat-button"
 import { useCart } from "@/context/cart-context"
 import { Loader2, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { joinWaitlist } from "@/lib/api/waitlist"
+import { joinWaitlist, type UserOpportunity } from "@/lib/api/waitlist"
 import { useAuth } from "@/context/auth-context"
 
 interface SeatmapProps {
@@ -14,15 +14,24 @@ interface SeatmapProps {
   eventId: string
   onSeatReserved?: () => void
   onWaitlistJoined?: (section: string) => void
+  opportunities?: UserOpportunity[]
 }
 
-export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined }: SeatmapProps) {
+export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, opportunities = [] }: SeatmapProps) {
   const { user } = useAuth()
   const { reserveSeatAndAddToCart, isAddingToCart, isSeatInCart, removeSeatFromCart } = useCart()
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [joiningWaitlist, setJoiningWaitlist] = useState<string | null>(null)
   const [waitlistJoined, setWaitlistJoined] = useState<string | null>(null)
+
+  const opportunitiesBySeatId = useMemo(() => {
+    const map = new Map<string, UserOpportunity>()
+    for (const opp of opportunities) {
+      map.set(opp.seatId, opp)
+    }
+    return map
+  }, [opportunities])
 
   // Group seats by section, then by row
   const sections = useMemo(() => {
@@ -74,7 +83,7 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined }: 
     setLocalError(null)
 
     try {
-      await reserveSeatAndAddToCart(selectedSeat)
+      await reserveSeatAndAddToCart(selectedSeat, eventId)
       setSelectedSeat(null)
       onSeatReserved?.()
     } catch (err) {
@@ -107,7 +116,7 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined }: 
     }
   }, [selectedSeat, user, eventId, onWaitlistJoined])
 
-  const isUnavailable = selectedSeat && selectedSeat.status !== "available"
+  const isUnavailable = selectedSeat && selectedSeat.status !== "available" && selectedSeat.status !== "offered"
 
   return (
     <div className="flex flex-col gap-6">
@@ -141,6 +150,7 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined }: 
                           const displaySeat = isInUserCart
                             ? { ...seat, status: "reserved" as const }
                             : seat
+                          const isOffered = opportunitiesBySeatId.has(seat.id)
 
                           return (
                             <SeatButton
@@ -148,6 +158,7 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined }: 
                               seat={displaySeat}
                               isSelected={selectedSeat?.id === seat.id}
                               onSelect={handleSelect}
+                              isOffered={isOffered}
                             />
                           )
                         })}

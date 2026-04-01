@@ -134,6 +134,9 @@ namespace Inventory.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -163,9 +166,9 @@ namespace Inventory.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "Status");
-
                     b.HasIndex("EventId", "Section", "Status");
+
+                    b.HasIndex("UserId", "Status");
 
                     b.HasIndex("UserId", "EventId", "Section")
                         .IsUnique();

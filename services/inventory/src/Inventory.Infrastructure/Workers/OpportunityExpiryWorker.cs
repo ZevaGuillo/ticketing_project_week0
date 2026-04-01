@@ -137,6 +137,21 @@ public class OpportunityExpiryWorker : BackgroundService
                 waitlistEntry.JoinedAt);
         }
 
+        if (kafkaProducer != null)
+        {
+            var expiredEvent = new
+            {
+                OpportunityId = opportunity.Id,
+                SeatId = opportunity.SeatId,
+                EventId = waitlistEntry.EventId,
+                Section = waitlistEntry.Section,
+                Status = "EXPIRED"
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(expiredEvent);
+            await kafkaProducer.ProduceAsync("waitlist-opportunity", json);
+            _logger.LogInformation("Published opportunity-expired event for seat {SeatId}", opportunity.SeatId);
+        }
+
         await TriggerReSelectionAsync(waitlistEntry, db, kafkaProducer, cancellationToken);
 
         await VerifyRedisConsistencyAsync(waitlistEntry, db, redisConfig, cancellationToken);
@@ -205,11 +220,12 @@ public class OpportunityExpiryWorker : BackgroundService
                     SeatId = availableSeat.Id,
                     Section = waitlistEntry.Section,
                     OpportunityTTL = 600,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    Status = "OFFERED"
                 };
 
                 var json = System.Text.Json.JsonSerializer.Serialize(domainEvent);
-                await kafkaProducer.ProduceAsync("waitlist.opportunity-granted", json, selectedUser.UserId.ToString());
+                await kafkaProducer.ProduceAsync("waitlist-opportunity", json, selectedUser.UserId.ToString());
             }
 
             _logger.LogInformation(

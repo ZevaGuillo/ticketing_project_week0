@@ -10,4 +10,5 @@ public interface IOpportunityWindowRepository
     Task<OpportunityWindow> AddAsync(OpportunityWindow window, CancellationToken ct = default);
     Task UpdateAsync(OpportunityWindow window, CancellationToken ct = default);
     Task<IReadOnlyList<OpportunityWindow>> GetExpiredOpportunitiesAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<OpportunityWindow>> GetActiveByUserAndEventAsync(Guid userId, Guid eventId, CancellationToken ct = default);
 }

@@ -45,4 +45,16 @@ public class OpportunityWindowRepository : IOpportunityWindowRepository
             .Where(e => e.Status == Domain.Enums.OpportunityStatus.OFFERED && e.ExpiresAt < DateTime.UtcNow)
             .ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<OpportunityWindow>> GetActiveByUserAndEventAsync(Guid userId, Guid eventId, CancellationToken ct = default)
+    {
+        return await _context.OpportunityWindows
+            .Include(o => o.WaitlistEntry)
+            .Where(o => o.WaitlistEntry != null 
+                && o.WaitlistEntry.UserId == userId 
+                && o.WaitlistEntry.EventId == eventId
+                && (o.Status == Domain.Enums.OpportunityStatus.OFFERED || o.Status == Domain.Enums.OpportunityStatus.IN_PROGRESS)
+                && o.ExpiresAt > DateTime.UtcNow)
+            .ToListAsync(ct);
+    }
 }

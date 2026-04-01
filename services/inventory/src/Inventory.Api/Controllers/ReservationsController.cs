@@ -26,6 +26,9 @@ public class ReservationsController : ControllerBase
         if (request.SeatId == Guid.Empty)
             return BadRequest("SeatId must not be empty");
 
+        if (request.EventId == Guid.Empty)
+            return BadRequest("EventId must not be empty");
+
         var userIdHeader = Request.Headers["X-User-Id"];
         var userId = userIdHeader.Count > 0 ? userIdHeader[0] : null;
         
@@ -34,7 +37,7 @@ public class ReservationsController : ControllerBase
 
         var customerId = !string.IsNullOrEmpty(request.CustomerId) ? request.CustomerId : userId;
         
-        var command = new CreateReservationCommand(request.SeatId, customerId);
+        var command = new CreateReservationCommand(request.SeatId, request.EventId, customerId);
         var response = await _mediator.Send(command, cancellationToken);
 
         return Created($"/reservations/{response.ReservationId}", response);
