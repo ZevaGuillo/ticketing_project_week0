@@ -52,12 +52,23 @@ graph TD
 
 | Componente | Tecnología |
 | :--- | :--- |
-| **Backend** | .NET 9, MediatR, EF Core, Minimal APIs |
+| **Backend** | .NET 9, MediatR, EF Core, MVC Controllers |
 | **Frontend** | Next.js 14 (App Router), TailwindCSS, Shadcn/UI |
 | **Mensajería** | Apache Kafka |
 | **Cache & Lock** | Redis |
 | **Base de Datos** | PostgreSQL (Schemas: `bc_catalog`, `bc_inventory`, etc.) |
 | **Observabilidad** | OpenTelemetry, Serilog |
+
+---
+
+## ✨ Funcionalidades
+
+### Sistema de Waitlist (Recoverable Demand)
+- Registro en lista de espera cuando no hay asientos disponibles
+- Selección FIFO automática cuando se libera un asiento
+- Ventana de oportunidad de compra (10 min TTL)
+- Sincronización de estado de asientos via Kafka
+- Notificación al usuario cuando su asiento está disponible
 
 ---
 
@@ -93,7 +104,8 @@ El sistema estará disponible en `http://localhost:3000`.
 | [Human Checks](humanchcks.md) | Registro de decisiones técnicas y correcciones a la IA. |
 | [Technical Debt](deptReport.md) | Reporte de puntos de mejora y arquitectura. |
 | [TDD Report](TDD_report.md) | Seguimiento de pruebas bajo enfoque **ATDD**. |
-| [API Guide](FRONTEND_API_GUIDE.md) | Guía de integración para el Frontend. |
+| [Waitlist Test Curls](docs/waitlist-test-curls.md) | Comandos curl para probar la API de waitlist. |
+| [API Contracts](contracts/) | Contratos OpenAPI y JSON Schema para Kafka. |
 
 ---
 

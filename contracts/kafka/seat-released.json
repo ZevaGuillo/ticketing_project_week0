@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Seat Released Event",
+  "description": "Event published when a seat is released (expired reservation, cancellation, etc.)",
+  "type": "object",
+  "properties": {
+    "seatId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Seat identifier"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Event identifier"
+    },
+    "section": {
+      "type": "string",
+      "description": "Seat section name"
+    },
+    "releasedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the seat was released"
+    },
+    "reason": {
+      "type": "string",
+      "enum": ["ttl_expired", "manual_cancellation", "waitlist_processed", "payment_failed"],
+      "description": "Reason for release"
+    }
+  },
+  "required": [
+    "seatId",
+    "eventId",
+    "releasedAt",
+    "reason"
+  ],
+  "additionalProperties": false
+}
