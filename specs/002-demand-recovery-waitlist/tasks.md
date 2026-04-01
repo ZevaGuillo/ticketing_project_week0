@@ -129,15 +129,15 @@
 
 ### Tests (TDD - RED first)
 
-- [ ] T035 [US7] Write failing unit test for ValidateOpportunityCommandHandler in services/inventory/tests/Inventory.Unit/Commands/
+- [X] T035 [US7] Write failing unit test for ValidateOpportunityCommandHandler in services/inventory/tests/Inventory.Unit/Commands/
 
 ### Implementation
 
-- [ ] T036 [US7] Implement ValidateOpportunityCommand in services/inventory/src/Inventory.Application/Commands/
-- [ ] T037 [US7] Implement ValidateOpportunityCommandHandler in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T038 [US7] Add opportunity status validation (OFFERED, not expired) in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T039 [US7] Create reservation with 15-min TTL in services/inventory/src/Inventory.Application/Services/
-- [ ] T040 [US7] Create GET /api/waitlist/opportunity/{token} endpoint in services/inventory/src/Inventory.Api/Endpoints/
+- [X] T036 [US7] Implement ValidateOpportunityCommand in services/inventory/src/Inventory.Application/Commands/
+- [X] T037 [US7] Implement ValidateOpportunityCommandHandler in services/inventory/src/Inventory.Application/Handlers/
+- [X] T038 [US7] Add opportunity status validation (OFFERED, not expired) in services/inventory/src/Inventory.Application/Handlers/
+- [X] T039 [US7] Create reservation with 15-min TTL in services/inventory/src/Inventory.Application/Services/
+- [X] T040 [US7] Create GET /api/waitlist/opportunity/{token} endpoint in services/inventory/src/Inventory.Api/Endpoints/
 
 ---
 

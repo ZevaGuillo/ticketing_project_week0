@@ -1,6 +1,7 @@
 using MediatR;
 using Inventory.Application.UseCases.JoinWaitlist;
 using Inventory.Application.UseCases.GetWaitlistStatus;
+using Inventory.Application.UseCases.CreateReservation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inventory.Api.Controllers;
@@ -71,6 +72,34 @@ public class WaitlistController : ControllerBase
             return NotFound(new { error = "User is not in waitlist for this event and section" });
 
         return Ok(response);
+    }
+
+    [HttpGet("/api/waitlist/opportunity/{token}")]
+    [ProducesResponseType(typeof(ValidateOpportunityResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ValidateOpportunity(
+        [FromRoute] string token,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return BadRequest("Token must not be empty");
+
+        try
+        {
+            var command = new ValidateOpportunityCommand(token);
+            var response = await _mediator.Send(command, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }
 
