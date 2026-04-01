@@ -149,9 +149,9 @@
 
 ### Implementation
 
-- [ ] T040b [US7] Implement OpportunityExpiryWorker (BackgroundService) in services/inventory/src/Inventory.Infrastructure/Workers/
-- [ ] T040c [US7] Add automatic re-selection trigger in OpportunityExpiryWorker in services/inventory/src/Inventory.Infrastructure/Workers/
-- [ ] T040d [US7] Add Redis-DB consistency check after re-selection in services/inventory/src/Inventory.Infrastructure/Workers/
+- [X] T040b [US7] Implement OpportunityExpiryWorker (BackgroundService) in services/inventory/src/Inventory.Infrastructure/Workers/
+- [X] T040c [US7] Add automatic re-selection trigger in OpportunityExpiryWorker in services/inventory/src/Inventory.Infrastructure/Workers/
+- [X] T040d [US7] Add Redis-DB consistency check after re-selection in services/inventory/src/Inventory.Infrastructure/Workers/
 
 ---
 

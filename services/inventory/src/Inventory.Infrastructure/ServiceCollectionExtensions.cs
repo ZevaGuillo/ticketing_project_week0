@@ -80,6 +80,15 @@ public static class ServiceCollectionExtensions
             return new Inventory.Infrastructure.Workers.ReservationExpiryWorker(scopeFactory, kafka);
         });
 
+        // Register opportunity expiry worker for waitlist re-selection
+        services.AddSingleton<IHostedService, Inventory.Infrastructure.Workers.OpportunityExpiryWorker>(sp =>
+        {
+            var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            var kafka = sp.GetRequiredService<IKafkaProducer>();
+            var logger = sp.GetRequiredService<ILogger<Inventory.Infrastructure.Workers.OpportunityExpiryWorker>>();
+            return new Inventory.Infrastructure.Workers.OpportunityExpiryWorker(scopeFactory, kafka, logger);
+        });
+
         // Register seats-generated Kafka consumer as hosted service
         var consumerConfig = new ConsumerConfig
         {
