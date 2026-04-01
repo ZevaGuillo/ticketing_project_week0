@@ -85,20 +85,20 @@
 
 ### Tests (TDD - RED first)
 
-- [ ] T025 [US5] Write failing unit test for ProcessWaitlistSelectionService in services/inventory/tests/Inventory.Unit/Services/
+- [X] T025 [US5] Write failing unit test for ProcessWaitlistSelectionService in services/inventory/tests/Inventory.Unit/Services/
 
 ### Implementation
 
-- [ ] T026 [US5] Implement WaitlistSelectionService with FIFO logic in services/inventory/src/Inventory.Infrastructure/Services/
-- [ ] T027 [US5] Implement Lua script for atomic user selection (ZPOPMAX + ZREM) in services/inventory/src/Inventory.Infrastructure/Services/
-- [ ] T027b [US5] Add distributed lock for atomic selection in services/inventory/src/Inventory.Infrastructure/Services/
-- [ ] T027c [US5] Add Redis idempotency cache for processed events in services/inventory/src/Inventory.Infrastructure/Services/
-- [ ] T028 [US5] Implement WaitlistOpportunityGrantedEvent publisher using IKafkaProducer in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T029 [US5] Implement opportunity window creation with 10-min TTL in services/inventory/src/Inventory.Infrastructure/Persistence/
+- [X] T026 [US5] Implement WaitlistSelectionService with FIFO logic in services/inventory/src/Inventory.Infrastructure/Services/
+- [X] T027 [US5] Implement Lua script for atomic user selection (ZPOPMAX + ZREM) in services/inventory/src/Inventory.Infrastructure/Services/
+- [X] T027b [US5] Add distributed lock for atomic selection in services/inventory/src/Inventory.Infrastructure/Services/
+- [X] T027c [US5] Add Redis idempotency cache for processed events in services/inventory/src/Inventory.Infrastructure/Services/
+- [X] T028 [US5] Implement WaitlistOpportunityGrantedEvent publisher using IKafkaProducer in services/inventory/src/Inventory.Application/Handlers/
+- [X] T029 [US5] Implement opportunity window creation with 10-min TTL in services/inventory/src/Inventory.Infrastructure/Persistence/
 
 ### Integration Tests
 
-- [ ] T030 [US5] Write integration test for FIFO selection in services/inventory/tests/Inventory.Integration/
+- [X] T030 [US5] Write integration test for FIFO selection in services/inventory/tests/Inventory.Integration/
 
 ---
 

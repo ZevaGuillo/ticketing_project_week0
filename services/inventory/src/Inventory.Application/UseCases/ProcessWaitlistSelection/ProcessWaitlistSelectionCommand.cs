@@ -58,8 +58,34 @@ public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSe
             {
                 return null;
             }
+
+            var lockValue = $"{request.ReservationId}:{DateTime.UtcNow:Ticks}";
+            var lockAcquired = await _redisConfiguration.AcquireLockAsync(
+                request.EventId, request.Section, lockValue, TimeSpan.FromSeconds(10));
+            
+            if (!lockAcquired)
+            {
+                return null;
+            }
+
+            try
+            {
+                return await ProcessSelectionInternalAsync(request, idempotencyKey, cancellationToken);
+            }
+            finally
+            {
+                await _redisConfiguration.ReleaseLockAsync(request.EventId, request.Section, lockValue);
+            }
         }
 
+        return await ProcessSelectionInternalAsync(request, idempotencyKey, cancellationToken);
+    }
+
+    private async Task<ProcessWaitlistSelectionResult?> ProcessSelectionInternalAsync(
+        ProcessWaitlistSelectionCommand request, 
+        string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
         var userId = await GetNextUserFromWaitlistAsync(request.EventId, request.Section, cancellationToken);
         if (userId == null)
         {
@@ -130,14 +156,10 @@ public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSe
     {
         if (_redisConfiguration != null)
         {
-            var nextUser = await _redisConfiguration.GetNextUserAsync(eventId, section);
-            if (nextUser.HasValue)
+            var result = await _redisConfiguration.AtomicFifoSelectAsync(eventId, section);
+            if (result.HasValue)
             {
-                var userIdStr = nextUser.Value.ToString();
-                if (Guid.TryParse(userIdStr, out var userId))
-                {
-                    return userId;
-                }
+                return result.Value.UserId;
             }
         }
 

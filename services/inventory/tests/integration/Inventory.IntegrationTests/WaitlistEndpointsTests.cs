@@ -124,4 +124,35 @@ public class WaitlistEndpointsTests : IClassFixture<InventoryApiFactory>
         DateTime JoinedAt,
         DateTime? NotifiedAt
     );
+
+    [Fact]
+    public async Task ProcessWaitlistSelection_WithMultipleUsers_ShouldSelectFifo()
+    {
+        var userId1 = Guid.NewGuid();
+        var userId2 = Guid.NewGuid();
+        var eventId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
+        var section = "A";
+
+        _client.DefaultRequestHeaders.Add("X-User-Id", userId1.ToString());
+
+        var joinRequest1 = new { eventId, section };
+        await _client.PostAsJsonAsync("/api/waitlist/join", joinRequest1);
+
+        _client.DefaultRequestHeaders.Remove("X-User-Id");
+        _client.DefaultRequestHeaders.Add("X-User-Id", userId2.ToString());
+
+        var joinRequest2 = new { eventId, section };
+        await _client.PostAsJsonAsync("/api/waitlist/join", joinRequest2);
+
+        _client.DefaultRequestHeaders.Remove("X-User-Id");
+        _client.DefaultRequestHeaders.Add("X-User-Id", userId1.ToString());
+
+        var statusResponse = await _client.GetAsync($"/api/waitlist/status?eventId={eventId}&section=A");
+        statusResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var content = await statusResponse.Content.ReadFromJsonAsync<GetWaitlistStatusResponse>();
+        content.Should().NotBeNull();
+        content!.QueuePosition.Should().Be(1);
+    }
 }
