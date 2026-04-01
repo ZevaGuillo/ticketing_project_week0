@@ -210,6 +210,46 @@ Las interfaces `IWaitlistRepository` y `IOpportunityWindowRepository` estaban en
 
 ---
 
+## Corrección 8: Refactorización de estructura Application - Commands/Queries a UseCases
+
+### Problema Identificado
+
+La carpeta `Inventory.Application` tenía una estructura inconsistente:
+
+| Ubicación | Contenido |
+|-----------|------------|
+| `UseCases/CreateReservation/` | Command + Handler (formato correcto) |
+| `Queries/` | GetWaitlistStatus (separado) |
+| `Commands/` | JoinWaitlist (separado) |
+
+### Decisión Tomada
+
+**Unificar** bajo estructura `UseCases/<UseCaseName>/`:
+
+| Acción | Descripción |
+|--------|-------------|
+| **Movido** | `GetWaitlistStatusQuery` → `UseCases/GetWaitlistStatus/GetWaitlistStatusQuery.cs` |
+| **Movido** | `GetWaitlistStatusQueryHandler` → `UseCases/GetWaitlistStatus/GetWaitlistStatusQueryHandler.cs` |
+| **Movido** | `JoinWaitlistCommand` → `UseCases/JoinWaitlist/JoinWaitlistCommand.cs` |
+| **Movido** | `JoinWaitlistCommandHandler` → `UseCases/JoinWaitlist/JoinWaitlistCommandHandler.cs` |
+| **Eliminado** | Carpeta `Queries/` |
+| **Eliminado** | Carpeta `Commands/` |
+
+### Justificación
+
+- Mantiene consistencia con `CreateReservation` que ya estaba en `UseCases/`
+- Facilita la navegación: cada use case es una carpeta autocontenida
+- El patrón CQRS se mantiene a nivel de implementación (commands/queries como records), no en la estructura de archivos
+
+### Archivos Modificados
+
+- `Inventory.Application/UseCases/GetWaitlistStatus/` (nuevo)
+- `Inventory.Application/UseCases/JoinWaitlist/` (nuevo)
+- `Inventory.Application/Queries/` (eliminado)
+- `Inventory.Application/Commands/` (eliminado)
+
+---
+
 ## Consulta 1: Análisis del Proyecto e Investigación Inicial
 
 **Fecha:** 2026-03-25 | **Feature:** Waitlist + Notificaciones Event-Driven

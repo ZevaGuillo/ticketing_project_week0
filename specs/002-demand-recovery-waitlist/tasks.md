@@ -37,8 +37,8 @@
 
 ### Tests (TDD - RED first)
 
-- [ ] T013 [US1] Write failing unit test for JoinWaitlistCommandHandler in services/inventory/tests/Inventory.Unit/Commands/
-- [ ] T014 [US1] Write failing unit test for GetWaitlistStatusQuery in services/inventory/tests/Inventory.Unit/Queries/
+- [X] T013 [US1] Write failing unit test for JoinWaitlistCommandHandler in services/inventory/tests/Inventory.Unit/Commands/
+- [X] T014 [US1] Write failing unit test for GetWaitlistStatusQuery in services/inventory/tests/Inventory.Unit/Queries/
 
 ### Implementation
 
