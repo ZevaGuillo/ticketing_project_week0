@@ -18,14 +18,14 @@
 
 ## Phase 2: Foundational (Domain & Application Layer)
 
-- [ ] T005 Create WaitlistStatus enum in services/inventory/src/Inventory.Domain/Enums/
-- [ ] T006 Create OpportunityStatus enum in services/inventory/src/Inventory.Domain/Enums/
-- [ ] T007 Create WaitlistEntry entity in services/inventory/src/Inventory.Domain/Entities/
-- [ ] T008 Create OpportunityWindow entity in services/inventory/src/Inventory.Domain/Entities/
-- [ ] T009 [P] Create IWaitlistRepository interface in services/inventory/src/Inventory.Domain/Ports/
-- [ ] T010 [P] Create IWaitlistService interface in services/inventory/src/Inventory.Domain/Ports/
-- [ ] T011 Create ReservationExpiredEvent entity in services/inventory/src/Inventory.Domain/Events/
-- [ ] T012 Create WaitlistOpportunityGrantedEvent entity in services/inventory/src/Inventory.Domain/Events/
+- [X] T005 Create WaitlistStatus enum in services/inventory/src/Inventory.Domain/Enums/
+- [X] T006 Create OpportunityStatus enum in services/inventory/src/Inventory.Domain/Enums/
+- [X] T007 Create WaitlistEntry entity in services/inventory/src/Inventory.Domain/Entities/
+- [X] T008 Create OpportunityWindow entity in services/inventory/src/Inventory.Domain/Entities/
+- [X] T009 [P] Create IWaitlistRepository interface in services/inventory/src/Inventory.Domain/Ports/
+- [X] T010 [P] Create IWaitlistService interface in services/inventory/src/Inventory.Domain/Ports/
+- [X] T011 Create ReservationExpiredEvent entity in services/inventory/src/Inventory.Domain/Events/
+- [X] T012 Create WaitlistOpportunityGrantedEvent entity in services/inventory/src/Inventory.Domain/Events/
 
 ---
 

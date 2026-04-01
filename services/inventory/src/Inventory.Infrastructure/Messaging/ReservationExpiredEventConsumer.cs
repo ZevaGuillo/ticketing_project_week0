@@ -1,3 +1,4 @@
+// HUMAN CHECK: Corrección 5 - DLQ configurada para mensajes fallidos en sistema distribuido.
 using System.Text.Json;
 using Confluent.Kafka;
 using Inventory.Domain.Events;

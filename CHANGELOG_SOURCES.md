@@ -187,6 +187,29 @@ await _kafkaProducer.ProduceAsync("topic-name", json, key);
 
 ---
 
+## Corrección 7: Separación de Interfaces de Repositorio
+
+### Problema Identificado
+
+Las interfaces `IWaitlistRepository` y `IOpportunityWindowRepository` estaban en el mismo archivo.
+
+### Decisión Tomada
+
+**Separar en archivos independientes** para mejor organización y SRP:
+
+| Archivo | Interfaz |
+|---------|----------|
+| `IWaitlistRepository.cs` | IWaitlistRepository |
+| `IOpportunityWindowRepository.cs` | IOpportunityWindowRepository |
+
+### Justificación
+
+- Cada bounded context tiene su propio archivo de interfaz
+- Mejora la navegación y mantenimiento
+- Sigue el principio de responsabilidad única
+
+---
+
 ## Consulta 1: Análisis del Proyecto e Investigación Inicial
 
 **Fecha:** 2026-03-25 | **Feature:** Waitlist + Notificaciones Event-Driven
