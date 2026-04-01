@@ -43,6 +43,14 @@ public class InventoryApiFactory : WebApplicationFactory<Program>
 
             services.AddSingleton(kafkaProducerMock.Object);
 
+            var reservationRepoMock = new Mock<IReservationRepository>();
+            reservationRepoMock.Setup(x => x.AddAsync(It.IsAny<Inventory.Domain.Entities.Reservation>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Inventory.Domain.Entities.Reservation r, CancellationToken _) => r);
+            reservationRepoMock.Setup(x => x.UpdateAsync(It.IsAny<Inventory.Domain.Entities.Reservation>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            services.AddSingleton(reservationRepoMock.Object);
+
             var connectionMultiplexerMock = new Mock<IConnectionMultiplexer>();
             var databaseMock = new Mock<IDatabase>();
             
