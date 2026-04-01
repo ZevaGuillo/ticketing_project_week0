@@ -1,11 +1,14 @@
+using Inventory.Infrastructure;
+using Inventory.Infrastructure.Configuration;
+using Inventory.Infrastructure.Consumers;
+using Inventory.Infrastructure.Locking;
+using Inventory.Infrastructure.Messaging;
+using Inventory.Infrastructure.Persistence;
+using Inventory.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Inventory.Domain.Ports;
-using Inventory.Infrastructure.Persistence;
-using Inventory.Infrastructure.Locking;
-using Inventory.Infrastructure.Messaging;
-using Inventory.Infrastructure.Consumers;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Confluent.Kafka;
 using Microsoft.Extensions.Hosting;
@@ -30,6 +33,7 @@ public static class ServiceCollectionExtensions
         // Lazy registration for Redis to avoid connection on EF build
         services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConn));
         services.AddScoped<IRedisLock, RedisLock>();
+        services.AddScoped<WaitlistRedisConfiguration>();
 
         // Configure Kafka producer
         var kafkaBootstrapServers = configuration.GetConnectionString("Kafka") ?? configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
@@ -45,6 +49,26 @@ public static class ServiceCollectionExtensions
 
         // Register inventory event consumer
         services.AddHostedService<Inventory.Infrastructure.Messaging.InventoryEventConsumer>();
+
+        // Register reservation-expired consumer for waitlist
+        var waitlistConsumerConfig = new ConsumerConfig
+        {
+            BootstrapServers = kafkaBootstrapServers,
+            GroupId = "waitlist-consumer-group",
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            EnableAutoCommit = false,
+            SessionTimeoutMs = 30000,
+            EnablePartitionEof = true
+        };
+        
+        services.AddSingleton<IHostedService, ReservationExpiredEventConsumer>(sp =>
+        {
+            var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            var consumer = new ConsumerBuilder<string?, string>(waitlistConsumerConfig).Build();
+            var dlqProducer = sp.GetRequiredService<IProducer<string?, string>>();
+            var logger = sp.GetRequiredService<ILogger<ReservationExpiredEventConsumer>>();
+            return new ReservationExpiredEventConsumer(scopeFactory, consumer, dlqProducer, logger);
+        });
 
         // Register expiry worker as hosted service (optional in tests)
         services.AddSingleton<IHostedService, Inventory.Infrastructure.Workers.ReservationExpiryWorker>(sp =>

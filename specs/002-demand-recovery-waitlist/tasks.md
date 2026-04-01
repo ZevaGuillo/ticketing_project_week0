@@ -8,11 +8,11 @@
 
 ## Phase 1: Setup & Infrastructure
 
-- [ ] T001 Create EF Core migration for waitlist tables in services/inventory/src/Inventory.Infrastructure/Persistence/Migrations/
-- [ ] T002 [P] Configure Kafka consumer for reservation-expired topic in services/inventory/src/Inventory.Infrastructure/Messaging/
-- [ ] T002b [P] Configure Kafka DLQ topic for failed messages in services/inventory/src/Inventory.Infrastructure/Messaging/
-- [ ] T003 [P] Configure Kafka producer for waitlist.opportunity-granted topic in services/inventory/src/Inventory.Infrastructure/Messaging/
-- [ ] T004 Add Redis configuration for waitlist queue (Sorted Set) in services/inventory/src/Inventory.Infrastructure/Configuration/
+- [X] T001 Create EF Core migration for waitlist tables in services/inventory/src/Inventory.Infrastructure/Persistence/Migrations/
+- [X] T002 [P] Configure Kafka consumer for reservation-expired topic in services/inventory/src/Inventory.Infrastructure/Messaging/
+- [X] T002b [P] Configure Kafka DLQ topic for failed messages in services/inventory/src/Inventory.Infrastructure/Messaging/
+- [X] T003 [P] Configure Kafka producer for waitlist.opportunity-granted topic in services/inventory/src/Inventory.Infrastructure/Messaging/
+- [X] T004 Add Redis configuration for waitlist queue (Sorted Set) in services/inventory/src/Inventory.Infrastructure/Configuration/
 
 ---
 
@@ -66,9 +66,10 @@
 
 ### Implementation
 
-- [ ] T022 [US4] Implement ReservationExpiredEventConsumer in services/inventory/src/Inventory.Infrastructure/Messaging/Consumers/
+- [X] T022 [US4] Implement ReservationExpiredEventConsumer in services/inventory/src/Inventory.Infrastructure/Messaging/
+- [ ] T022b [US4] Implement WaitlistSelectionHandler to process reservation-expired event in services/inventory/src/Inventory.Application/Handlers/
 - [ ] T023 [US4] Add idempotency check for event processing in services/inventory/src/Inventory.Infrastructure/Services/
-- [ ] T023b [US4] Configure Kafka DLQ for failed messages in services/inventory/src/Inventory.Infrastructure/Messaging/
+- [X] T023b [US4] Configure Kafka DLQ for failed messages in services/inventory/src/Inventory.Infrastructure/Messaging/
 
 ### Integration Tests
 
@@ -92,7 +93,7 @@
 - [ ] T027 [US5] Implement Lua script for atomic user selection (ZPOPMAX + ZREM) in services/inventory/src/Inventory.Infrastructure/Services/
 - [ ] T027b [US5] Add distributed lock for atomic selection in services/inventory/src/Inventory.Infrastructure/Services/
 - [ ] T027c [US5] Add Redis idempotency cache for processed events in services/inventory/src/Inventory.Infrastructure/Services/
-- [ ] T028 [US5] Create WaitlistOpportunityGrantedEvent publisher in services/inventory/src/Inventory.Infrastructure/Messaging/Producers/
+- [ ] T028 [US5] Implement WaitlistOpportunityGrantedEvent publisher using IKafkaProducer in services/inventory/src/Inventory.Application/Handlers/
 - [ ] T029 [US5] Implement opportunity window creation with 10-min TTL in services/inventory/src/Inventory.Infrastructure/Persistence/
 
 ### Integration Tests

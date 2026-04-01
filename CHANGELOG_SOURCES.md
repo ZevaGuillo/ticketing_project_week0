@@ -147,6 +147,46 @@ Análisis de `/speckit.analyze` identificó gaps críticos en el sistema distrib
 
 ---
 
+## Corrección 6: Estandarización de Productores Kafka
+
+### Problema Identificado
+
+Al crear `WaitlistEventProducer.cs` como wrapper de `IKafkaProducer`, se introdujo un patrón diferente al resto del proyecto:
+
+| Archivo | Patrón Anterior | Estado |
+|----------|-----------------|--------|
+| `CreateReservationCommandHandler` | Usa `IKafkaProducer` directamente | ❌ Inconsistente |
+| `WaitlistEventProducer.cs` | Wrapper class | ❌ Nuevo patrón no necesario |
+
+### Decisión Tomada
+
+**Seguir el estándar existente** - usar `IKafkaProducer` directamente en los handlers:
+
+```csharp
+// Patrón correcto (existing)
+var json = JsonSerializer.Serialize(@event, options);
+await _kafkaProducer.ProduceAsync("topic-name", json, key);
+```
+
+### Cambios Realizados
+
+| Acción | Archivo |
+|--------|---------|
+| **Eliminado** | `WaitlistEventProducer.cs` |
+| **Creado** | `Inventory.Domain/Events/WaitlistOpportunityGrantedEvent.cs` |
+| **Creado** | `Inventory.Domain/Events/ReservationExpiredEvent.cs` |
+| **Actualizado** | tasks.md T022b (WaitlistSelectionHandler) |
+| **Actualizado** | tasks.md T028 (usar IKafkaProducer directamente) |
+
+### Justificación
+
+- El proyecto ya usa `IKafkaProducer` directamente en handlers
+- Mantiene consistencia con código existente
+- Separa concern: dominio (eventos) vs infraestructura (serialización)
+- Los eventos viven en Domain/Events, los handlers los serializan y publican
+
+---
+
 ## Consulta 1: Análisis del Proyecto e Investigación Inicial
 
 **Fecha:** 2026-03-25 | **Feature:** Waitlist + Notificaciones Event-Driven
