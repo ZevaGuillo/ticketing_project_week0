@@ -250,6 +250,51 @@ La carpeta `Inventory.Application` tenía una estructura inconsistente:
 
 ---
 
+## Corrección 9: Migración de Minimal API a Controllers
+
+### Problema Identificado
+
+El proyecto usaba Minimal API endpoints (`app.MapGroup()`) mientras otros servicios del ecosistema usan Controllers MVC.
+
+### Decisión Tomada
+
+**Migrar** a Controllers para mantener consistencia con el resto de servicios:
+
+| Acción | Archivo |
+|--------|---------|
+| **Creado** | `Inventory.Api/Controllers/WaitlistController.cs` |
+| **Creado** | `Inventory.Api/Controllers/ReservationsController.cs` |
+| **Eliminado** | `Inventory.Api/Endpoints/ReservationEndpoints.cs` |
+| **Eliminado** | `Inventory.Api/Endpoints/WaitlistEndpoints.cs` |
+| **Eliminado** | `Inventory.Api/Endpoints/` (carpeta) |
+| **Actualizado** | `Inventory.Api/Program.cs` (agregado `AddControllers()` + `MapControllers()`) |
+
+### Cambios en Program.cs
+
+```csharp
+// Antes (Minimal API)
+builder.Services.AddEndpointsApiExplorer();
+app.MapReservationEndpoints();
+app.MapWaitlistEndpoints();
+
+// Después (Controllers)
+builder.Services.AddControllers();
+app.MapControllers();
+```
+
+### Tests Actualizados
+
+- `InventoryApiFactory.cs`: Agregado mock de Redis (`IConnectionMultiplexer`, `WaitlistRedisConfiguration`) para tests de integración
+
+### Justificación
+
+- Consistencia con otros servicios del proyecto
+- Mejor soporte de validación automática con `[ApiController]`
+- Conventions más familiares para equipos con experiencia MVC
+- Filtros integrados disponibles (`[Authorize]`, `[ExceptionFilter]`)
+
+---
+
 ## Consulta 1: Análisis del Proyecto e Investigación Inicial
 
 **Fecha:** 2026-03-25 | **Feature:** Waitlist + Notificaciones Event-Driven

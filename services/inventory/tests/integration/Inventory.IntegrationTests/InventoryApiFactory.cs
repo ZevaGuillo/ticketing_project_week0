@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Inventory.Infrastructure.Persistence;
+using Inventory.Infrastructure.Configuration;
 using Inventory.Domain.Ports;
 using Moq;
+using StackExchange.Redis;
 
 namespace Inventory.IntegrationTests;
 
@@ -40,6 +42,29 @@ public class InventoryApiFactory : WebApplicationFactory<Program>
                 .Returns(Task.CompletedTask);
 
             services.AddSingleton(kafkaProducerMock.Object);
+
+            var connectionMultiplexerMock = new Mock<IConnectionMultiplexer>();
+            var databaseMock = new Mock<IDatabase>();
+            
+            databaseMock.Setup(x => x.SortedSetAddAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<double>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+                .ReturnsAsync(true);
+            
+            databaseMock.Setup(x => x.SortedSetRankAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<Order>(),
+                It.IsAny<CommandFlags>()))
+                .ReturnsAsync((long?)1);
+            
+            connectionMultiplexerMock.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(databaseMock.Object);
+            
+            services.AddSingleton(connectionMultiplexerMock.Object);
+            services.AddScoped(sp => new WaitlistRedisConfiguration(connectionMultiplexerMock.Object));
 
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();

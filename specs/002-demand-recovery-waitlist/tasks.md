@@ -42,15 +42,15 @@
 
 ### Implementation
 
-- [ ] T015 [US1] Implement JoinWaitlistCommand in services/inventory/src/Inventory.Application/Commands/
-- [ ] T016 [US1] Implement JoinWaitlistCommandHandler in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T017 [US1] Implement WaitlistRepository in services/inventory/src/Inventory.Infrastructure/Persistence/
-- [ ] T018 [US1] Create POST /api/waitlist/join endpoint in services/inventory/src/Inventory.Api/Endpoints/
-- [ ] T019 [US1] Add Redis Sorted Set integration for waitlist queue in services/inventory/src/Inventory.Infrastructure/Services/
+- [X] T015 [US1] Implement JoinWaitlistCommand in services/inventory/src/Inventory.Application/Commands/
+- [X] T016 [US1] Implement JoinWaitlistCommandHandler in services/inventory/src/Inventory.Application/Handlers/
+- [X] T017 [US1] Implement WaitlistRepository in services/inventory/src/Inventory.Infrastructure/Persistence/
+- [X] T018 [US1] Create POST /api/waitlist/join endpoint in services/inventory/src/Inventory.Api/Endpoints/
+- [X] T019 [US1] Add Redis Sorted Set integration for waitlist queue in services/inventory/src/Inventory.Infrastructure/Services/
 
 ### Component Tests
 
-- [ ] T020 [US1] Write component test for POST /api/waitlist/join endpoint in services/inventory/tests/Inventory.Integration/
+- [X] T020 [US1] Write component test for POST /api/waitlist/join endpoint in services/inventory/tests/Inventory.Integration/
 
 ---
 

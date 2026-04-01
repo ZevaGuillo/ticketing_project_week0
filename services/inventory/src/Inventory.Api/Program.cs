@@ -2,7 +2,6 @@ using Inventory.Infrastructure;
 using Inventory.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Inventory.Domain.Ports;
-using Inventory.Api.Endpoints;
 using UserContext;
 using IUserContext = UserContext.IUserContext;
 using UserContextImpl = UserContext.UserContext;
@@ -12,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Inventory.Application.UseCases.CreateReservation.CreateReservationCommand).Assembly));
+
+builder.Services.AddControllers();
 
 builder.Services.AddScoped<IUserContext, UserContextImpl>();
 
@@ -59,7 +60,7 @@ app.Use(async (context, next) =>
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-app.MapReservationEndpoints();
+app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {

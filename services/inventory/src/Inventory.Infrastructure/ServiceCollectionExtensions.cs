@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConn));
         services.AddScoped<IRedisLock, RedisLock>();
         services.AddScoped<WaitlistRedisConfiguration>();
+        services.AddScoped<IWaitlistRepository, WaitlistRepository>();
 
         // Configure Kafka producer
         var kafkaBootstrapServers = configuration.GetConnectionString("Kafka") ?? configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
