@@ -1,20 +1,83 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { format } from "date-fns"
-import { ArrowLeft, Calendar, Loader2 } from "lucide-react"
+import { ArrowLeft, Calendar, Loader2, Bell, CheckCircle } from "lucide-react"
 import { useSeatmap } from "@/hooks/use-seatmap"
 import { Seatmap } from "@/components/seatmap"
 import { CartSidebar } from "@/components/cart-sidebar"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/context/auth-context"
+import { getWaitlistStatus } from "@/lib/api/waitlist"
 
 interface EventDetailClientProps {
   eventId: string
 }
 
+interface WaitlistInfo {
+  section: string
+  queuePosition: number
+  status: string
+}
+
 export function EventDetailClient({ eventId }: EventDetailClientProps) {
+  const { user, isAuthenticated } = useAuth()
   const { data: seatmap, error, isLoading, mutate } = useSeatmap(eventId)
+  const [waitlistSections, setWaitlistSections] = useState<WaitlistInfo[]>([])
+  const [loadingWaitlist, setLoadingWaitlist] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    console.log("[EventDetail] User changed, refreshing waitlist. user:", user?.id, user?.email)
+    setRefreshKey(k => k + 1)
+  }, [user?.id])
+
+  useEffect(() => {
+    if (isAuthenticated && user && seatmap?.seats) {
+      loadWaitlistStatus()
+    } else {
+      setWaitlistSections([])
+    }
+  }, [isAuthenticated, user, seatmap, refreshKey])
+
+  const loadWaitlistStatus = async () => {
+    if (!user || !seatmap?.seats) return
+    
+    console.log("[Waitlist] Loading status for user:", user.id, user.email)
+    setLoadingWaitlist(true)
+    
+    // Check all known sections, not just those in the seatmap
+    const sections = ["General", "VIP", "A", "B", "C", "D"]
+    const results: WaitlistInfo[] = []
+    
+    for (const section of sections) {
+      try {
+        const status = await getWaitlistStatus(eventId, section, user.id)
+        console.log("[Waitlist] Section", section, "status:", status)
+        // Only include active waitlist entries with valid position
+        if (status && status.status === "ACTIVE" && status.queuePosition > 0) {
+          results.push({
+            section,
+            queuePosition: status.queuePosition,
+            status: status.status
+          })
+        }
+      } catch (e) {
+        console.log("[Waitlist] Section", section, "error:", e)
+      }
+    }
+    
+    console.log("[Waitlist] Final results:", results)
+    setWaitlistSections(results)
+    setLoadingWaitlist(false)
+  }
+
+  const uniqueSections = seatmap?.seats 
+    ? [...new Set(seatmap.seats.map(s => s.sectionCode))].sort()
+    : []
 
   return (
     <main className="min-h-screen bg-background">
@@ -62,6 +125,31 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
               </div>
             ) : null}
 
+            {/* Waitlist Status Banner - Only show if user is on waitlist */}
+            {isAuthenticated && user && !isLoading && waitlistSections.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Bell className="size-4 text-amber-600" />
+                  <span className="font-medium text-amber-900 dark:text-amber-100">
+                    You're on the waitlist
+                  </span>
+                  {loadingWaitlist && <Loader2 className="size-4 animate-spin text-amber-600" />}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {waitlistSections.map(info => (
+                    <Badge 
+                      key={info.section} 
+                      variant="outline"
+                      className="border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-900/30"
+                    >
+                      <CheckCircle className="size-3 mr-1" />
+                      Section {info.section}: Position #{info.queuePosition}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Seatmap */}
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -87,7 +175,12 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
                 </Button>
               </div>
             ) : seatmap ? (
-              <Seatmap seatmap={seatmap} onSeatReserved={() => mutate()} />
+              <Seatmap 
+                seatmap={seatmap} 
+                eventId={eventId} 
+                onSeatReserved={() => mutate()} 
+                onWaitlistJoined={loadWaitlistStatus}
+              />
             ) : null}
           </div>
 

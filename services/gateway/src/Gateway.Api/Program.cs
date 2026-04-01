@@ -53,6 +53,30 @@ builder.Services.AddAuthorization(options =>
 var proxyBuilder = builder.Services.AddReverseProxy();
 proxyBuilder.LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
+proxyBuilder.AddTransforms(transforms =>
+{
+    transforms.AddRequestTransform(context =>
+    {
+        var userId = context.HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
+        
+        context.ProxyRequest.Headers.Remove("X-User-Id");
+        
+        if (!string.IsNullOrEmpty(userId))
+        {
+            context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Id", userId);
+        }
+        
+        var userRole = context.HttpContext.Request.Headers["X-User-Role"].FirstOrDefault();
+        context.ProxyRequest.Headers.Remove("X-User-Role");
+        if (!string.IsNullOrEmpty(userRole))
+        {
+            context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Role", userRole);
+        }
+        
+        return ValueTask.CompletedTask;
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

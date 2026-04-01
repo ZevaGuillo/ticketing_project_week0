@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Ticket, ShoppingCart, LogOut, User, LogIn } from "lucide-react"
+import { Ticket, ShoppingCart, LogOut, User, LogIn, Bell } from "lucide-react"
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,28 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           {isAuthenticated && user ? (
             <>
+              {/* Waitlist */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Link href="/waitlist">
+                        <Bell className="size-5" />
+                        <span className="sr-only">My Waitlist</span>
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>My Waitlist</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* User indicator */}
               <div className="hidden sm:flex items-center gap-1.5 rounded-md bg-secondary px-2.5 py-1.5 text-xs text-muted-foreground">
                 <User className="size-3.5" />

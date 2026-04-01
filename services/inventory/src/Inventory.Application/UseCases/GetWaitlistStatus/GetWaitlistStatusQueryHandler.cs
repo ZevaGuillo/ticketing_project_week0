@@ -34,10 +34,14 @@ public class GetWaitlistStatusQueryHandler : IRequestHandler<GetWaitlistStatusQu
         return new GetWaitlistStatusResponse
         {
             WaitlistEntryId = entry.Id,
+            UserId = entry.UserId,
+            EventId = entry.EventId,
+            Section = entry.Section,
             QueuePosition = (int)position,
             Status = entry.Status.ToString(),
             JoinedAt = entry.JoinedAt,
-            NotifiedAt = entry.NotifiedAt
+            NotifiedAt = entry.NotifiedAt,
+            CancelledAt = entry.CancelledAt
         };
     }
 }

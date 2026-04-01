@@ -41,9 +41,13 @@ app.UseCors("FrontendPolicy");
 
 app.Use(async (context, next) =>
 {
+    Console.WriteLine($"[MIDDLEWARE] Incoming headers: {string.Join(", ", context.Request.Headers.Select(h => $"{h.Key}={h.Value}"))}");
+    
     var userContext = context.RequestServices.GetRequiredService<IUserContext>();
     var userId = context.Request.Headers[UserContextExtensions.UserIdHeader].FirstOrDefault();
     var userRole = context.Request.Headers[UserContextExtensions.UserRoleHeader].FirstOrDefault();
+
+    Console.WriteLine($"[MIDDLEWARE] X-User-Id: '{userId}', X-User-Role: '{userRole}'");
 
     if (!string.IsNullOrEmpty(userId))
     {

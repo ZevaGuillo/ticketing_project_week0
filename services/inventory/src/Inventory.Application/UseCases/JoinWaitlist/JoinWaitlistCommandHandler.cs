@@ -57,6 +57,9 @@ public class JoinWaitlistCommandHandler : IRequestHandler<JoinWaitlistCommand, J
         return new JoinWaitlistResponse
         {
             WaitlistEntryId = entry.Id,
+            UserId = entry.UserId,
+            EventId = entry.EventId,
+            Section = entry.Section,
             QueuePosition = (int)position,
             JoinedAt = entry.JoinedAt,
             Status = entry.Status.ToString()

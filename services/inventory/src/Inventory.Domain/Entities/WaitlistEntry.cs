@@ -11,6 +11,7 @@ public class WaitlistEntry
     public WaitlistStatus Status { get; set; } = WaitlistStatus.ACTIVE;
     public DateTime JoinedAt { get; set; }
     public DateTime? NotifiedAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
