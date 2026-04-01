@@ -62,18 +62,18 @@
 
 ### Tests (TDD - RED first)
 
-- [ ] T021 [US4] Write failing unit test for ReservationExpiredEventConsumer in services/inventory/tests/Inventory.Unit/Messaging/
+- [X] T021 [US4] Write failing unit test for ReservationExpiredEventConsumer in services/inventory/tests/Inventory.Unit/Messaging/
 
 ### Implementation
 
 - [X] T022 [US4] Implement ReservationExpiredEventConsumer in services/inventory/src/Inventory.Infrastructure/Messaging/
-- [ ] T022b [US4] Implement WaitlistSelectionHandler to process reservation-expired event in services/inventory/src/Inventory.Application/Handlers/
-- [ ] T023 [US4] Add idempotency check for event processing in services/inventory/src/Inventory.Infrastructure/Services/
+- [X] T022b [US4] Implement WaitlistSelectionHandler to process reservation-expired event in services/inventory/src/Inventory.Application/Handlers/
+- [X] T023 [US4] Add idempotency check for event processing in services/inventory/src/Inventory.Infrastructure/Services/
 - [X] T023b [US4] Configure Kafka DLQ for failed messages in services/inventory/src/Inventory.Infrastructure/Messaging/
 
 ### Integration Tests
 
-- [ ] T024 [US4] Write integration test for Kafka event consumption in services/inventory/tests/Inventory.Integration/
+- [X] T024 [US4] Write integration test for Kafka event consumption in services/inventory/tests/Inventory.Integration/
 
 ---
 

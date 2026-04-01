@@ -68,4 +68,11 @@ public class WaitlistRedisConfiguration
         var db = GetDatabase();
         return await db.KeyExistsAsync($"waitlist:processed:{key}");
     }
+
+    public async Task RemoveFromQueueAsync(Guid eventId, string section, Guid userId)
+    {
+        var db = GetDatabase();
+        var key = GetWaitlistKey(eventId, section);
+        await db.SortedSetRemoveAsync(key, userId.ToString());
+    }
 }

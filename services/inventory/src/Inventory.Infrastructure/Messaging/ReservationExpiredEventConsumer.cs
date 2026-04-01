@@ -96,7 +96,7 @@ public class ReservationExpiredEventConsumer : BackgroundService
         }
     }
 
-    private async Task ProcessEventAsync(ReservationExpiredEvent evt, CancellationToken ct)
+    public async Task ProcessEventAsync(ReservationExpiredEvent evt, CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
