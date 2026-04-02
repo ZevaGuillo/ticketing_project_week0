@@ -57,11 +57,14 @@ public sealed class AddToCartHandler : IRequestHandler<AddToCartCommand, AddToCa
                     Id = Guid.NewGuid(),
                     OrderId = existingOrder.Id,
                     SeatId = request.SeatId,
-                    Price = request.Price
+                    Price = request.Price,
+                    SeatLabel = request.SeatLabel
                 };
                 
                 existingOrder.Items.Add(newItem);
                 existingOrder.TotalAmount = existingOrder.Items.Sum(i => i.Price);
+                if (!string.IsNullOrEmpty(request.EventName) && string.IsNullOrEmpty(existingOrder.EventName))
+                    existingOrder.EventName = request.EventName;
                 
                 order = await _orderRepository.UpdateAsync(existingOrder, cancellationToken);
             }
@@ -72,6 +75,7 @@ public sealed class AddToCartHandler : IRequestHandler<AddToCartCommand, AddToCa
                 {
                     Id = Guid.NewGuid(),
                     UserId = request.UserId,
+                    UserEmail = request.UserEmail,
                     GuestToken = request.GuestToken,
                     TotalAmount = request.Price,
                     State = "draft",
@@ -82,9 +86,11 @@ public sealed class AddToCartHandler : IRequestHandler<AddToCartCommand, AddToCa
                         {
                             Id = Guid.NewGuid(),
                             SeatId = request.SeatId,
-                            Price = request.Price
+                            Price = request.Price,
+                            SeatLabel = request.SeatLabel
                         }
-                    }
+                    },
+                    EventName = request.EventName
                 };
                 
                 // Set the OrderId on the item
@@ -96,12 +102,13 @@ public sealed class AddToCartHandler : IRequestHandler<AddToCartCommand, AddToCa
             var orderDto = new OrderDto(
                 order.Id,
                 order.UserId,
+                order.UserEmail,
                 order.GuestToken,
                 order.TotalAmount,
                 order.State,
                 order.CreatedAt,
                 order.PaidAt,
-                order.Items.Select(i => new OrderItemDto(i.Id, i.SeatId, i.Price))
+                order.Items.Select(i => new OrderItemDto(i.Id, i.SeatId, i.Price, i.SeatLabel))
             );
 
             return new AddToCartResponse(true, null, orderDto);

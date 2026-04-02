@@ -3,6 +3,7 @@ namespace Ordering.Application.DTOs;
 public record OrderDto(
     Guid Id,
     string? UserId,
+    string? UserEmail,
     string? GuestToken,
     decimal TotalAmount,
     string State,
@@ -17,5 +18,6 @@ public record OrderDto(
 public record OrderItemDto(
     Guid Id,
     Guid SeatId,
-    decimal Price
+    decimal Price,
+    string? SeatLabel = null
 );

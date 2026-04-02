@@ -22,23 +22,22 @@ public class GetOrderHandler : IRequestHandler<GetOrderQuery, OrderDto?>
         if (order == null)
             return null;
 
-        // ENRICHMENT: In a real scenario, we would call Catalog and Identity service here.
-        // For the current MVP scope and testing consistency, we ensure the DTO reflects 
-        // the data needed by Fulfillment.
         var firstItem = order.Items.FirstOrDefault();
+        var seatNumber = firstItem?.SeatLabel ?? (firstItem != null ? $"Seat-{firstItem.SeatId.ToString().Substring(0, 8)}" : "N/A");
 
         return new OrderDto(
             order.Id,
-            order.UserId ?? "guest@example.com", // Ensure we have an email for Notification
+            order.UserId,
+            order.UserEmail,
             order.GuestToken,
             order.TotalAmount,
             order.State,
             order.CreatedAt,
             order.PaidAt,
-            order.Items.Select(i => new OrderItemDto(i.Id, i.SeatId, i.Price)),
-            "Awesome Event MVP", // Mocked EventName until Catalog integration is live
-            firstItem != null ? $"Seat-{firstItem.SeatId.ToString().Substring(0,4)}" : "N/A",
-            Guid.Empty // EventId (Placeholder)
+            order.Items.Select(i => new OrderItemDto(i.Id, i.SeatId, i.Price, i.SeatLabel)),
+            order.EventName ?? "Evento",
+            seatNumber,
+            Guid.Empty
         );
     }
 }

@@ -26,6 +26,7 @@ public class CartController : ControllerBase
     public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest request, CancellationToken cancellationToken = default)
     {
         var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+        var userEmail = Request.Headers["X-User-Email"].FirstOrDefault();
         
         if (string.IsNullOrEmpty(request.UserId) && string.IsNullOrEmpty(request.GuestToken) && string.IsNullOrEmpty(userId))
         {
@@ -39,7 +40,10 @@ public class CartController : ControllerBase
             request.SeatId,
             request.Price,
             effectiveUserId,
-            request.GuestToken
+            request.GuestToken,
+            userEmail,
+            request.EventName,
+            request.SeatLabel
         );
 
         var response = await _mediator.Send(command, cancellationToken);

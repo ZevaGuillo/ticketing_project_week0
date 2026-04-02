@@ -74,7 +74,7 @@ public class OrdersController : ControllerBase
         return Ok(new
         {
             OrderId = result.Id,
-            CustomerEmail = result.UserId ?? "guest@example.com",
+            CustomerEmail = result.UserEmail ?? result.UserId ?? "guest@example.com",
             EventId = result.EventId,
             EventName = result.EventName,
             SeatNumber = result.SeatNumber,
