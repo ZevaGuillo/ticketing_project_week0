@@ -207,7 +207,11 @@ public class ReservationExpiredEventConsumer : BackgroundService
         selectedEntry.Status = WaitlistStatus.OFFERED;
         selectedEntry.NotifiedAt = DateTime.UtcNow;
 
-        // 8. Save to database
+        // 8. Reserve seat for the duration of the opportunity window so it is not visible
+        //    as available to other users while the selected user has the chance to purchase.
+        availableSeat.Reserved = true;
+
+        // 9. Save to database
         dbContext.OpportunityWindows.Add(opportunity);
         await dbContext.SaveChangesAsync(ct);
 

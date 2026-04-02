@@ -24,6 +24,8 @@ export interface CreateReservationRequest {
   seatId: string
   eventId: string
   customerId: string
+  // Optional token for waitlist opportunities
+  opportunityToken?: string
 }
 
 export interface CreateReservationResponse {

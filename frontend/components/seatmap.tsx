@@ -83,7 +83,10 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
     setLocalError(null)
 
     try {
-      await reserveSeatAndAddToCart(selectedSeat, eventId)
+      // Check if user has an opportunity for this seat
+      const opportunity = opportunitiesBySeatId.get(selectedSeat.id)
+      
+      await reserveSeatAndAddToCart(selectedSeat, eventId, opportunity?.token)
       setSelectedSeat(null)
       onSeatReserved?.()
     } catch (err) {
@@ -91,7 +94,7 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
         err instanceof Error ? err.message : "Failed to reserve seat"
       )
     }
-  }, [selectedSeat, reserveSeatAndAddToCart, isSeatInCart, removeSeatFromCart, onSeatReserved])
+  }, [selectedSeat, reserveSeatAndAddToCart, isSeatInCart, removeSeatFromCart, onSeatReserved, opportunitiesBySeatId, eventId])
 
   const handleJoinWaitlist = useCallback(async () => {
     if (!selectedSeat || !user) return
@@ -116,7 +119,8 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
     }
   }, [selectedSeat, user, eventId, onWaitlistJoined])
 
-  const isUnavailable = selectedSeat && selectedSeat.status !== "available" && selectedSeat.status !== "offered"
+  const hasOpportunityForSelected = selectedSeat ? opportunitiesBySeatId.has(selectedSeat.id) : false
+  const isUnavailable = selectedSeat && selectedSeat.status !== "available" && !hasOpportunityForSelected
 
   return (
     <div className="flex flex-col gap-6">
@@ -187,8 +191,11 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
             {isSeatInCart(selectedSeat.id) && (
               <p className="text-xs text-accent mt-1">Already in your cart</p>
             )}
-            {selectedSeat.status === "reserved" && (
+            {selectedSeat.status === "reserved" && !hasOpportunityForSelected && (
               <p className="text-xs text-amber-600 mt-1">Seat reserved by another user</p>
+            )}
+            {hasOpportunityForSelected && (
+              <p className="text-xs text-green-600 mt-1">¡Tienes una oportunidad para este asiento!</p>
             )}
             {selectedSeat.status === "sold" && (
               <p className="text-xs text-red-600 mt-1">Seat already sold</p>
@@ -220,7 +227,7 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
                 )}
               </Button>
             )}
-            {selectedSeat.status === "available" && (
+            {(selectedSeat.status === "available" || hasOpportunityForSelected) && (
               <Button
                 onClick={handleReserve}
                 disabled={isAddingToCart}

@@ -114,29 +114,21 @@ public class OpportunityExpiryWorker : BackgroundService
             "Opportunity {OpportunityId} expired for user {UserId}, triggering re-selection",
             opportunity.Id, waitlistEntry.UserId);
 
+        // 1. Mark opportunity as expired and the waitlist entry as EXPIRED (one chance per user).
+        //    The user loses their spot; they will NOT be re-queued.
         opportunity.Status = OpportunityStatus.EXPIRED;
-        
-        waitlistEntry.Status = WaitlistStatus.ACTIVE;
+        waitlistEntry.Status = WaitlistStatus.EXPIRED;
 
-        if (waitlistRepo != null)
-        {
-            await waitlistRepo.UpdateAsync(waitlistEntry, cancellationToken);
-        }
-        
         if (opportunityRepo != null)
-        {
             await opportunityRepo.UpdateAsync(opportunity, cancellationToken);
-        }
-        
-        if (redisConfig != null)
-        {
-            await redisConfig.AddToQueueAsync(
-                waitlistEntry.EventId,
-                waitlistEntry.Section,
-                waitlistEntry.UserId,
-                waitlistEntry.JoinedAt);
-        }
+        if (waitlistRepo != null)
+            await waitlistRepo.UpdateAsync(waitlistEntry, cancellationToken);
 
+        // Ensure the user is not left in Redis queue
+        if (redisConfig != null)
+            await redisConfig.RemoveFromQueueAsync(waitlistEntry.EventId, waitlistEntry.Section, waitlistEntry.UserId);
+
+        // 2. Publish expired notification to other services
         if (kafkaProducer != null)
         {
             var expiredEvent = new
@@ -152,38 +144,68 @@ public class OpportunityExpiryWorker : BackgroundService
             _logger.LogInformation("Published opportunity-expired event for seat {SeatId}", opportunity.SeatId);
         }
 
-        await TriggerReSelectionAsync(waitlistEntry, db, kafkaProducer, cancellationToken);
-
-        await VerifyRedisConsistencyAsync(waitlistEntry, db, redisConfig, cancellationToken);
+        // 3. Offer the seat to the next user in the FIFO queue.
+        //    If no users remain, the seat is released back to available for everyone.
+        await TriggerReSelectionAsync(waitlistEntry, opportunity.SeatId, db, redisConfig, kafkaProducer, cancellationToken);
     }
 
     private async Task TriggerReSelectionAsync(
-        Domain.Entities.WaitlistEntry waitlistEntry,
+        Domain.Entities.WaitlistEntry expiredEntry,
+        Guid seatId,
         InventoryDbContext db,
+        WaitlistRedisConfiguration? redisConfig,
         IKafkaProducer? kafkaProducer,
         CancellationToken cancellationToken)
     {
         try
         {
-            var availableSeat = await db.Seats
-                .FirstOrDefaultAsync(s => !s.Reserved, cancellationToken);
-
-            if (availableSeat == null)
+            // Reuse the exact same seat from the expired opportunity
+            var seat = await db.Seats.FindAsync(new object[] { seatId }, cancellationToken);
+            if (seat == null)
             {
-                _logger.LogInformation(
-                    "No available seats for re-selection, skipping re-selection");
+                _logger.LogWarning("Seat {SeatId} not found, skipping re-selection", seatId);
                 return;
             }
 
-            var selectedUser = await SelectNextUserFromQueueAsync(
-                waitlistEntry.EventId, 
-                waitlistEntry.Section, 
-                db, 
-                cancellationToken);
+            // Primary: atomic pop from Redis FIFO queue.
+            // At this point the expired user has NOT been re-inserted into Redis, so the
+            // first element of the sorted set is the actual next person in line (User3).
+            Domain.Entities.WaitlistEntry? selectedUser = null;
+            if (redisConfig != null)
+            {
+                var nextUserId = await redisConfig.FifoPopAsync(expiredEntry.EventId, expiredEntry.Section);
+                if (nextUserId.HasValue)
+                {
+                    selectedUser = await db.WaitlistEntries
+                        .FirstOrDefaultAsync(w => w.UserId == nextUserId.Value
+                                                  && w.EventId == expiredEntry.EventId
+                                                  && w.Section == expiredEntry.Section
+                                                  && w.Status == WaitlistStatus.ACTIVE, cancellationToken);
+                    _logger.LogInformation("Redis FIFO selected user: {UserId}", nextUserId);
+                }
+            }
+
+            // Fallback: query DB ordered by JoinedAt, explicitly excluding the just-expired user
+            // (who is still OFFERED in DB at this point) to prevent them from being re-selected.
+            if (selectedUser == null)
+            {
+                selectedUser = await db.WaitlistEntries
+                    .Where(w => w.EventId == expiredEntry.EventId
+                               && w.Section == expiredEntry.Section
+                               && w.Status == WaitlistStatus.ACTIVE
+                               && w.UserId != expiredEntry.UserId)
+                    .OrderBy(w => w.JoinedAt)
+                    .FirstOrDefaultAsync(cancellationToken);
+            }
 
             if (selectedUser == null)
             {
-                _logger.LogInformation("No users available for re-selection for event {EventId}", waitlistEntry.EventId);
+                // Waitlist exhausted — release the seat so it becomes purchasable by anyone.
+                seat.Reserved = false;
+                await db.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation(
+                    "Waitlist exhausted for event {EventId} section {Section}. Seat {SeatId} released to general availability.",
+                    expiredEntry.EventId, expiredEntry.Section, seatId);
                 return;
             }
 
@@ -195,7 +217,7 @@ public class OpportunityExpiryWorker : BackgroundService
             {
                 Id = opportunityId,
                 WaitlistEntryId = selectedUser.Id,
-                SeatId = availableSeat.Id,
+                SeatId = seatId,
                 Token = token,
                 Status = OpportunityStatus.OFFERED,
                 StartsAt = DateTime.UtcNow,
@@ -205,8 +227,11 @@ public class OpportunityExpiryWorker : BackgroundService
             selectedUser.Status = WaitlistStatus.OFFERED;
             selectedUser.NotifiedAt = DateTime.UtcNow;
 
-            db.OpportunityWindows.Add(opportunity);
+            // Reserve the seat for the duration of the opportunity window so it does not
+            // appear as available to other users while User3 has the chance to purchase.
+            seat.Reserved = true;
 
+            db.OpportunityWindows.Add(opportunity);
             await db.SaveChangesAsync(cancellationToken);
 
             if (kafkaProducer != null)
@@ -216,9 +241,9 @@ public class OpportunityExpiryWorker : BackgroundService
                     OpportunityId = opportunityId,
                     WaitlistEntryId = selectedUser.Id,
                     UserId = selectedUser.UserId,
-                    EventId = waitlistEntry.EventId,
-                    SeatId = availableSeat.Id,
-                    Section = waitlistEntry.Section,
+                    EventId = expiredEntry.EventId,
+                    SeatId = seatId,
+                    Section = expiredEntry.Section,
                     OpportunityTTL = 600,
                     CreatedAt = DateTime.UtcNow,
                     Status = "OFFERED"
@@ -234,24 +259,8 @@ public class OpportunityExpiryWorker : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error triggering re-selection for event {EventId}", waitlistEntry.EventId);
+            _logger.LogError(ex, "Error triggering re-selection for event {EventId}", expiredEntry.EventId);
         }
-    }
-
-    private async Task<Domain.Entities.WaitlistEntry?> SelectNextUserFromQueueAsync(
-        Guid eventId, 
-        string section, 
-        InventoryDbContext db,
-        CancellationToken cancellationToken)
-    {
-        var activeEntries = await db.WaitlistEntries
-            .Where(w => w.EventId == eventId 
-                       && w.Section == section 
-                       && w.Status == WaitlistStatus.ACTIVE)
-            .OrderBy(w => w.JoinedAt)
-            .ToListAsync(cancellationToken);
-
-        return activeEntries.FirstOrDefault();
     }
 
     private async Task VerifyRedisConsistencyAsync(
