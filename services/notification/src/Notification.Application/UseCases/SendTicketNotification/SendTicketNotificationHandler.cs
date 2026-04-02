@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Notification.Application.Email;
 using Notification.Application.Ports;
 using Notification.Domain.Entities;
 
@@ -121,24 +122,11 @@ public class SendTicketNotificationHandler : IRequestHandler<SendTicketNotificat
 
     private string BuildEmailBody(SendTicketNotificationCommand request)
     {
-        return $@"
-Dear Customer,
-
-Thank you for your purchase! Your ticket has been successfully issued.
-
-Event Details:
-- Event: {request.EventName}
-- Seat: {request.SeatNumber}
-- Price: {request.Price} {request.Currency}
-- Issued At: {request.TicketIssuedAt:g}
-
-Your ticket PDF is attached to this email. Please download it and bring it to the venue.
-You can also scan the QR code on your ticket for quick entry.
-
-If you have any questions, please contact our support team.
-
-Best regards,
-Ticketing Platform
-";
+        return EmailTemplates.TicketConfirmation(
+            request.EventName,
+            request.SeatNumber,
+            request.Price,
+            request.Currency,
+            request.TicketIssuedAt);
     }
 }
