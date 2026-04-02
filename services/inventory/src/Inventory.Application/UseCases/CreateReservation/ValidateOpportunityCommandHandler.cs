@@ -1,7 +1,10 @@
+using System.Text.Json;
+using Inventory.Application.DTOs;
 using Inventory.Application.UseCases.CreateReservation;
 using Inventory.Domain.Entities;
 using Inventory.Domain.Enums;
 using Inventory.Domain.Ports;
+using Inventory.Infrastructure.Configuration;
 using Inventory.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -13,16 +16,21 @@ public class ValidateOpportunityCommandHandler : IRequestHandler<ValidateOpportu
     private readonly InventoryDbContext _context;
     private readonly IOpportunityWindowRepository _opportunityWindowRepository;
     private readonly IReservationRepository _reservationRepository;
-    private const int ReservationTtlMinutes = 15;
+    private readonly IKafkaProducer _kafkaProducer;
+    private readonly ReservationSettings _reservationSettings;
 
     public ValidateOpportunityCommandHandler(
         InventoryDbContext context,
         IOpportunityWindowRepository opportunityWindowRepository,
-        IReservationRepository reservationRepository)
+        IReservationRepository reservationRepository,
+        IKafkaProducer kafkaProducer,
+        ReservationSettings reservationSettings)
     {
         _context = context;
         _opportunityWindowRepository = opportunityWindowRepository;
         _reservationRepository = reservationRepository;
+        _kafkaProducer = kafkaProducer;
+        _reservationSettings = reservationSettings;
     }
 
     public async Task<ValidateOpportunityResult> Handle(ValidateOpportunityCommand request, CancellationToken cancellationToken)
@@ -52,20 +60,45 @@ public class ValidateOpportunityCommandHandler : IRequestHandler<ValidateOpportu
             throw new InvalidOperationException("Waitlist entry not found");
         }
 
+        var seat = await _context.Seats.FindAsync(new object[] { opportunity.SeatId }, cancellationToken);
+        if (seat == null)
+        {
+            throw new InvalidOperationException("Seat not found");
+        }
+
         opportunity.Status = OpportunityStatus.IN_PROGRESS;
         await _opportunityWindowRepository.UpdateAsync(opportunity, cancellationToken);
 
+        var now = DateTime.UtcNow;
         var reservation = new Reservation
         {
             Id = Guid.NewGuid(),
+            EventId = waitlistEntry.EventId,
             SeatId = opportunity.SeatId,
             CustomerId = waitlistEntry.UserId.ToString(),
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(ReservationTtlMinutes),
+            CreatedAt = now,
+            ExpiresAt = now.AddMinutes(_reservationSettings.TTLMinutes),
             Status = "active"
         };
 
         await _reservationRepository.AddAsync(reservation, cancellationToken);
+
+        // Publish reservation-created so the Ordering service's in-memory store
+        // learns about this reservation and allows adding it to the cart.
+        var @event = new ReservationCreatedEvent(
+            EventId: Guid.NewGuid().ToString("D"),
+            ReservationId: reservation.Id.ToString("D"),
+            CustomerId: reservation.CustomerId,
+            SeatId: reservation.SeatId.ToString("D"),
+            SeatNumber: $"{seat.Section}-{seat.Row}-{seat.Number}",
+            Section: seat.Section,
+            BasePrice: 0m,
+            CreatedAt: reservation.CreatedAt.ToString("O"),
+            ExpiresAt: reservation.ExpiresAt.ToString("O"),
+            Status: reservation.Status
+        );
+        var json = JsonSerializer.Serialize(@event, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        await _kafkaProducer.ProduceAsync("reservation-created", json, reservation.SeatId.ToString("N"));
 
         return new ValidateOpportunityResult
         {

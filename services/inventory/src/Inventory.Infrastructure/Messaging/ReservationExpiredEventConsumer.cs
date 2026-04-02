@@ -19,6 +19,7 @@ public class ReservationExpiredEventConsumer : BackgroundService
     private readonly ILogger<ReservationExpiredEventConsumer> _logger;
     private readonly IConsumer<string?, string> _consumer;
     private readonly IProducer<string?, string> _dlqProducer;
+    private readonly WaitlistSettings _waitlistSettings;
     private readonly string _topic = "reservation-expired";
     private readonly string _dlqTopic = "reservation-expired-dlq";
     private readonly string _waitlistTopic = "waitlist-opportunity";
@@ -27,12 +28,14 @@ public class ReservationExpiredEventConsumer : BackgroundService
         IServiceScopeFactory scopeFactory,
         IConsumer<string?, string> consumer,
         IProducer<string?, string> dlqProducer,
-        ILogger<ReservationExpiredEventConsumer> logger)
+        ILogger<ReservationExpiredEventConsumer> logger,
+        WaitlistSettings waitlistSettings)
     {
         _scopeFactory = scopeFactory;
         _consumer = consumer;
         _dlqProducer = dlqProducer;
         _logger = logger;
+        _waitlistSettings = waitlistSettings;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -190,7 +193,7 @@ public class ReservationExpiredEventConsumer : BackgroundService
         // 6. Create OpportunityWindow
         var opportunityId = Guid.NewGuid();
         var token = Guid.NewGuid().ToString("N");
-        var expiresAt = DateTime.UtcNow.AddMinutes(10);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_waitlistSettings.OpportunityTTLMinutes);
 
         var opportunity = new Domain.Entities.OpportunityWindow
         {

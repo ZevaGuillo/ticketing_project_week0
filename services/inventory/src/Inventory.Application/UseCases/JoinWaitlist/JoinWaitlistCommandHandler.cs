@@ -25,25 +25,44 @@ public class JoinWaitlistCommandHandler : IRequestHandler<JoinWaitlistCommand, J
 
     public async Task<JoinWaitlistResponse> Handle(JoinWaitlistCommand request, CancellationToken cancellationToken)
     {
+        // Block only if the user already has an active or offered entry
         var exists = await _waitlistRepository.ExistsAsync(request.UserId, request.EventId, request.Section, cancellationToken);
         if (exists)
         {
             throw new InvalidOperationException("User is already in waitlist for this event and section");
         }
 
-        var entry = new WaitlistEntry
-        {
-            Id = Guid.NewGuid(),
-            UserId = request.UserId,
-            EventId = request.EventId,
-            Section = request.Section,
-            Status = WaitlistStatus.ACTIVE,
-            JoinedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        // If a prior entry exists in a terminal state (EXPIRED/CANCELLED/CONSUMED),
+        // reactivate it so we keep history and avoid duplicate rows.
+        var existingEntry = await _waitlistRepository.GetByUserEventSectionAsync(
+            request.UserId, request.EventId, request.Section, cancellationToken);
 
-        await _waitlistRepository.AddAsync(entry, cancellationToken);
+        WaitlistEntry entry;
+        if (existingEntry != null)
+        {
+            existingEntry.Status = WaitlistStatus.ACTIVE;
+            existingEntry.JoinedAt = DateTime.UtcNow;
+            existingEntry.UpdatedAt = DateTime.UtcNow;
+            existingEntry.NotifiedAt = null;
+            existingEntry.CancelledAt = null;
+            await _waitlistRepository.UpdateAsync(existingEntry, cancellationToken);
+            entry = existingEntry;
+        }
+        else
+        {
+            entry = new WaitlistEntry
+            {
+                Id = Guid.NewGuid(),
+                UserId = request.UserId,
+                EventId = request.EventId,
+                Section = request.Section,
+                Status = WaitlistStatus.ACTIVE,
+                JoinedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _waitlistRepository.AddAsync(entry, cancellationToken);
+        }
 
         if (_redisConfiguration != null)
         {

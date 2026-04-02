@@ -50,7 +50,8 @@ public class WaitlistRepository : IWaitlistRepository
     public async Task<bool> ExistsAsync(Guid userId, Guid eventId, string section, CancellationToken ct = default)
     {
         return await _context.WaitlistEntries
-            .AnyAsync(e => e.UserId == userId && e.EventId == eventId && e.Section == section, ct);
+            .AnyAsync(e => e.UserId == userId && e.EventId == eventId && e.Section == section
+                        && (e.Status == Domain.Enums.WaitlistStatus.ACTIVE || e.Status == Domain.Enums.WaitlistStatus.OFFERED), ct);
     }
 
     public async Task<int> GetQueuePositionAsync(Guid eventId, string section, Guid userId, CancellationToken ct = default)

@@ -93,6 +93,21 @@ public class InventoryEventConsumer : BackgroundService
                                     _logger.LogInformation("Seat {SeatId} status confirmed as RESERVED (Sold)", seat.Id);
                                 }
 
+                                // Mark any active OpportunityWindow for this seat as USED so the
+                                // expiry worker does not re-release the seat after payment.
+                                var activeWindow = await dbContext.OpportunityWindows
+                                    .Where(o => o.SeatId == reservation.SeatId
+                                             && (o.Status == Inventory.Domain.Enums.OpportunityStatus.OFFERED
+                                              || o.Status == Inventory.Domain.Enums.OpportunityStatus.IN_PROGRESS))
+                                    .FirstOrDefaultAsync(stoppingToken);
+
+                                if (activeWindow != null)
+                                {
+                                    activeWindow.Status = Inventory.Domain.Enums.OpportunityStatus.USED;
+                                    activeWindow.UsedAt = DateTime.UtcNow;
+                                    _logger.LogInformation("OpportunityWindow {OpportunityId} marked as USED after payment", activeWindow.Id);
+                                }
+
                                 await dbContext.SaveChangesAsync(stoppingToken);
                             }
                             else

@@ -15,12 +15,14 @@ public class OpportunityExpiryWorker : BackgroundService
     private readonly IKafkaProducer _producer;
     private readonly ILogger<OpportunityExpiryWorker> _logger;
     private readonly TimeSpan _pollInterval;
+    private readonly WaitlistSettings _waitlistSettings;
 
     public OpportunityExpiryWorker(
         IServiceScopeFactory scopeFactory,
         IKafkaProducer producer,
-        ILogger<OpportunityExpiryWorker> logger)
-        : this(scopeFactory, producer, logger, TimeSpan.FromMinutes(1))
+        ILogger<OpportunityExpiryWorker> logger,
+        WaitlistSettings waitlistSettings)
+        : this(scopeFactory, producer, logger, waitlistSettings, TimeSpan.FromMinutes(1))
     {
     }
 
@@ -28,11 +30,13 @@ public class OpportunityExpiryWorker : BackgroundService
         IServiceScopeFactory scopeFactory,
         IKafkaProducer producer,
         ILogger<OpportunityExpiryWorker> logger,
+        WaitlistSettings waitlistSettings,
         TimeSpan pollInterval)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _producer = producer ?? throw new ArgumentNullException(nameof(producer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _waitlistSettings = waitlistSettings ?? throw new ArgumentNullException(nameof(waitlistSettings));
         _pollInterval = pollInterval;
     }
 
@@ -107,6 +111,24 @@ public class OpportunityExpiryWorker : BackgroundService
         {
             _logger.LogWarning("WaitlistEntry not found for opportunity {OpportunityId}", opportunity.Id);
             opportunity.Status = OpportunityStatus.EXPIRED;
+            return;
+        }
+
+        // Guard: if the seat already has a confirmed reservation (payment completed),
+        // just mark the window as USED and leave the seat alone.
+        var confirmedReservation = await db.Reservations
+            .Where(r => r.SeatId == opportunity.SeatId && r.Status == "confirmed")
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (confirmedReservation != null)
+        {
+            _logger.LogInformation(
+                "Opportunity {OpportunityId} expired but seat {SeatId} is already confirmed (paid). Marking as USED.",
+                opportunity.Id, opportunity.SeatId);
+            opportunity.Status = OpportunityStatus.USED;
+            opportunity.UsedAt = DateTime.UtcNow;
+            if (opportunityRepo != null)
+                await opportunityRepo.UpdateAsync(opportunity, cancellationToken);
             return;
         }
 
@@ -211,7 +233,7 @@ public class OpportunityExpiryWorker : BackgroundService
 
             var opportunityId = Guid.NewGuid();
             var token = Guid.NewGuid().ToString("N");
-            var expiresAt = DateTime.UtcNow.AddMinutes(10);
+            var expiresAt = DateTime.UtcNow.AddMinutes(_waitlistSettings.OpportunityTTLMinutes);
 
             var opportunity = new Domain.Entities.OpportunityWindow
             {
@@ -244,7 +266,7 @@ public class OpportunityExpiryWorker : BackgroundService
                     EventId = expiredEntry.EventId,
                     SeatId = seatId,
                     Section = expiredEntry.Section,
-                    OpportunityTTL = 600,
+                    OpportunityTTL = _waitlistSettings.OpportunityTTLMinutes * 60,
                     CreatedAt = DateTime.UtcNow,
                     Status = "OFFERED"
                 };

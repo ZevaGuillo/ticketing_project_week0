@@ -32,19 +32,22 @@ public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSe
     private readonly WaitlistRedisConfiguration? _redisConfiguration;
     private readonly IOpportunityWindowRepository _opportunityWindowRepository;
     private readonly IKafkaProducer _kafkaProducer;
+    private readonly WaitlistSettings _waitlistSettings;
 
     public ProcessWaitlistSelectionHandler(
         InventoryDbContext context,
         IWaitlistRepository waitlistRepository,
         WaitlistRedisConfiguration? redisConfiguration,
         IOpportunityWindowRepository opportunityWindowRepository,
-        IKafkaProducer kafkaProducer)
+        IKafkaProducer kafkaProducer,
+        WaitlistSettings waitlistSettings)
     {
         _context = context;
         _waitlistRepository = waitlistRepository;
         _redisConfiguration = redisConfiguration;
         _opportunityWindowRepository = opportunityWindowRepository;
         _kafkaProducer = kafkaProducer;
+        _waitlistSettings = waitlistSettings;
     }
 
     public async Task<ProcessWaitlistSelectionResult?> Handle(ProcessWaitlistSelectionCommand request, CancellationToken cancellationToken)
@@ -105,7 +108,7 @@ public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSe
         await _waitlistRepository.UpdateAsync(waitlistEntry, cancellationToken);
 
         var token = Guid.NewGuid().ToString("N");
-        var expiresAt = DateTime.UtcNow.AddMinutes(10);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_waitlistSettings.OpportunityTTLMinutes);
 
         var opportunityWindow = new OpportunityWindow
         {
@@ -134,7 +137,7 @@ public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSe
             EventId = request.EventId,
             SeatId = request.SeatId,
             Section = request.Section,
-            OpportunityTTL = 600,
+            OpportunityTTL = _waitlistSettings.OpportunityTTLMinutes * 60,
             IdempotencyKey = idempotencyKey,
             CreatedAt = DateTime.UtcNow
         };

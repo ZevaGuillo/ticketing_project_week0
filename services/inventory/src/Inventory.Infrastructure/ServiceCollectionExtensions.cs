@@ -31,6 +31,19 @@ public static class ServiceCollectionExtensions
             }
             return options;
         });
+
+        // Configure Waitlist settings
+        services.AddSingleton<WaitlistSettings>(sp =>
+        {
+            var options = new WaitlistSettings();
+            configuration.GetSection("Waitlist").Bind(options);
+            var envValue = Environment.GetEnvironmentVariable("Waitlist__OpportunityTTLMinutes");
+            if (int.TryParse(envValue, out var ttlMinutes) && ttlMinutes > 0)
+            {
+                options.OpportunityTTLMinutes = ttlMinutes;
+            }
+            return options;
+        });
         
         services.AddDbContext<InventoryDbContext>(options =>
         {
@@ -83,7 +96,8 @@ public static class ServiceCollectionExtensions
             var consumer = new ConsumerBuilder<string?, string>(waitlistConsumerConfig).Build();
             var dlqProducer = sp.GetRequiredService<IProducer<string?, string>>();
             var logger = sp.GetRequiredService<ILogger<ReservationExpiredEventConsumer>>();
-            return new ReservationExpiredEventConsumer(scopeFactory, consumer, dlqProducer, logger);
+            var waitlistSettings = sp.GetRequiredService<WaitlistSettings>();
+            return new ReservationExpiredEventConsumer(scopeFactory, consumer, dlqProducer, logger, waitlistSettings);
         });
 
         // Register expiry worker as hosted service (optional in tests)
@@ -100,7 +114,8 @@ public static class ServiceCollectionExtensions
             var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
             var kafka = sp.GetRequiredService<IKafkaProducer>();
             var logger = sp.GetRequiredService<ILogger<Inventory.Infrastructure.Workers.OpportunityExpiryWorker>>();
-            return new Inventory.Infrastructure.Workers.OpportunityExpiryWorker(scopeFactory, kafka, logger);
+            var waitlistSettings = sp.GetRequiredService<WaitlistSettings>();
+            return new Inventory.Infrastructure.Workers.OpportunityExpiryWorker(scopeFactory, kafka, logger, waitlistSettings);
         });
 
         // Register seats-generated Kafka consumer as hosted service

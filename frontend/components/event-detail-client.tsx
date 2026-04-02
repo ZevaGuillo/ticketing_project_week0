@@ -155,8 +155,8 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
               </div>
             )}
 
-            {/* Waitlist Status Banner - Only show if user is on waitlist */}
-            {isAuthenticated && user && !isLoading && waitlistSections.length > 0 && (
+            {/* Waitlist Status Banner - Only show if user is on waitlist AND has no active opportunity */}
+            {isAuthenticated && user && !isLoading && waitlistSections.length > 0 && !(opportunities && opportunities.length > 0) && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Bell className="size-4 text-amber-600" />
