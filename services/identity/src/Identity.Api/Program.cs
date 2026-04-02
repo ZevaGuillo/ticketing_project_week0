@@ -159,6 +159,13 @@ app.MapPost("/auth/token", async (HttpContext context) =>
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity" }));
 
+app.MapGet("/internal/users/{id:guid}", async (Guid id, IUserRepository userRepo) =>
+{
+    var user = await userRepo.GetByIdAsync(id);
+    if (user == null) return Results.NotFound();
+    return Results.Ok(new { userId = user.Id, email = user.Email });
+});
+
 using (var scope = app.Services.CreateScope())
 {
     try

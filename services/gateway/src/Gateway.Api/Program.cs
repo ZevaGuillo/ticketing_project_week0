@@ -29,6 +29,7 @@ Console.WriteLine($"[JWT CONFIG] Key: {jwtKey.Substring(0, 10)}..., Issuer: {jwt
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -39,8 +40,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero,
-            NameClaimType = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
-            RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+            NameClaimType = "sub",
+            RoleClaimType = "role"
         };
     });
 
@@ -71,6 +72,13 @@ proxyBuilder.AddTransforms(transforms =>
         if (!string.IsNullOrEmpty(userRole))
         {
             context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Role", userRole);
+        }
+
+        var userEmail = context.HttpContext.User.FindFirstValue("email");
+        if (!string.IsNullOrEmpty(userEmail))
+        {
+            context.ProxyRequest.Headers.Remove("X-User-Email");
+            context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Email", userEmail);
         }
         
         return ValueTask.CompletedTask;

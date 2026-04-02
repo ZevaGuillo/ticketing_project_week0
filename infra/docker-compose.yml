@@ -296,10 +296,16 @@ services:
       - ASPNETCORE_URLS=http://+:5006
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_notification;Include Error Detail=true
       - Kafka__BootstrapServers=kafka:9092
-      - SmtpEmailOptions__UseDevMode=true
-      - SmtpEmailOptions__SmtpServer=localhost
-      - SmtpEmailOptions__SmtpPort=587
-      - SmtpEmailOptions__FromEmail=noreply@ticketing.local
+      - Email__Smtp__Host=smtp.gmail.com
+      - Email__Smtp__Port=587
+      - Email__Smtp__EnableSsl=true
+      - Email__Smtp__UseDevMode=${SMTP_DEV_MODE:-false}
+      - Email__Smtp__FromAddress=${GMAIL_USER}
+      - Email__Smtp__FromName=Ticketing Platform
+      - Email__Smtp__Username=${GMAIL_USER}
+      - Email__Smtp__Password=${GMAIL_APP_PASSWORD}
+      - IdentityService__BaseUrl=http://identity:5001
+      - CatalogService__BaseUrl=http://catalog:5001
     depends_on:
       postgres:
         condition: service_healthy

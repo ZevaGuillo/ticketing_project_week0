@@ -23,6 +23,12 @@ public class HeaderForwardingTransform : RequestTransform
             context.ProxyRequest.Headers.Add(GatewayHeaders.UserRole, userRole);
         }
 
+        var userEmail = httpContext.Request.Headers["X-User-Email"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(userEmail))
+        {
+            context.ProxyRequest.Headers.Add(GatewayHeaders.UserEmail, userEmail);
+        }
+
         return ValueTask.CompletedTask;
     }
 }

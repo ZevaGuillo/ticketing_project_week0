@@ -36,6 +36,12 @@ public static class ServiceCollectionExtensions
             var url = configuration["OrderingService:Url"] ?? "http://speckit-ordering:5003";
             client.BaseAddress = new Uri(url);
         });
+
+        services.AddHttpClient("identity", client =>
+        {
+            var url = configuration["IdentityService:BaseUrl"] ?? "http://identity:5001";
+            client.BaseAddress = new Uri(url);
+        });
         
         // PDF & QR Services
         services.AddScoped<IQrCodeService, QrCodeService>();

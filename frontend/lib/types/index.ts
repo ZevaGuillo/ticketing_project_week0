@@ -44,6 +44,8 @@ export interface AddToCartRequest {
   price: number
   userId?: string | null
   guestToken?: string | null
+  eventName?: string | null
+  seatLabel?: string | null
 }
 
 // Server returns the Order directly, or wrapped in a success response

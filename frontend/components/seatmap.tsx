@@ -86,7 +86,7 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
       // Check if user has an opportunity for this seat
       const opportunity = opportunitiesBySeatId.get(selectedSeat.id)
       
-      await reserveSeatAndAddToCart(selectedSeat, eventId, opportunity?.token)
+      await reserveSeatAndAddToCart(selectedSeat, eventId, seatmap.eventName, opportunity?.token)
       setSelectedSeat(null)
       onSeatReserved?.()
     } catch (err) {
