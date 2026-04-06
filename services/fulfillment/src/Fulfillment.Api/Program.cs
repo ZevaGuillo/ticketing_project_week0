@@ -23,6 +23,8 @@ var app = builder.Build();
 
 app.UseInfrastructure();
 
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "fulfillment" }));
+
 Console.WriteLine("🚀 Fulfillment API is starting...");
 Console.WriteLine("📍 Listening on http://0.0.0.0:5004");
 Console.Out.Flush();

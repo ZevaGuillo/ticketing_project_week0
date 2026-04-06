@@ -6,16 +6,19 @@ import { format } from "date-fns"
 import { ArrowLeft, Loader2, Calendar, MapPin, X, AlertCircle } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 import { getAllWaitlistStatus, cancelWaitlist, type WaitlistStatusResponse } from "@/lib/api/waitlist"
+import { getEvents } from "@/lib/api/catalog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const EVENT_ID = "e40b63e0-446c-46d5-8d47-b5d911d7376f"
+interface WaitlistEntryWithEvent extends WaitlistStatusResponse {
+  eventName: string
+}
 
 export default function WaitlistPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
-  const [waitlistEntries, setWaitlistEntries] = useState<WaitlistStatusResponse[]>([])
+  const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntryWithEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
@@ -34,9 +37,18 @@ export default function WaitlistPage() {
     
     try {
       console.log("[WaitlistPage] Loading for user:", user.id)
-      const entries = await getAllWaitlistStatus(EVENT_ID, user.id)
-      console.log("[WaitlistPage] Loaded entries:", entries)
-      setWaitlistEntries(entries)
+      const events = await getEvents()
+      const allEntries: WaitlistEntryWithEvent[] = []
+
+      for (const event of events) {
+        const entries = await getAllWaitlistStatus(event.id, user.id)
+        for (const entry of entries) {
+          allEntries.push({ ...entry, eventName: event.name })
+        }
+      }
+
+      console.log("[WaitlistPage] Loaded entries:", allEntries)
+      setWaitlistEntries(allEntries)
     } catch (err) {
       console.error("[WaitlistPage] Load error:", err)
       setError(err instanceof Error ? err.message : "Failed to load waitlist")
@@ -45,13 +57,13 @@ export default function WaitlistPage() {
     }
   }
 
-  const handleCancel = async (entry: WaitlistStatusResponse) => {
+  const handleCancel = async (entry: WaitlistEntryWithEvent) => {
     if (!user) return
     
     console.log("[WaitlistPage] Cancelling entry:", entry)
     setCancellingId(entry.waitlistEntryId)
     try {
-      await cancelWaitlist(EVENT_ID, entry.section, user.id)
+      await cancelWaitlist(entry.eventId, entry.section, user.id)
       console.log("[WaitlistPage] Cancelled successfully, removing from list")
       setWaitlistEntries(prev => prev.filter(e => e.waitlistEntryId !== entry.waitlistEntryId))
     } catch (err) {
@@ -148,7 +160,10 @@ export default function WaitlistPage() {
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <div className="flex items-center gap-3">
                     <MapPin className="size-4 text-muted-foreground" />
-                    <CardTitle className="text-lg">Section {entry.section}</CardTitle>
+                    <div>
+                      <CardTitle className="text-lg">{entry.eventName}</CardTitle>
+                      <CardDescription>Section {entry.section}</CardDescription>
+                    </div>
                     <Badge 
                       variant={entry.status === "ACTIVE" ? "default" : "secondary"}
                       className={entry.status === "ACTIVE" ? "bg-amber-500" : ""}

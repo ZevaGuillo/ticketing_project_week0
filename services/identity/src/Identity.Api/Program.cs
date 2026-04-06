@@ -158,6 +158,7 @@ app.MapPost("/auth/token", async (HttpContext context) =>
 });
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity" }));
+app.MapGet("/auth/health", () => Results.Ok(new { status = "healthy", service = "identity" }));
 
 app.MapGet("/internal/users/{id:guid}", async (Guid id, IUserRepository userRepo) =>
 {
