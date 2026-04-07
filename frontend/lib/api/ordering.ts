@@ -1,4 +1,4 @@
-import { API_CONFIG, RETRY_DELAY_MS, RETRY_ADD_TO_CART_ATTEMPTS } from "./config"
+import { API_CONFIG, RETRY_DELAY_MS, RETRY_ADD_TO_CART_ATTEMPTS, authHeaders } from "./config"
 import type {
   AddToCartRequest,
   AddToCartResponse,
@@ -19,7 +19,7 @@ export async function addToCart(
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(data),
     })
     
@@ -81,7 +81,7 @@ export async function addToCartWithRetry(
 export async function checkout(data: CheckoutRequest): Promise<Order> {
   const res = await fetch(`${API_CONFIG.gateway}${API_CONFIG.ordering}/orders/checkout`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(data),
   })
   if (res.status === 404) {

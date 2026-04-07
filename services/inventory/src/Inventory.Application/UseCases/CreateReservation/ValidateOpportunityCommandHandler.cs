@@ -13,6 +13,7 @@ namespace Inventory.Application.UseCases.CreateReservation;
 
 public class ValidateOpportunityCommandHandler : IRequestHandler<ValidateOpportunityCommand, ValidateOpportunityResult>
 {
+    private static readonly JsonSerializerOptions CamelCaseOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly InventoryDbContext _context;
     private readonly IOpportunityWindowRepository _opportunityWindowRepository;
     private readonly IReservationRepository _reservationRepository;
@@ -97,7 +98,7 @@ public class ValidateOpportunityCommandHandler : IRequestHandler<ValidateOpportu
             ExpiresAt: reservation.ExpiresAt.ToString("O"),
             Status: reservation.Status
         );
-        var json = JsonSerializer.Serialize(@event, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var json = JsonSerializer.Serialize(@event, CamelCaseOptions);
         await _kafkaProducer.ProduceAsync("reservation-created", json, reservation.SeatId.ToString("N"));
 
         return new ValidateOpportunityResult

@@ -3,14 +3,12 @@ using Inventory.Domain.Events;
 using Inventory.Domain.Enums;
 using Inventory.Domain.Ports;
 using Inventory.Infrastructure.Configuration;
-using Inventory.Infrastructure.Persistence;
 using MediatR;
 
 namespace Inventory.Application.UseCases.ProcessWaitlistSelection;
 
 public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSelectionCommand, ProcessWaitlistSelectionResult?>
 {
-    private readonly InventoryDbContext _context;
     private readonly IWaitlistRepository _waitlistRepository;
     private readonly WaitlistRedisConfiguration? _redisConfiguration;
     private readonly IOpportunityWindowRepository _opportunityWindowRepository;
@@ -18,14 +16,12 @@ public class ProcessWaitlistSelectionHandler : IRequestHandler<ProcessWaitlistSe
     private readonly WaitlistSettings _waitlistSettings;
 
     public ProcessWaitlistSelectionHandler(
-        InventoryDbContext context,
         IWaitlistRepository waitlistRepository,
         WaitlistRedisConfiguration? redisConfiguration,
         IOpportunityWindowRepository opportunityWindowRepository,
         IKafkaProducer kafkaProducer,
         WaitlistSettings waitlistSettings)
     {
-        _context = context;
         _waitlistRepository = waitlistRepository;
         _redisConfiguration = redisConfiguration;
         _opportunityWindowRepository = opportunityWindowRepository;

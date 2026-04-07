@@ -30,7 +30,7 @@ const statusConfig = {
   },
 } as const
 
-export function SeatButton({ seat, isSelected, onSelect, isOffered = false }: SeatButtonProps) {
+export function SeatButton({ seat, isSelected, onSelect, isOffered = false }: Readonly<SeatButtonProps>) {
   const effectiveStatus = isOffered ? "offered" : seat.status
   const config = statusConfig[effectiveStatus]
   const { isSeatInCart } = useCart()

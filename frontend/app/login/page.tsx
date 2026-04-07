@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/context/auth-context"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Lock, AlertCircle, Eye, EyeOff, LogIn } from "lucide-react"
 
-export default function LoginPage() {
+function LoginForm() {
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -166,7 +166,7 @@ export default function LoginPage() {
           <div className="text-center text-sm text-muted-foreground">
             ¿No tienes cuenta?{" "}
             <Link 
-              href={`/register${redirect !== "/" ? `?redirect=${redirect}` : ""}`}
+              href={`/register${redirect === "/" ? "" : `?redirect=${redirect}`}`}
               className="text-accent hover:text-accent/80 font-medium"
             >
               Regístrate
@@ -175,5 +175,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

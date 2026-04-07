@@ -20,19 +20,19 @@ public class CreateUserHandler
     public async Task<Guid> Handle(CreateUserCommand command)
     {
         if (string.IsNullOrWhiteSpace(command.Email))
-            throw new ArgumentException("Email is required", nameof(command.Email));
+            throw new ArgumentException("Email is required", nameof(command));
 
         if (!IsValidEmail(command.Email))
-            throw new ArgumentException("Invalid email format", nameof(command.Email));
+            throw new ArgumentException("Invalid email format", nameof(command));
 
         if (string.IsNullOrWhiteSpace(command.Password))
-            throw new ArgumentException("Password is required", nameof(command.Password));
+            throw new ArgumentException("Password is required", nameof(command));
 
         if (command.Password.Length < MinPasswordLength)
-            throw new ArgumentException($"Password must be at least {MinPasswordLength} characters", nameof(command.Password));
+            throw new ArgumentException($"Password must be at least {MinPasswordLength} characters", nameof(command));
 
         if (!IsValidPassword(command.Password))
-            throw new ArgumentException("Password must contain at least one uppercase letter, one lowercase letter, and one number", nameof(command.Password));
+            throw new ArgumentException("Password must contain at least one uppercase letter, one lowercase letter, and one number", nameof(command));
 
         var existingUser = await _userRepository.GetByEmailAsync(command.Email);
         if (existingUser is not null)

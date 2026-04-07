@@ -1,4 +1,4 @@
-import { API_CONFIG } from "./config"
+import { API_CONFIG, authHeaders } from "./config"
 
 const WAITLIST_API = `${API_CONFIG.gateway}/api/waitlist`
 
@@ -22,11 +22,11 @@ export interface WaitlistStatusResponse {
 export async function joinWaitlist(request: JoinWaitlistRequest, userId: string): Promise<WaitlistStatusResponse> {
   const res = await fetch(`${WAITLIST_API}/join`, {
     method: "POST",
-    headers: {
+    headers: authHeaders({
       "Content-Type": "application/json",
       "X-User-Id": userId,
       "Cache-Control": "no-cache",
-    },
+    }),
     body: JSON.stringify(request),
     cache: "no-store",
   })
@@ -47,10 +47,10 @@ export async function getWaitlistStatus(
   const params = new URLSearchParams({ eventId, section })
   const res = await fetch(`${WAITLIST_API}/status?${params}`, {
     method: "GET",
-    headers: {
+    headers: authHeaders({
       "X-User-Id": userId,
       "Cache-Control": "no-cache",
-    },
+    }),
     cache: "no-store",
   })
 
@@ -91,9 +91,9 @@ export async function cancelWaitlist(
   const params = new URLSearchParams({ eventId, section })
   const res = await fetch(`${WAITLIST_API}/cancel?${params}`, {
     method: "DELETE",
-    headers: {
+    headers: authHeaders({
       "X-User-Id": userId,
-    },
+    }),
   })
 
   if (!res.ok && res.status !== 404) {
@@ -118,10 +118,10 @@ export async function getUserOpportunities(
   const params = new URLSearchParams({ eventId })
   const res = await fetch(`${WAITLIST_API}/my-opportunities?${params}`, {
     method: "GET",
-    headers: {
+    headers: authHeaders({
       "X-User-Id": userId,
       "Cache-Control": "no-cache",
-    },
+    }),
     cache: "no-store",
   })
 

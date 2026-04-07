@@ -15,6 +15,7 @@ namespace Inventory.Infrastructure.Messaging;
 
 public class ReservationExpiredEventConsumer : BackgroundService
 {
+    private static readonly JsonSerializerOptions CaseInsensitiveOptions = new() { PropertyNameCaseInsensitive = true };
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ReservationExpiredEventConsumer> _logger;
     private readonly IConsumer<string?, string> _consumer;
@@ -61,10 +62,7 @@ public class ReservationExpiredEventConsumer : BackgroundService
 
                     var reservationExpired = JsonSerializer.Deserialize<ReservationExpiredEvent>(
                         result.Message.Value,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
+                        CaseInsensitiveOptions);
 
                     if (reservationExpired != null)
                     {
@@ -90,11 +88,11 @@ public class ReservationExpiredEventConsumer : BackgroundService
         }
     }
 
-    private async Task SendToDlqAsync(string errorMessage, CancellationToken ct)
+    private async Task SendToDlqAsync(string errorMessage, CancellationToken _)
     {
         try
         {
-            _logger.LogWarning("Sending failed message to DLQ: {Topic}", _dlqTopic);
+            _logger.LogWarning("Sending failed message to DLQ: {Topic}, Error: {Error}", _dlqTopic, errorMessage);
             await Task.CompletedTask;
         }
         catch (Exception ex)
@@ -165,12 +163,8 @@ public class ReservationExpiredEventConsumer : BackgroundService
         // Fallback to DB order if Redis didn't return a user
         if (selectedUserId == null)
         {
-            var firstInQueue = waitlistEntries.FirstOrDefault();
-            if (firstInQueue != null)
-            {
-                selectedUserId = firstInQueue.UserId;
-                _logger.LogInformation("Using DB order, selected user: {UserId}", selectedUserId);
-            }
+            selectedUserId = waitlistEntries[0].UserId;
+            _logger.LogInformation("Using DB order, selected user: {UserId}", selectedUserId);
         }
 
         if (selectedUserId == null)

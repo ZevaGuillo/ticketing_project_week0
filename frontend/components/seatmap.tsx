@@ -209,22 +209,30 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
                 variant="outline"
                 className="border-amber-500 text-amber-600 hover:bg-amber-50"
               >
-                {joiningWaitlist === selectedSeat.id ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Joining...
-                  </>
-                ) : waitlistJoined === selectedSeat.id ? (
-                  <>
-                    <Bell className="size-4" />
-                    Joined Waitlist
-                  </>
-                ) : (
-                  <>
-                    <Bell className="size-4" />
-                    Join Waitlist
-                  </>
-                )}
+                {(() => {
+                  if (joiningWaitlist === selectedSeat.id) {
+                    return (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Joining...
+                      </>
+                    )
+                  }
+                  if (waitlistJoined === selectedSeat.id) {
+                    return (
+                      <>
+                        <Bell className="size-4" />
+                        Joined Waitlist
+                      </>
+                    )
+                  }
+                  return (
+                    <>
+                      <Bell className="size-4" />
+                      Join Waitlist
+                    </>
+                  )
+                })()}
               </Button>
             )}
             {(selectedSeat.status === "available" || hasOpportunityForSelected) && (

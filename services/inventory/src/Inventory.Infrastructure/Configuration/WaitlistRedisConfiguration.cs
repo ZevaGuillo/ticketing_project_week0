@@ -35,9 +35,9 @@ public class WaitlistRedisConfiguration
 
     public string GetWaitlistKey(Guid eventId, string section) => $"{_queuePrefix}:{eventId}:{section}";
 
-    public string GetIdempotencyKey(string key) => $"waitlist:processed:{key}";
+    public static string GetIdempotencyKey(string key) => $"waitlist:processed:{key}";
 
-    public string GetOpportunityTokenKey(string token) => $"waitlist:opportunity:{token}";
+    public static string GetOpportunityTokenKey(string token) => $"waitlist:opportunity:{token}";
 
     public string GetLockKey(Guid eventId, string section) => $"waitlist:lock:{eventId}:{section}";
 

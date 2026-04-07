@@ -10,6 +10,7 @@ namespace Catalog.Infrastructure.Messaging;
 
 public class CatalogEventConsumer : BackgroundService
 {
+    private const string SeatIdProperty = "seatId";
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CatalogEventConsumer> _logger;
     private readonly string _bootstrapServers;
@@ -109,7 +110,7 @@ public class CatalogEventConsumer : BackgroundService
                 
                 if (root.TryGetProperty("SeatId", out var pascalSeatId))
                     seatIdElement = pascalSeatId;
-                else if (root.TryGetProperty("seatId", out var camelSeatId))
+                else if (root.TryGetProperty(SeatIdProperty, out var camelSeatId))
                     seatIdElement = camelSeatId;
                 
                 if (seatIdElement.HasValue && Guid.TryParse(seatIdElement.Value.GetString(), out var seatId))
@@ -132,7 +133,7 @@ public class CatalogEventConsumer : BackgroundService
             }
             else if (topic == "reservation-created")
             {
-                if (root.TryGetProperty("seatId", out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
+                if (root.TryGetProperty(SeatIdProperty, out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
                 {
                     Guid? reservationId = null;
                     if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
@@ -144,7 +145,7 @@ public class CatalogEventConsumer : BackgroundService
             }
             else if (topic == "reservation-expired")
             {
-                if (root.TryGetProperty("seatId", out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
+                if (root.TryGetProperty(SeatIdProperty, out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
                     await repository.UpdateSeatStatusAsync(seatId, "available");
                 else if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
                     await repository.UpdateSeatStatusByReservationAsync(resId, "available");
@@ -154,10 +155,10 @@ public class CatalogEventConsumer : BackgroundService
                 if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
                     await repository.UpdateSeatStatusByReservationAsync(resId, "sold");
             }
-            else if (topic == "seat-released")
+            else if (topic == "seat-released"
+                && root.TryGetProperty(SeatIdProperty, out var seatIdProp2) && Guid.TryParse(seatIdProp2.GetString(), out var seatId2))
             {
-                if (root.TryGetProperty("seatId", out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
-                    await repository.UpdateSeatStatusAsync(seatId, "available", null);
+                await repository.UpdateSeatStatusAsync(seatId2, "available", null);
             }
         }
         catch (Exception ex)

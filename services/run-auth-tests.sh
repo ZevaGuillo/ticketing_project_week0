@@ -40,15 +40,15 @@ run_tests "identity/tests/integration/Identity.IntegrationTests/Identity.Integra
 
 echo "Step 2: Inventory Service Tests"
 echo "--------------------------------"
-if [ -d "inventory/tests" ]; then
+if [[ -d "inventory/tests" ]]; then
     for test_dir in inventory/tests/unit/*/; do
-        if [ -f "${test_dir}*.csproj" ]; then
+        if [[ -f "${test_dir}*.csproj" ]]; then
             run_tests "${test_dir}" "Inventory Unit"
         fi
     done
     
     for test_dir in inventory/tests/integration/*/; do
-        if [ -f "${test_dir}*.csproj" ]; then
+        if [[ -f "${test_dir}*.csproj" ]]; then
             run_tests "${test_dir}" "Inventory Integration"
         fi
     done
@@ -59,15 +59,15 @@ fi
 
 echo "Step 3: Ordering Service Tests"
 echo "-------------------------------"
-if [ -d "ordering/tests" ]; then
+if [[ -d "ordering/tests" ]]; then
     for test_dir in ordering/tests/unit/*/; do
-        if [ -f "${test_dir}*.csproj" ]; then
+        if [[ -f "${test_dir}*.csproj" ]]; then
             run_tests "${test_dir}" "Ordering Unit"
         fi
     done
     
     for test_dir in ordering/tests/integration/*/; do
-        if [ -f "${test_dir}*.csproj" ]; then
+        if [[ -f "${test_dir}*.csproj" ]]; then
             run_tests "${test_dir}" "Ordering Integration"
         fi
     done
@@ -78,15 +78,15 @@ fi
 
 echo "Step 4: Gateway Service Tests"
 echo "------------------------------"
-if [ -d "gateway/tests" ]; then
+if [[ -d "gateway/tests" ]]; then
     for test_dir in gateway/tests/unit/*/; do
-        if [ -f "${test_dir}*.csproj" ]; then
+        if [[ -f "${test_dir}*.csproj" ]]; then
             run_tests "${test_dir}" "Gateway Unit"
         fi
     done
     
     for test_dir in gateway/tests/integration/*/; do
-        if [ -f "${test_dir}*.csproj" ]; then
+        if [[ -f "${test_dir}*.csproj" ]]; then
             run_tests "${test_dir}" "Gateway Integration"
         fi
     done
@@ -99,7 +99,7 @@ echo "=========================================="
 echo "Test Suite Complete"
 echo "=========================================="
 
-if [ $TOTAL_FAILED -eq 0 ]; then
+if [[ $TOTAL_FAILED -eq 0 ]]; then
     echo -e "${GREEN}✓ All test suites passed!${NC}"
     exit 0
 else

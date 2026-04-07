@@ -45,11 +45,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("AdminOnly", policy =>
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("AdminOnly", policy =>
         policy.RequireRole("Admin"));
-});
 
 var proxyBuilder = builder.Services.AddReverseProxy();
 proxyBuilder.LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
@@ -58,7 +56,10 @@ proxyBuilder.AddTransforms(transforms =>
 {
     transforms.AddRequestTransform(context =>
     {
-        var userId = context.HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
+        // Prefer userId from JWT claims (authenticated routes) over client-supplied header
+        var jwtUserId = context.HttpContext.User.FindFirstValue("sub");
+        var headerUserId = context.HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
+        var userId = !string.IsNullOrEmpty(jwtUserId) ? jwtUserId : headerUserId;
         
         context.ProxyRequest.Headers.Remove("X-User-Id");
         
@@ -67,7 +68,9 @@ proxyBuilder.AddTransforms(transforms =>
             context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Id", userId);
         }
         
-        var userRole = context.HttpContext.Request.Headers["X-User-Role"].FirstOrDefault();
+        var jwtRole = context.HttpContext.User.FindFirstValue("role");
+        var headerRole = context.HttpContext.Request.Headers["X-User-Role"].FirstOrDefault();
+        var userRole = !string.IsNullOrEmpty(jwtRole) ? jwtRole : headerRole;
         context.ProxyRequest.Headers.Remove("X-User-Role");
         if (!string.IsNullOrEmpty(userRole))
         {

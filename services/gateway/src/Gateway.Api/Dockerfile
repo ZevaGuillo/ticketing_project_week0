@@ -12,7 +12,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-RUN printf '#!/bin/bash\nset -e\necho "Starting application..."\nexec dotnet Gateway.Api.dll\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/bash\nset -e\necho "Starting application..."\n\
+exec dotnet Gateway.Api.dll\n' \
+  > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000

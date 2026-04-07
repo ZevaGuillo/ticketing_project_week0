@@ -1,4 +1,4 @@
-import { API_CONFIG } from "./config"
+import { API_CONFIG, authHeaders } from "./config"
 import type {
   CreateReservationRequest,
   CreateReservationResponse,
@@ -13,9 +13,9 @@ export async function createReservation(
   if (data.opportunityToken) {
     const res = await fetch(`${API_CONFIG.gateway}/api/waitlist/opportunity/${data.opportunityToken}`, {
       method: "GET",
-      headers: { 
+      headers: authHeaders({ 
         "X-User-Id": userId,
-      },
+      }),
     })
     
     if (res.status === 404) {
@@ -43,10 +43,10 @@ export async function createReservation(
   // Regular reservation flow for users without opportunities
   const res = await fetch(`${API_CONFIG.gateway}${API_CONFIG.inventory}/reservations`, {
     method: "POST",
-    headers: { 
+    headers: authHeaders({ 
       "Content-Type": "application/json",
       "X-User-Id": userId,
-    },
+    }),
     body: JSON.stringify({
       seatId: data.seatId,
       eventId: data.eventId,

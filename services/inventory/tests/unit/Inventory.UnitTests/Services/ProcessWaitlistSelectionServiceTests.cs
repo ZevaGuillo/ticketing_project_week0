@@ -4,8 +4,6 @@ using Inventory.Domain.Entities;
 using Inventory.Domain.Enums;
 using Inventory.Domain.Ports;
 using Inventory.Infrastructure.Configuration;
-using Inventory.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
@@ -13,7 +11,6 @@ namespace Inventory.UnitTests.Services;
 
 public class ProcessWaitlistSelectionServiceTests
 {
-    private readonly InventoryDbContext _context;
     private readonly Mock<IWaitlistRepository> _waitlistRepoMock;
     private readonly Mock<IOpportunityWindowRepository> _opportunityWindowRepoMock;
     private readonly Mock<IKafkaProducer> _kafkaProducerMock;
@@ -21,17 +18,11 @@ public class ProcessWaitlistSelectionServiceTests
 
     public ProcessWaitlistSelectionServiceTests()
     {
-        var options = new DbContextOptionsBuilder<InventoryDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        
-        _context = new InventoryDbContext(options);
         _waitlistRepoMock = new Mock<IWaitlistRepository>();
         _opportunityWindowRepoMock = new Mock<IOpportunityWindowRepository>();
         _kafkaProducerMock = new Mock<IKafkaProducer>();
         
         _handler = new ProcessWaitlistSelectionHandler(
-            _context,
             _waitlistRepoMock.Object,
             null,
             _opportunityWindowRepoMock.Object,

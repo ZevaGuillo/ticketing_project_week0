@@ -1,4 +1,4 @@
-import { API_CONFIG } from "./config"
+import { API_CONFIG, authHeaders } from "./config"
 
 export interface ProcessPaymentRequest {
   orderId: string
@@ -41,7 +41,7 @@ export async function processPayment(
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(data),
     })
     

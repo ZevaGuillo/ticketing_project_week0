@@ -13,6 +13,7 @@ namespace Fulfillment.Infrastructure.Events;
 
 public class PaymentSucceededEventConsumer : BackgroundService
 {
+    private static readonly JsonSerializerOptions CamelCaseOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly IConsumer<string, string> _consumer;
     private readonly KafkaOptions _kafkaOptions;
     private readonly IServiceProvider _serviceProvider;
@@ -60,7 +61,7 @@ public class PaymentSucceededEventConsumer : BackgroundService
                 {
                     var paymentEvent = JsonSerializer.Deserialize<PaymentSucceededEvent>(
                         consumeResult.Message.Value,
-                        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                        CamelCaseOptions);
 
                     if (paymentEvent == null)
                     {

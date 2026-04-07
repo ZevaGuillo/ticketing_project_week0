@@ -30,16 +30,20 @@ test_endpoint() {
         local status=$(grep -o '"status":[^{]*' /tmp/response.txt | head -1 || echo "")
         if [[ "$status" == *"$expected_status"* ]] || [[ "$expected_status" == "any" ]]; then
             echo -e "${GREEN}PASS${NC}"
+            return 0
         else
             echo -e "${RED}FAIL${NC} (unexpected status)"
             cat /tmp/response.txt
+            return 1
         fi
     else
         if [[ "$expected_status" == "error" ]]; then
             echo -e "${GREEN}PASS${NC} (expected error)"
+            return 0
         else
             echo -e "${RED}FAIL${NC}"
             cat /tmp/response.txt
+            return 1
         fi
     fi
 }

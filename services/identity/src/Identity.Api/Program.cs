@@ -1,3 +1,4 @@
+using Identity.Api;
 using Identity.Domain.Ports;
 using Identity.Domain.ValueObjects;
 using Identity.Application.UseCases.IssueToken;
@@ -183,21 +184,24 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-public record IssueTokenRequest(string Email, string Password);
+namespace Identity.Api
+{
+    public record IssueTokenRequest(string Email, string Password);
 
-public record IssueTokenResponse(
-    string token,
-    DateTime expiresAt,
-    string userRole,
-    string userEmail
-);
+    public record IssueTokenResponse(
+        string token,
+        DateTime expiresAt,
+        string userRole,
+        string userEmail
+    );
 
-public record CreateUserRequest(string Email, string Password, string Role = "User");
+    public record CreateUserRequest(string Email, string Password, string Role = "User");
 
-public record CreateUserResponse(
-    Guid userId,
-    string email,
-    string role
-);
+    public record CreateUserResponse(
+        Guid userId,
+        string email,
+        string role
+    );
 
-public partial class Program { }
+    public partial class Program { }
+}

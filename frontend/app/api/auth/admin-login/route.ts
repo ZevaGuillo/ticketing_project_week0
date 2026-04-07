@@ -14,11 +14,11 @@ export async function POST(request: NextRequest) {
     }
 
     password = password
-      .replace(/\\041/g, '!')
-      .replace(/\\044/g, '$')
-      .replace(/\\040/g, ' ')
-      .replace(/\\035/g, '#')
-      .replace(/\\046/g, '&')
+      .replaceAll('\\041', '!')
+      .replaceAll('\\044', '$')
+      .replaceAll('\\040', ' ')
+      .replaceAll('\\035', '#')
+      .replaceAll('\\046', '&')
 
     try {
       const controller = new AbortController()

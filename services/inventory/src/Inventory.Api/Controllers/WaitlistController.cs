@@ -12,6 +12,7 @@ namespace Inventory.Api.Controllers;
 [Route("[controller]")]
 public class WaitlistController : ControllerBase
 {
+    private const string UserIdHeader = "X-User-Id";
     private readonly IMediator _mediator;
 
     public WaitlistController(IMediator mediator)
@@ -25,7 +26,7 @@ public class WaitlistController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> JoinWaitlist([FromBody] JoinWaitlistRequest request, CancellationToken cancellationToken)
     {
-        var userIdHeader = Request.Headers["X-User-Id"].FirstOrDefault();
+        var userIdHeader = Request.Headers[UserIdHeader].FirstOrDefault();
         if (string.IsNullOrEmpty(userIdHeader) || !Guid.TryParse(userIdHeader, out var userId))
             return BadRequest("X-User-Id header is required and must be a valid GUID");
 
@@ -57,7 +58,7 @@ public class WaitlistController : ControllerBase
         [FromQuery] string section,
         CancellationToken cancellationToken)
     {
-        var userIdHeader = Request.Headers["X-User-Id"].FirstOrDefault();
+        var userIdHeader = Request.Headers[UserIdHeader].FirstOrDefault();
         if (string.IsNullOrEmpty(userIdHeader) || !Guid.TryParse(userIdHeader, out var userId))
             return BadRequest("X-User-Id header is required and must be a valid GUID");
 
@@ -113,7 +114,7 @@ public class WaitlistController : ControllerBase
         [FromQuery] string section,
         CancellationToken cancellationToken)
     {
-        var userIdHeader = Request.Headers["X-User-Id"].FirstOrDefault();
+        var userIdHeader = Request.Headers[UserIdHeader].FirstOrDefault();
         if (string.IsNullOrEmpty(userIdHeader) || !Guid.TryParse(userIdHeader, out var userId))
             return BadRequest("X-User-Id header is required and must be a valid GUID");
 
@@ -147,7 +148,7 @@ public class WaitlistController : ControllerBase
         [FromQuery] Guid eventId,
         CancellationToken cancellationToken)
     {
-        var userIdHeader = Request.Headers["X-User-Id"].FirstOrDefault();
+        var userIdHeader = Request.Headers[UserIdHeader].FirstOrDefault();
         if (string.IsNullOrEmpty(userIdHeader) || !Guid.TryParse(userIdHeader, out var userId))
             return BadRequest("X-User-Id header is required and must be a valid GUID");
 
