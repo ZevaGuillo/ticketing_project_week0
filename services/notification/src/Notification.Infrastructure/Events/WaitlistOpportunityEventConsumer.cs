@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Notification.Application.Email;
 using Notification.Application.Ports;
+using Notification.Domain.Events;
 using System.Net.Http.Json;
 using System.Text.Json;
 

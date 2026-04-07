@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Notification.Application.UseCases.SendTicketNotification;
+using Notification.Domain.Events;
 using System.Text.Json;
 
 namespace Notification.Infrastructure.Events;
