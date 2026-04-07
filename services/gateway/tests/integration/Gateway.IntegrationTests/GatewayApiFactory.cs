@@ -1,19 +1,28 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Gateway.IntegrationTests;
 
-public class GatewayApiFactory : WebApplicationFactory<Program>
+public class GatewayApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly string _jwtKey = "dev-secret-key-minimum-32-chars-required-for-security";
     private readonly string _jwtIssuer = "SpecKit.Identity";
     private readonly string _jwtAudience = "SpecKit.Services";
+
+    private IHost? _mockBackend;
+    private string _mockBackendAddress = "";
 
     public string GenerateValidToken()
     {
@@ -108,23 +117,59 @@ public class GatewayApiFactory : WebApplicationFactory<Program>
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    public async Task InitializeAsync()
+    {
+        _mockBackend = new HostBuilder()
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseUrls("http://127.0.0.1:0")
+                    .Configure(app =>
+                    {
+                        app.Run(async context =>
+                        {
+                            context.Response.StatusCode = 200;
+                            context.Response.ContentType = "application/json";
+                            await context.Response.WriteAsync("[]");
+                        });
+                    });
+            })
+            .Build();
+
+        await _mockBackend.StartAsync();
+
+        var server = _mockBackend.Services.GetRequiredService<IServer>();
+        var addressFeature = server.Features.Get<IServerAddressesFeature>()!;
+        _mockBackendAddress = addressFeature.Addresses.First();
+    }
+
+    async Task IAsyncLifetime.DisposeAsync()
+    {
+        if (_mockBackend != null)
+        {
+            await _mockBackend.StopAsync();
+            _mockBackend.Dispose();
+        }
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         
         builder.ConfigureAppConfiguration(configuration =>
         {
-            var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["Jwt:Key"] = _jwtKey,
-                    ["Jwt:Issuer"] = _jwtIssuer,
-                    ["Jwt:Audience"] = _jwtAudience,
-                    ["Jwt:ExpirationMinutes"] = "120"
-                })
-                .Build();
-
-            configuration.AddConfiguration(config);
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = _jwtKey,
+                ["Jwt:Issuer"] = _jwtIssuer,
+                ["Jwt:Audience"] = _jwtAudience,
+                ["Jwt:ExpirationMinutes"] = "120",
+                ["ReverseProxy:Clusters:catalog:Destinations:catalog:Address"] = _mockBackendAddress,
+                ["ReverseProxy:Clusters:inventory:Destinations:inventory:Address"] = _mockBackendAddress,
+                ["ReverseProxy:Clusters:identity:Destinations:identity:Address"] = _mockBackendAddress,
+                ["ReverseProxy:Clusters:ordering:Destinations:ordering:Address"] = _mockBackendAddress,
+                ["ReverseProxy:Clusters:payment:Destinations:payment:Address"] = _mockBackendAddress,
+                ["ReverseProxy:Clusters:fulfillment:Destinations:fulfillment:Address"] = _mockBackendAddress,
+            });
         });
     }
 }

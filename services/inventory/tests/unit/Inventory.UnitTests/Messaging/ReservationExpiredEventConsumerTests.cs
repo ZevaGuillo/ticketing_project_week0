@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Inventory.Domain.Events;
+using Inventory.Infrastructure.Configuration;
 using Inventory.Infrastructure.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,8 @@ public class ReservationExpiredEventConsumerTests
             _scopeFactoryMock.Object,
             _consumerMock.Object,
             _dlqProducerMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            new WaitlistSettings());
 
         consumer.Should().NotBeNull();
     }

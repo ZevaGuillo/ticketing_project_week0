@@ -43,7 +43,7 @@ public class ReservationEndpointsTests : IClassFixture<InventoryApiFactory>
         var request = new
         {
             seatId = seatId,
-            customerId = "test-customer"
+            eventId = Guid.NewGuid()
         };
 
         var response = await _client.PostAsJsonAsync("/reservations", request);
@@ -68,6 +68,7 @@ public class ReservationEndpointsTests : IClassFixture<InventoryApiFactory>
         var request = new
         {
             seatId = seatId,
+            eventId = Guid.NewGuid(),
             customerId = "test-customer"
         };
 

@@ -3,6 +3,7 @@ using Inventory.Application.UseCases.CreateReservation;
 using Inventory.Domain.Entities;
 using Inventory.Domain.Enums;
 using Inventory.Domain.Ports;
+using Inventory.Infrastructure.Configuration;
 using Inventory.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -15,6 +16,7 @@ public class ValidateOpportunityCommandHandlerTests
     private readonly InventoryDbContext _context;
     private readonly Mock<IOpportunityWindowRepository> _opportunityWindowRepoMock;
     private readonly Mock<IReservationRepository> _reservationRepoMock;
+    private readonly Mock<IKafkaProducer> _kafkaProducerMock;
     private readonly ValidateOpportunityCommandHandler _handler;
 
     public ValidateOpportunityCommandHandlerTests()
@@ -26,11 +28,14 @@ public class ValidateOpportunityCommandHandlerTests
         _context = new InventoryDbContext(options);
         _opportunityWindowRepoMock = new Mock<IOpportunityWindowRepository>();
         _reservationRepoMock = new Mock<IReservationRepository>();
+        _kafkaProducerMock = new Mock<IKafkaProducer>();
         
         _handler = new ValidateOpportunityCommandHandler(
             _context,
             _opportunityWindowRepoMock.Object,
-            _reservationRepoMock.Object);
+            _reservationRepoMock.Object,
+            _kafkaProducerMock.Object,
+            new ReservationSettings());
         
         _context.WaitlistEntries.Add(new WaitlistEntry
         {
@@ -62,6 +67,19 @@ public class ValidateOpportunityCommandHandlerTests
         _context.SaveChanges();
     }
 
+    private void AddSeatToContext(Guid seatId, string section)
+    {
+        _context.Seats.Add(new Seat
+        {
+            Id = seatId,
+            Section = section,
+            Row = "1",
+            Number = 1,
+            Reserved = false
+        });
+        _context.SaveChanges();
+    }
+
     [Fact]
     public async Task Handle_WithValidToken_ShouldReturnOpportunityDetails()
     {
@@ -84,6 +102,7 @@ public class ValidateOpportunityCommandHandlerTests
         };
 
         AddWaitlistEntryToContext(waitlistEntryId, userId, eventId, "A");
+        AddSeatToContext(seatId, "A");
 
         _opportunityWindowRepoMock.Setup(r => r.GetByTokenAsync(token, It.IsAny<CancellationToken>()))
             .ReturnsAsync(opportunity);
@@ -195,12 +214,13 @@ public class ValidateOpportunityCommandHandlerTests
         var token = Guid.NewGuid().ToString("N");
         var opportunityId = Guid.NewGuid();
         var waitlistEntryId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
         
         var opportunity = new OpportunityWindow
         {
             Id = opportunityId,
             WaitlistEntryId = waitlistEntryId,
-            SeatId = Guid.NewGuid(),
+            SeatId = seatId,
             Token = token,
             Status = OpportunityStatus.OFFERED,
             StartsAt = DateTime.UtcNow,
@@ -208,6 +228,7 @@ public class ValidateOpportunityCommandHandlerTests
         };
 
         AddWaitlistEntryToContext(waitlistEntryId, Guid.NewGuid(), Guid.NewGuid(), "A");
+        AddSeatToContext(seatId, "A");
 
         Reservation? capturedReservation = null;
 
@@ -236,12 +257,13 @@ public class ValidateOpportunityCommandHandlerTests
     {
         var token = Guid.NewGuid().ToString("N");
         var waitlistEntryId = Guid.NewGuid();
+        var seatId = Guid.NewGuid();
         
         var opportunity = new OpportunityWindow
         {
             Id = Guid.NewGuid(),
             WaitlistEntryId = waitlistEntryId,
-            SeatId = Guid.NewGuid(),
+            SeatId = seatId,
             Token = token,
             Status = OpportunityStatus.OFFERED,
             StartsAt = DateTime.UtcNow,
@@ -249,6 +271,7 @@ public class ValidateOpportunityCommandHandlerTests
         };
 
         AddWaitlistEntryToContext(waitlistEntryId, Guid.NewGuid(), Guid.NewGuid(), "A");
+        AddSeatToContext(seatId, "A");
 
         OpportunityWindow? updatedWindow = null;
 

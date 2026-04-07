@@ -35,7 +35,8 @@ public class ProcessWaitlistSelectionServiceTests
             _waitlistRepoMock.Object,
             null,
             _opportunityWindowRepoMock.Object,
-            _kafkaProducerMock.Object);
+            _kafkaProducerMock.Object,
+            new WaitlistSettings());
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public class ProcessWaitlistSelectionServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
 
         _kafkaProducerMock.Verify(p => p.ProduceAsync(
-            "waitlist.opportunity-granted",
+            "waitlist-opportunity",
             It.IsAny<string>(),
             userId.ToString()), Times.Once);
     }
