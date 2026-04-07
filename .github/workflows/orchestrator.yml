@@ -363,8 +363,8 @@ jobs:
     name: "SonarCloud Unified Scan"
     uses: ./.github/workflows/sonar-analysis.yml
     with:
-      project_key: "JostinAlvaradoS_ticketing_project_week0"
-      organization: "jostinalvarados"
+      project_key: "ZevaGuillo_ticketing_project_week0"
+      organization: "zevaguillo"
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
