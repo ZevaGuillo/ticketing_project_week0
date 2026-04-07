@@ -22,7 +22,7 @@ public class OrderDtoTests
         };
 
         // Act
-        var dto = new OrderDto(id, userId, null, totalAmount, state, createdAt, null, items);
+        var dto = new OrderDto(id, userId, null, null, totalAmount, state, createdAt, null, items);
 
         // Assert
         dto.Id.Should().Be(id);

@@ -2,21 +2,23 @@ using Inventory.Infrastructure;
 using Inventory.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Inventory.Domain.Ports;
-using Inventory.Api.Endpoints;
-using MediatR;
+using UserContext;
+using IUserContext = UserContext.IUserContext;
+using UserContextImpl = UserContext.UserContext;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Registrar infra y adaptadores del servicio Inventory
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Register MediatR for application handlers
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Inventory.Application.UseCases.CreateReservation.CreateReservationCommand).Assembly));
+
+builder.Services.AddControllers();
+
+builder.Services.AddScoped<IUserContext, UserContextImpl>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add CORS policy for frontend on localhost:3000
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
@@ -37,23 +39,44 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("FrontendPolicy");
 
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"[MIDDLEWARE] Incoming headers: {string.Join(", ", context.Request.Headers.Select(h => $"{h.Key}={h.Value}"))}");
+    
+    var userContext = context.RequestServices.GetRequiredService<IUserContext>();
+    var userId = context.Request.Headers[UserContextExtensions.UserIdHeader].FirstOrDefault();
+    var userRole = context.Request.Headers[UserContextExtensions.UserRoleHeader].FirstOrDefault();
+
+    Console.WriteLine($"[MIDDLEWARE] X-User-Id: '{userId}', X-User-Role: '{userRole}'");
+
+    if (!string.IsNullOrEmpty(userId))
+    {
+        userContext.SetUserId(userId);
+    }
+
+    if (!string.IsNullOrEmpty(userRole))
+    {
+        userContext.SetUserRole(userRole);
+    }
+
+    await next();
+});
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-// Map endpoints
-app.MapReservationEndpoints();
+app.MapControllers();
 
-// Apply migrations automatically on startup
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         dbContext.Database.Migrate();
-        Console.WriteLine("✅ Inventory migrations applied successfully");
+        Console.WriteLine("Inventory migrations applied successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"⚠️ Warning: Could not apply migrations: {ex.Message}");
+        Console.WriteLine($"Warning: Could not apply migrations: {ex.Message}");
     }
 }
 

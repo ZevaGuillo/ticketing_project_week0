@@ -4,18 +4,34 @@ import { useMemo, useState, useCallback } from "react"
 import type { Seat, SeatmapResponse } from "@/lib/types"
 import { SeatButton, SeatLegend } from "@/components/seat-button"
 import { useCart } from "@/context/cart-context"
-import { Loader2 } from "lucide-react"
+import { Loader2, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { joinWaitlist, type UserOpportunity } from "@/lib/api/waitlist"
+import { useAuth } from "@/context/auth-context"
 
 interface SeatmapProps {
   seatmap: SeatmapResponse
+  eventId: string
   onSeatReserved?: () => void
+  onWaitlistJoined?: (section: string) => void
+  opportunities?: UserOpportunity[]
 }
 
-export function Seatmap({ seatmap, onSeatReserved }: SeatmapProps) {
-  const { reserveSeatAndAddToCart, isAddingToCart, reservations, isSeatInCart, removeSeatFromCart } = useCart()
+export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, opportunities = [] }: SeatmapProps) {
+  const { user } = useAuth()
+  const { reserveSeatAndAddToCart, isAddingToCart, isSeatInCart, removeSeatFromCart } = useCart()
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [joiningWaitlist, setJoiningWaitlist] = useState<string | null>(null)
+  const [waitlistJoined, setWaitlistJoined] = useState<string | null>(null)
+
+  const opportunitiesBySeatId = useMemo(() => {
+    const map = new Map<string, UserOpportunity>()
+    for (const opp of opportunities) {
+      map.set(opp.seatId, opp)
+    }
+    return map
+  }, [opportunities])
 
   // Group seats by section, then by row
   const sections = useMemo(() => {
@@ -46,19 +62,18 @@ export function Seatmap({ seatmap, onSeatReserved }: SeatmapProps) {
   }, [seatmap.seats])
 
   const handleSelect = useCallback((seat: Seat) => {
-    // Don't allow selection of seats already in cart
     if (isSeatInCart(seat.id)) {
       setSelectedSeat(null)
       return
     }
     setSelectedSeat((prev) => (prev?.id === seat.id ? null : seat))
     setLocalError(null)
+    setWaitlistJoined(null)
   }, [isSeatInCart])
 
   const handleReserve = useCallback(async () => {
     if (!selectedSeat) return
     
-    // If seat is already in cart, remove it
     if (isSeatInCart(selectedSeat.id)) {
       removeSeatFromCart(selectedSeat.id)
       setSelectedSeat(null)
@@ -68,7 +83,10 @@ export function Seatmap({ seatmap, onSeatReserved }: SeatmapProps) {
     setLocalError(null)
 
     try {
-      await reserveSeatAndAddToCart(selectedSeat)
+      // Check if user has an opportunity for this seat
+      const opportunity = opportunitiesBySeatId.get(selectedSeat.id)
+      
+      await reserveSeatAndAddToCart(selectedSeat, eventId, seatmap.eventName, opportunity?.token)
       setSelectedSeat(null)
       onSeatReserved?.()
     } catch (err) {
@@ -76,7 +94,33 @@ export function Seatmap({ seatmap, onSeatReserved }: SeatmapProps) {
         err instanceof Error ? err.message : "Failed to reserve seat"
       )
     }
-  }, [selectedSeat, reserveSeatAndAddToCart, isSeatInCart, removeSeatFromCart, onSeatReserved])
+  }, [selectedSeat, reserveSeatAndAddToCart, isSeatInCart, removeSeatFromCart, onSeatReserved, opportunitiesBySeatId, eventId])
+
+  const handleJoinWaitlist = useCallback(async () => {
+    if (!selectedSeat || !user) return
+    
+    setLocalError(null)
+    setJoiningWaitlist(selectedSeat.id)
+
+    try {
+      await joinWaitlist(
+        { eventId, section: selectedSeat.sectionCode },
+        user.id
+      )
+      setWaitlistJoined(selectedSeat.id)
+      setSelectedSeat(null)
+      onWaitlistJoined?.(selectedSeat.sectionCode)
+    } catch (err) {
+      setLocalError(
+        err instanceof Error ? err.message : "Failed to join waitlist"
+      )
+    } finally {
+      setJoiningWaitlist(null)
+    }
+  }, [selectedSeat, user, eventId, onWaitlistJoined])
+
+  const hasOpportunityForSelected = selectedSeat ? opportunitiesBySeatId.has(selectedSeat.id) : false
+  const isUnavailable = selectedSeat && selectedSeat.status !== "available" && !hasOpportunityForSelected
 
   return (
     <div className="flex flex-col gap-6">
@@ -107,10 +151,10 @@ export function Seatmap({ seatmap, onSeatReserved }: SeatmapProps) {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {seats.map((seat) => {
                           const isInUserCart = isSeatInCart(seat.id)
-                          // Show seat from server, but mark as reserved if in user's cart
                           const displaySeat = isInUserCart
                             ? { ...seat, status: "reserved" as const }
                             : seat
+                          const isOffered = opportunitiesBySeatId.has(seat.id)
 
                           return (
                             <SeatButton
@@ -118,6 +162,7 @@ export function Seatmap({ seatmap, onSeatReserved }: SeatmapProps) {
                               seat={displaySeat}
                               isSelected={selectedSeat?.id === seat.id}
                               onSelect={handleSelect}
+                              isOffered={isOffered}
                             />
                           )
                         })}
@@ -146,24 +191,62 @@ export function Seatmap({ seatmap, onSeatReserved }: SeatmapProps) {
             {isSeatInCart(selectedSeat.id) && (
               <p className="text-xs text-accent mt-1">Already in your cart</p>
             )}
-          </div>
-          <Button
-            onClick={handleReserve}
-            disabled={isAddingToCart}
-            variant={isSeatInCart(selectedSeat.id) ? "destructive" : "default"}
-            className={isSeatInCart(selectedSeat.id) ? "" : "bg-accent text-accent-foreground hover:bg-accent/90"}
-          >
-            {isAddingToCart ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                {isSeatInCart(selectedSeat.id) ? "Removing..." : "Reserving..."}
-              </>
-            ) : isSeatInCart(selectedSeat.id) ? (
-              "Remove from Cart"
-            ) : (
-              "Reserve & Add to Cart"
+            {selectedSeat.status === "reserved" && !hasOpportunityForSelected && (
+              <p className="text-xs text-amber-600 mt-1">Seat reserved by another user</p>
             )}
-          </Button>
+            {hasOpportunityForSelected && (
+              <p className="text-xs text-green-600 mt-1">¡Tienes una oportunidad para este asiento!</p>
+            )}
+            {selectedSeat.status === "sold" && (
+              <p className="text-xs text-red-600 mt-1">Seat already sold</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {isUnavailable && user && (
+              <Button
+                onClick={handleJoinWaitlist}
+                disabled={joiningWaitlist === selectedSeat.id || waitlistJoined === selectedSeat.id}
+                variant="outline"
+                className="border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                {joiningWaitlist === selectedSeat.id ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Joining...
+                  </>
+                ) : waitlistJoined === selectedSeat.id ? (
+                  <>
+                    <Bell className="size-4" />
+                    Joined Waitlist
+                  </>
+                ) : (
+                  <>
+                    <Bell className="size-4" />
+                    Join Waitlist
+                  </>
+                )}
+              </Button>
+            )}
+            {(selectedSeat.status === "available" || hasOpportunityForSelected) && (
+              <Button
+                onClick={handleReserve}
+                disabled={isAddingToCart}
+                variant={isSeatInCart(selectedSeat.id) ? "destructive" : "default"}
+                className={isSeatInCart(selectedSeat.id) ? "" : "bg-accent text-accent-foreground hover:bg-accent/90"}
+              >
+                {isAddingToCart ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    {isSeatInCart(selectedSeat.id) ? "Removing..." : "Reserving..."}
+                  </>
+                ) : isSeatInCart(selectedSeat.id) ? (
+                  "Remove from Cart"
+                ) : (
+                  "Reserve & Add to Cart"
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

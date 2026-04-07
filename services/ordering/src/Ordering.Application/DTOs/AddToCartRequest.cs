@@ -5,5 +5,7 @@ public record AddToCartRequest(
     Guid SeatId,
     decimal Price,
     string? UserId = null,
-    string? GuestToken = null
+    string? GuestToken = null,
+    string? EventName = null,
+    string? SeatLabel = null
 );

@@ -63,7 +63,7 @@ export interface GenerateSeatsRequest {
 // Get admin token from localStorage
 const getAdminToken = () => {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('adminToken')
+  return localStorage.getItem('admin-token')
 }
 
 const getAuthHeaders = () => {
@@ -73,15 +73,16 @@ const getAuthHeaders = () => {
 
 // Public API (existing functions)
 export async function getEvents(): Promise<EventSummary[]> {
-  const res = await fetch(`${API_CONFIG.catalog}/events`)
+  const res = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/events`)
   if (!res.ok) {
     throw new Error(`Failed to fetch events: ${res.status} ${res.statusText}`)
   }
-  return res.json()
+  const data = await res.json()
+  return Array.isArray(data) ? data : data.events
 }
 
 export async function getSeatmap(eventId: string): Promise<SeatmapResponse> {
-  const res = await fetch(`${API_CONFIG.catalog}/events/${eventId}/seatmap`)
+  const res = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/events/${eventId}/seatmap`)
   if (!res.ok) {
     throw new Error(`Failed to fetch seatmap: ${res.status} ${res.statusText}`)
   }
@@ -90,7 +91,7 @@ export async function getSeatmap(eventId: string): Promise<SeatmapResponse> {
 
 // New public API functions
 export async function getEvent(id: string): Promise<Event | null> {
-  const response = await fetch(`${API_CONFIG.catalog}/events/${id}`, {
+  const response = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/events/${id}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ export async function getEvent(id: string): Promise<Event | null> {
 export const catalogAdminApi = {
   // Create new event
   async createEvent(data: CreateEventRequest): Promise<Event> {
-    const response = await fetch(`${API_CONFIG.catalog}/admin/events`, {
+    const response = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/admin/events`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -131,7 +132,7 @@ export const catalogAdminApi = {
 
   // Update event
   async updateEvent(id: string, data: UpdateEventRequest): Promise<Event> {
-    const response = await fetch(`${API_CONFIG.catalog}/admin/events/${id}`, {
+    const response = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/admin/events/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -150,7 +151,7 @@ export const catalogAdminApi = {
 
   // Generate seats for event
   async generateSeats(eventId: string, data: GenerateSeatsRequest): Promise<{ message: string }> {
-    const response = await fetch(`${API_CONFIG.catalog}/admin/events/${eventId}/seats`, {
+    const response = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/admin/events/${eventId}/seats`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -169,7 +170,7 @@ export const catalogAdminApi = {
 
   // Deactivate event
   async deactivateEvent(eventId: string): Promise<Event> {
-    const response = await fetch(`${API_CONFIG.catalog}/admin/events/${eventId}/deactivate`, {
+    const response = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/admin/events/${eventId}/deactivate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -187,7 +188,7 @@ export const catalogAdminApi = {
 
   // Reactivate event
   async reactivateEvent(eventId: string): Promise<Event> {
-    const response = await fetch(`${API_CONFIG.catalog}/admin/events/${eventId}/reactivate`, {
+    const response = await fetch(`${API_CONFIG.gateway}${API_CONFIG.catalog}/admin/events/${eventId}/reactivate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

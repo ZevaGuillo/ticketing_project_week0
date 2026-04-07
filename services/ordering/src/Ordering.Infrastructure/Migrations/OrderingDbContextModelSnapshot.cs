@@ -18,7 +18,7 @@ namespace Ordering.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("bc_ordering")
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -31,6 +31,9 @@ namespace Ordering.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventName")
+                        .HasColumnType("text");
 
                     b.Property<string>("GuestToken")
                         .HasColumnType("text");
@@ -47,6 +50,9 @@ namespace Ordering.Infrastructure.Migrations
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("UserEmail")
+                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .HasColumnType("text");
@@ -79,6 +85,9 @@ namespace Ordering.Infrastructure.Migrations
 
                     b.Property<Guid>("SeatId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SeatLabel")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

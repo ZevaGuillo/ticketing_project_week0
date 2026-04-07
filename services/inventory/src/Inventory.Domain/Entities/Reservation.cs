@@ -11,6 +11,11 @@ public class Reservation
     public Guid Id { get; set; }
 
     /// <summary>
+    /// Reference to the event this reservation belongs to.
+    /// </summary>
+    public Guid EventId { get; set; }
+
+    /// <summary>
     /// Reference to the seat being reserved.
     /// </summary>
     public Guid SeatId { get; set; }

@@ -3,6 +3,7 @@ using MediatR;
 using Inventory.Application.DTOs;
 using Inventory.Domain.Entities;
 using Inventory.Domain.Ports;
+using Inventory.Infrastructure.Configuration;
 using Inventory.Infrastructure.Persistence;
 
 namespace Inventory.Application.UseCases.CreateReservation;
@@ -15,19 +16,21 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
     private readonly InventoryDbContext _context;
     private readonly IRedisLock _redisLock;
     private readonly IKafkaProducer _kafkaProducer;
+    private readonly ReservationSettings _reservationSettings;
 
     private const string RedisLockKeyPrefix = "lock:seat:";
     private const int LockExpirySeconds = 30;
-    private const int ReservationTTLMinutes = 15;
 
     public CreateReservationCommandHandler(
         InventoryDbContext context,
         IRedisLock redisLock,
-        IKafkaProducer kafkaProducer)
+        IKafkaProducer kafkaProducer,
+        ReservationSettings reservationSettings)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _redisLock = redisLock ?? throw new ArgumentNullException(nameof(redisLock));
         _kafkaProducer = kafkaProducer ?? throw new ArgumentNullException(nameof(kafkaProducer));
+        _reservationSettings = reservationSettings ?? throw new ArgumentNullException(nameof(reservationSettings));
     }
 
     public async Task<CreateReservationResponse> Handle(CreateReservationCommand request, CancellationToken cancellationToken)
@@ -63,12 +66,13 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
                 throw new InvalidOperationException($"Seat {request.SeatId} is already reserved");
             }
 
-            // Create reservation with 15-minute TTL
+            // Create reservation with configured TTL
             var now = DateTime.UtcNow;
-            var expiresAt = now.AddMinutes(ReservationTTLMinutes);
+            var expiresAt = now.AddMinutes(_reservationSettings.TTLMinutes);
             var reservation = new Reservation
             {
                 Id = Guid.NewGuid(),
+                EventId = request.EventId,
                 SeatId = request.SeatId,
                 CustomerId = request.CustomerId,
                 CreatedAt = now,

@@ -9,6 +9,8 @@ public class InventoryDbContext : DbContext
 
     public DbSet<Seat> Seats { get; set; } = null!;
     public DbSet<Reservation> Reservations { get; set; } = null!;
+    public DbSet<WaitlistEntry> WaitlistEntries { get; set; } = null!;
+    public DbSet<OpportunityWindow> OpportunityWindows { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +33,29 @@ public class InventoryDbContext : DbContext
             eb.Property(e => e.CustomerId).HasMaxLength(256);
             eb.HasIndex(e => e.SeatId);
             eb.HasIndex(e => e.ExpiresAt);
+        });
+
+        modelBuilder.Entity<WaitlistEntry>(eb =>
+        {
+            eb.HasKey(e => e.Id);
+            eb.Property(e => e.Section).HasMaxLength(100);
+            eb.Property(e => e.Status).HasConversion<string>();
+            eb.HasIndex(e => new { e.UserId, e.EventId, e.Section }).IsUnique();
+            eb.HasIndex(e => new { e.EventId, e.Section, e.Status });
+            eb.HasIndex(e => new { e.UserId, e.Status });
+        });
+
+        modelBuilder.Entity<OpportunityWindow>(eb =>
+        {
+            eb.HasKey(e => e.Id);
+            eb.Property(e => e.Token).HasMaxLength(255);
+            eb.Property(e => e.Status).HasConversion<string>();
+            eb.Property(e => e.SeatId).IsRequired();
+            eb.HasIndex(e => e.WaitlistEntryId);
+            eb.HasIndex(e => e.Token);
+            eb.HasOne(e => e.WaitlistEntry)
+                .WithMany(w => w.OpportunityWindows)
+                .HasForeignKey(e => e.WaitlistEntryId);
         });
     }
 }

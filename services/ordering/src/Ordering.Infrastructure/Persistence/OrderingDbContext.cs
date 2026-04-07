@@ -19,11 +19,13 @@ public class OrderingDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.UserId).IsRequired(false);
+            entity.Property(x => x.UserEmail).IsRequired(false);
             entity.Property(x => x.GuestToken).IsRequired(false);
             entity.Property(x => x.TotalAmount).IsRequired().HasPrecision(18, 2);
             entity.Property(x => x.State).IsRequired().HasDefaultValue("draft");
             entity.Property(x => x.CreatedAt).IsRequired();
             entity.Property(x => x.PaidAt).IsRequired(false);
+            entity.Property(x => x.EventName).IsRequired(false);
 
             entity.HasMany(x => x.Items)
                 .WithOne(x => x.Order)
@@ -42,6 +44,7 @@ public class OrderingDbContext : DbContext
             entity.Property(x => x.OrderId).IsRequired();
             entity.Property(x => x.SeatId).IsRequired();
             entity.Property(x => x.Price).IsRequired().HasPrecision(18, 2);
+            entity.Property(x => x.SeatLabel).IsRequired(false);
 
             entity.HasIndex(x => x.OrderId);
             entity.HasIndex(x => x.SeatId);

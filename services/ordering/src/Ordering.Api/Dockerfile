@@ -1,6 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Copy shared UserContext library (required by Ordering)
+COPY services/shared/src ./services/shared/src
+
 # Copy only the Ordering src to keep context small and preserve project references
 COPY services/ordering/src ./services/ordering/src
 WORKDIR /src/services/ordering/src/Ordering.Api

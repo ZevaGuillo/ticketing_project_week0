@@ -18,10 +18,49 @@ namespace Inventory.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("bc_inventory")
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Inventory.Domain.Entities.OpportunityWindow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SeatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WaitlistEntryId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token");
+
+                    b.HasIndex("WaitlistEntryId");
+
+                    b.ToTable("OpportunityWindows", "bc_inventory");
+                });
 
             modelBuilder.Entity("Inventory.Domain.Entities.Reservation", b =>
                 {
@@ -87,6 +126,70 @@ namespace Inventory.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Seats", "bc_inventory");
+                });
+
+            modelBuilder.Entity("Inventory.Domain.Entities.WaitlistEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("NotifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Section")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId", "Section", "Status");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.HasIndex("UserId", "EventId", "Section")
+                        .IsUnique();
+
+                    b.ToTable("WaitlistEntries", "bc_inventory");
+                });
+
+            modelBuilder.Entity("Inventory.Domain.Entities.OpportunityWindow", b =>
+                {
+                    b.HasOne("Inventory.Domain.Entities.WaitlistEntry", "WaitlistEntry")
+                        .WithMany("OpportunityWindows")
+                        .HasForeignKey("WaitlistEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WaitlistEntry");
+                });
+
+            modelBuilder.Entity("Inventory.Domain.Entities.WaitlistEntry", b =>
+                {
+                    b.Navigation("OpportunityWindows");
                 });
 #pragma warning restore 612, 618
         }

@@ -34,7 +34,7 @@ export interface ProcessPaymentResponse {
 export async function processPayment(
   data: ProcessPaymentRequest
 ): Promise<ProcessPaymentResponse> {
-  const url = `${API_CONFIG.payment}/payments`
+  const url = `${API_CONFIG.gateway}${API_CONFIG.payment}/payments`
   
   console.log(`[processPayment] Calling ${url}`, data)
   
@@ -69,7 +69,7 @@ export async function processPayment(
     console.error(`[processPayment] Network error:`, err)
     if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
       throw new Error(
-        `Failed to connect to Payment service at ${API_CONFIG.payment}. Make sure the service is running.`
+        `Failed to connect to API Gateway at ${API_CONFIG.gateway}. Make sure the service is running.`
       )
     }
     throw err

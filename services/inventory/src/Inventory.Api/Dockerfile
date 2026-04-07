@@ -1,6 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Copy shared UserContext library (required by Inventory)
+COPY services/shared/src ./services/shared/src
+
 # Copy only the Inventory src to keep context small and preserve project references
 COPY services/inventory/src ./services/inventory/src
 WORKDIR /src/services/inventory/src/Inventory.Api

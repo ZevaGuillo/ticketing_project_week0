@@ -40,6 +40,12 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(KafkaOptions.Section));
         services.AddHostedService<TicketIssuedEventConsumer>();
 
+        // Add Waitlist Opportunity Consumer
+        services.Configure<IdentityServiceOptions>(
+            configuration.GetSection(IdentityServiceOptions.Section));
+        services.AddHttpClient("identity");
+        services.AddHostedService<WaitlistOpportunityEventConsumer>();
+
         return services;
     }
 

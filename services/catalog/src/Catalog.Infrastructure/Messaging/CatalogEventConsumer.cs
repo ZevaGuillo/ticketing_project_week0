@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Catalog.Application.Ports;
 using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,21 +13,21 @@ public class CatalogEventConsumer : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CatalogEventConsumer> _logger;
     private readonly string _bootstrapServers;
-    private readonly string[] _topics = { "reservation-created", "reservation-expired", "payment-succeeded" };
+    private readonly string[] _topics = { "reservation-created", "reservation-expired", "payment-succeeded", "seat-released", "waitlist-opportunity" };
     private readonly string _groupId = "catalog-service-group";
 
-    public CatalogEventConsumer(IServiceProvider serviceProvider, ILogger<CatalogEventConsumer> logger)
+    public CatalogEventConsumer(IServiceProvider serviceProvider, ILogger<CatalogEventConsumer> logger, IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-        _bootstrapServers = "speckit-kafka:9092";
+        
+        _bootstrapServers = configuration["Kafka:BootstrapServers"] ?? configuration["Kafka__BootstrapServers"] ?? "kafka:9092";
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            // Give Kafka time to start up
             _logger.LogInformation("CatalogEventConsumer: Waiting for Kafka to be ready...");
             await Task.Delay(5000, stoppingToken);
 
@@ -35,12 +36,28 @@ public class CatalogEventConsumer : BackgroundService
                 BootstrapServers = _bootstrapServers,
                 GroupId = _groupId,
                 AutoOffsetReset = AutoOffsetReset.Earliest,
-                EnableAutoCommit = true,
+                EnableAutoCommit = false,
                 SessionTimeoutMs = 30000
             };
-
+            
             using var consumer = new ConsumerBuilder<string, string>(config).Build();
             consumer.Subscribe(_topics);
+            
+            _logger.LogInformation("CatalogEventConsumer: Waiting for initial assignment...");
+            var assignmentTimeout = DateTime.UtcNow.AddSeconds(30);
+            while (!stoppingToken.IsCancellationRequested && DateTime.UtcNow < assignmentTimeout)
+            {
+                try
+                {
+                    var msg = consumer.Consume(TimeSpan.FromSeconds(1));
+                    if (msg != null && !msg.IsPartitionEOF)
+                    {
+                        consumer.Commit(msg);
+                        break;
+                    }
+                }
+                catch (ConsumeException) { }
+            }
 
             _logger.LogInformation("CatalogEventConsumer started and subscribed to topics: {Topics}", string.Join(", ", _topics));
 
@@ -49,14 +66,15 @@ public class CatalogEventConsumer : BackgroundService
                 try
                 {
                     var result = consumer.Consume(TimeSpan.FromSeconds(10));
-                    if (result != null)
-                    {
-                        await ProcessEventAsync(result.Topic, result.Message.Value);
-                    }
+                    
+                    if (result == null || result.IsPartitionEOF)
+                        continue;
+                    
+                    await ProcessEventAsync(result.Topic, result.Message.Value);
+                    consumer.Commit(result);
                 }
                 catch (OperationCanceledException)
                 {
-                    _logger.LogInformation("CatalogEventConsumer: Cancellation requested");
                     break;
                 }
                 catch (Exception ex)
@@ -72,7 +90,7 @@ public class CatalogEventConsumer : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "CatalogEventConsumer fatal error - service will continue without Kafka consumer");
+            _logger.LogError(ex, "CatalogEventConsumer fatal error");
         }
     }
 
@@ -85,35 +103,61 @@ public class CatalogEventConsumer : BackgroundService
         {
             var root = JsonDocument.Parse(message).RootElement;
             
-            if (topic == "reservation-created")
+            if (topic == "waitlist-opportunity")
+            {
+                JsonElement? seatIdElement = null;
+                
+                if (root.TryGetProperty("SeatId", out var pascalSeatId))
+                    seatIdElement = pascalSeatId;
+                else if (root.TryGetProperty("seatId", out var camelSeatId))
+                    seatIdElement = camelSeatId;
+                
+                if (seatIdElement.HasValue && Guid.TryParse(seatIdElement.Value.GetString(), out var seatId))
+                {
+                    var status = (root.TryGetProperty("Status", out var statusProp) || root.TryGetProperty("status", out statusProp))
+                        ? statusProp.GetString() 
+                        : "OFFERED";
+
+                    if (status == "OFFERED")
+                    {
+                        await repository.UpdateSeatStatusAsync(seatId, "reserved", null);
+                        _logger.LogInformation("Seat {SeatId} marked as reserved (opportunity offered)", seatId);
+                    }
+                    else if (status == "EXPIRED" || status == "USED")
+                    {
+                        await repository.UpdateSeatStatusAsync(seatId, "available", null);
+                        _logger.LogInformation("Seat {SeatId} marked as available (opportunity {Status})", seatId, status);
+                    }
+                }
+            }
+            else if (topic == "reservation-created")
             {
                 if (root.TryGetProperty("seatId", out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
                 {
                     Guid? reservationId = null;
                     if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
-                    {
                         reservationId = resId;
-                    }
+                    
                     await repository.UpdateSeatStatusAsync(seatId, "reserved", reservationId);
+                    _logger.LogInformation("Seat {SeatId} marked as reserved", seatId);
                 }
             }
             else if (topic == "reservation-expired")
             {
                 if (root.TryGetProperty("seatId", out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
-                {
                     await repository.UpdateSeatStatusAsync(seatId, "available");
-                }
                 else if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
-                {
                     await repository.UpdateSeatStatusByReservationAsync(resId, "available");
-                }
             }
             else if (topic == "payment-succeeded")
             {
                 if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
-                {
                     await repository.UpdateSeatStatusByReservationAsync(resId, "sold");
-                }
+            }
+            else if (topic == "seat-released")
+            {
+                if (root.TryGetProperty("seatId", out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
+                    await repository.UpdateSeatStatusAsync(seatId, "available", null);
             }
         }
         catch (Exception ex)
@@ -121,9 +165,4 @@ public class CatalogEventConsumer : BackgroundService
             _logger.LogError(ex, "Error processing event {Topic}", topic);
         }
     }
-}
-
-public interface ICatalogRepositoryExtras
-{
-    // Adding this placeholder to denote we need to update the interface
 }
