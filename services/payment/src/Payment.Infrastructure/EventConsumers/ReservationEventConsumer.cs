@@ -1,8 +1,9 @@
 using Confluent.Kafka;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Payment.Domain.Events;
+using Payment.Infrastructure.EventConsumers.Strategies;
 using Payment.Infrastructure.Events;
 using Payment.Infrastructure.Services;
 using System.Text.Json;
@@ -10,23 +11,22 @@ using System.Text.Json;
 namespace Payment.Infrastructure.EventConsumers;
 
 /// <summary>
-/// Background service that consumes reservation events from Kafka to maintain local state.
-/// Eliminates the need for HTTP calls to inventory service for reservation validation.
+/// Background service that consumes payment-related events from Kafka.
+/// Dispatches each message to the registered <see cref="IPaymentEventStrategy"/> for its topic.
 /// </summary>
 public class ReservationEventConsumer : BackgroundService
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly KafkaOptions _kafkaOptions;
-    private readonly ReservationStateStore _reservationStore;
     private readonly ILogger<ReservationEventConsumer> _logger;
-    private IConsumer<string?, string>? _consumer;
 
     public ReservationEventConsumer(
+        IServiceProvider serviceProvider,
         IOptions<KafkaOptions> kafkaOptions,
-        ReservationStateStore reservationStore,
         ILogger<ReservationEventConsumer> logger)
     {
+        _serviceProvider = serviceProvider;
         _kafkaOptions = kafkaOptions.Value;
-        _reservationStore = reservationStore;
         _logger = logger;
     }
 
@@ -44,6 +44,11 @@ public class ReservationEventConsumer : BackgroundService
 
         try
         {
+            using var scope = _serviceProvider.CreateScope();
+            var strategies = scope.ServiceProvider
+                .GetRequiredService<IEnumerable<IPaymentEventStrategy>>()
+                .ToDictionary(s => s.Topic);
+
             var config = new ConsumerConfig
             {
                 BootstrapServers = _kafkaOptions.BootstrapServers,
@@ -53,138 +58,69 @@ public class ReservationEventConsumer : BackgroundService
                 EnableAutoOffsetStore = false
             };
 
-            _consumer = new ConsumerBuilder<string?, string>(config).Build();
-            _consumer.Subscribe(new[] { "reservation-created", "reservation-expired" });
+            using var consumer = new ConsumerBuilder<string?, string>(config).Build();
+            consumer.Subscribe(strategies.Keys);
 
-            _logger.LogInformation("Subscribed to reservation topics: reservation-created, reservation-expired");
+            _logger.LogInformation("Subscribed to topics: {Topics}", string.Join(", ", strategies.Keys));
+
+            var reservationStore = scope.ServiceProvider.GetRequiredService<ReservationStateStore>();
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    var consumeResult = _consumer.Consume(TimeSpan.FromMilliseconds(1000));
+                    var consumeResult = consumer.Consume(TimeSpan.FromMilliseconds(1000));
                     if (consumeResult?.Message?.Value != null)
                     {
-                        await ProcessReservationEvent(consumeResult, stoppingToken);
-                        _consumer.StoreOffset(consumeResult);
+                        await DispatchAsync(consumeResult.Topic, consumeResult.Message.Value, strategies, stoppingToken);
+                        consumer.StoreOffset(consumeResult);
                     }
 
                     // Periodically cleanup expired reservations
-                    _reservationStore.CleanupExpiredReservations();
+                    reservationStore.CleanupExpiredReservations();
                 }
-                catch (OperationCanceledException)
-                {
-                    _logger.LogInformation("Reservation event consumer cancellation requested");
-                    break;
-                }
+                catch (OperationCanceledException) { break; }
                 catch (ConsumeException ex)
                 {
-                    _logger.LogError(ex, "Error consuming reservation event: {Error}", ex.Error.Reason);
+                    _logger.LogError(ex, "Error consuming event: {Error}", ex.Error.Reason);
                     await Task.Delay(5000, stoppingToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Unexpected error in reservation event consumer");
+                    _logger.LogError(ex, "Unexpected error in event consumer");
                     await Task.Delay(5000, stoppingToken);
                 }
             }
+
+            consumer.Close();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Fatal error in reservation event consumer");
         }
-        finally
-        {
-            _consumer?.Close();
-            _consumer?.Dispose();
-        }
     }
 
-    private async Task ProcessReservationEvent(ConsumeResult<string?, string> result, CancellationToken cancellationToken)
+    private async Task DispatchAsync(
+        string topic,
+        string message,
+        Dictionary<string, IPaymentEventStrategy> strategies,
+        CancellationToken cancellationToken)
     {
+        if (!strategies.TryGetValue(topic, out var strategy))
+        {
+            _logger.LogWarning("No strategy registered for topic '{Topic}'", topic);
+            return;
+        }
+
+        using var scope = _serviceProvider.CreateScope();
         try
         {
-            _logger.LogDebug("Processing reservation event from topic {Topic}: {Message}", result.Topic, result.Message.Value);
-
-            switch (result.Topic)
-            {
-                case "reservation-created":
-                    await HandleReservationCreated(result.Message.Value, cancellationToken);
-                    break;
-                case "reservation-expired":
-                    await HandleReservationExpired(result.Message.Value, cancellationToken);
-                    break;
-                default:
-                    _logger.LogWarning("Unknown reservation topic: {Topic}", result.Topic);
-                    break;
-            }
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to deserialize reservation event from topic {Topic}", result.Topic);
+            var root = JsonDocument.Parse(message).RootElement;
+            await strategy.HandleAsync(root, scope, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing reservation event from topic {Topic}", result.Topic);
+            _logger.LogError(ex, "Error processing event for topic '{Topic}'", topic);
         }
-    }
-
-    private Task HandleReservationCreated(string eventJson, CancellationToken cancellationToken)
-    {
-        var reservationEvent = JsonSerializer.Deserialize<ReservationCreatedEvent>(eventJson, new JsonSerializerOptions 
-        { 
-            PropertyNameCaseInsensitive = true 
-        });
-
-        if (reservationEvent == null)
-        {
-            _logger.LogWarning("Failed to deserialize reservation-created event");
-            return Task.CompletedTask;
-        }
-
-        if (!Guid.TryParse(reservationEvent.ReservationId, out var reservationId) ||
-            !Guid.TryParse(reservationEvent.CustomerId, out var customerId) ||
-            !Guid.TryParse(reservationEvent.SeatId, out var seatId))
-        {
-            _logger.LogWarning("Invalid GUIDs in reservation-created event");
-            return Task.CompletedTask;
-        }
-
-        _reservationStore.AddReservation(reservationId, customerId, seatId, reservationEvent.ExpiresAt);
-        
-        _logger.LogInformation("Processed reservation-created event for reservation {ReservationId}", reservationId);
-        return Task.CompletedTask;
-    }
-
-    private Task HandleReservationExpired(string eventJson, CancellationToken cancellationToken)
-    {
-        var expiredEvent = JsonSerializer.Deserialize<ReservationExpiredEvent>(eventJson, new JsonSerializerOptions 
-        { 
-            PropertyNameCaseInsensitive = true 
-        });
-
-        if (expiredEvent == null)
-        {
-            _logger.LogWarning("Failed to deserialize reservation-expired event");
-            return Task.CompletedTask;
-        }
-
-        if (!Guid.TryParse(expiredEvent.ReservationId, out var reservationId))
-        {
-            _logger.LogWarning("Invalid ReservationId GUID in reservation-expired event");
-            return Task.CompletedTask;
-        }
-
-        _reservationStore.ExpireReservation(reservationId);
-        
-        _logger.LogInformation("Processed reservation-expired event for reservation {ReservationId}", reservationId);
-        return Task.CompletedTask;
-    }
-
-    public override void Dispose()
-    {
-        _consumer?.Close();
-        _consumer?.Dispose();
-        base.Dispose();
     }
 }
