@@ -4,13 +4,11 @@ using Ordering.Application.Ports;
 
 namespace Ordering.Application.UseCases.GetOrder;
 
-public record GetOrderQuery(Guid OrderId) : IRequest<OrderDto?>;
-
-public class GetOrderHandler : IRequestHandler<GetOrderQuery, OrderDto?>
+public class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, OrderDto?>
 {
     private readonly IOrderRepository _orderRepository;
 
-    public GetOrderHandler(IOrderRepository orderRepository)
+    public GetOrderQueryHandler(IOrderRepository orderRepository)
     {
         _orderRepository = orderRepository;
     }
@@ -18,7 +16,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderQuery, OrderDto?>
     public async Task<OrderDto?> Handle(GetOrderQuery request, CancellationToken cancellationToken)
     {
         var order = await _orderRepository.GetByIdAsync(request.OrderId, cancellationToken);
-        
+
         if (order == null)
             return null;
 

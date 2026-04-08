@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Ordering.Infrastructure.Events;
+namespace Ordering.Domain.Events;
 
 /// <summary>
 /// Event published when a seat reservation is created.
@@ -10,31 +10,31 @@ public record ReservationCreatedEvent
 {
     [JsonPropertyName("eventId")]
     public string EventId { get; init; } = string.Empty;
-    
+
     [JsonPropertyName("reservationId")]
     public string ReservationId { get; init; } = string.Empty;
-    
+
     [JsonPropertyName("customerId")]
     public string? CustomerId { get; init; }
-    
+
     [JsonPropertyName("seatId")]
     public string SeatId { get; init; } = string.Empty;
-    
+
     [JsonPropertyName("seatNumber")]
     public string SeatNumber { get; init; } = string.Empty;
-    
+
     [JsonPropertyName("section")]
     public string Section { get; init; } = string.Empty;
-    
+
     [JsonPropertyName("basePrice")]
     public decimal BasePrice { get; init; }
-    
+
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; init; }
-    
+
     [JsonPropertyName("expiresAt")]
     public DateTime ExpiresAt { get; init; }
-    
+
     [JsonPropertyName("status")]
     public string Status { get; init; } = "active";
 }
@@ -46,10 +46,10 @@ public record ReservationExpiredEvent
 {
     [JsonPropertyName("reservationId")]
     public string ReservationId { get; init; } = string.Empty;
-    
+
     [JsonPropertyName("seatId")]
     public string SeatId { get; init; } = string.Empty;
-    
+
     [JsonPropertyName("expiredAt")]
     public DateTime ExpiredAt { get; init; }
 }
