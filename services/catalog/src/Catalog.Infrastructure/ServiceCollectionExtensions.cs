@@ -12,6 +12,7 @@ using Catalog.Application.Ports;
 using Catalog.Application.UseCases.GetEventSeatmap;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Messaging;
+using Catalog.Infrastructure.Messaging.Strategies;
 
 namespace Catalog.Infrastructure;
 
@@ -48,7 +49,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new ProducerBuilder<string?, string>(kafkaConfig).Build());
         services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
-        // Kafka consumers
+        // Kafka event strategies (Strategy pattern)
+        services.AddScoped<IKafkaEventStrategy, WaitlistOpportunityStrategy>();
+        services.AddScoped<IKafkaEventStrategy, ReservationCreatedStrategy>();
+        services.AddScoped<IKafkaEventStrategy, ReservationExpiredStrategy>();
+        services.AddScoped<IKafkaEventStrategy, PaymentSucceededStrategy>();
+        services.AddScoped<IKafkaEventStrategy, SeatReleasedStrategy>();
+        services.AddScoped<IKafkaEventStrategy, TicketIssuedStrategy>();
+
+        // Kafka consumer
         services.AddHostedService<CatalogEventConsumer>();
         
         // Add JWT Authentication

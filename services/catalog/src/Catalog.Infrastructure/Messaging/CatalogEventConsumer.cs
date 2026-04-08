@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Catalog.Application.Ports;
+using Catalog.Infrastructure.Messaging.Strategies;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,18 +11,15 @@ namespace Catalog.Infrastructure.Messaging;
 
 public class CatalogEventConsumer : BackgroundService
 {
-    private const string SeatIdProperty = "seatId";
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CatalogEventConsumer> _logger;
     private readonly string _bootstrapServers;
-    private readonly string[] _topics = { "reservation-created", "reservation-expired", "payment-succeeded", "seat-released", "waitlist-opportunity", "ticket-issued" };
     private readonly string _groupId = "catalog-service-group";
 
     public CatalogEventConsumer(IServiceProvider serviceProvider, ILogger<CatalogEventConsumer> logger, IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-        
         _bootstrapServers = configuration["Kafka:BootstrapServers"] ?? configuration["Kafka__BootstrapServers"] ?? "kafka:9092";
     }
 
@@ -32,6 +30,11 @@ public class CatalogEventConsumer : BackgroundService
             _logger.LogInformation("CatalogEventConsumer: Waiting for Kafka to be ready...");
             await Task.Delay(5000, stoppingToken);
 
+            using var scope = _serviceProvider.CreateScope();
+            var strategies = scope.ServiceProvider
+                .GetRequiredService<IEnumerable<IKafkaEventStrategy>>()
+                .ToDictionary(s => s.Topic);
+
             var config = new ConsumerConfig
             {
                 BootstrapServers = _bootstrapServers,
@@ -40,44 +43,23 @@ public class CatalogEventConsumer : BackgroundService
                 EnableAutoCommit = false,
                 SessionTimeoutMs = 30000
             };
-            
-            using var consumer = new ConsumerBuilder<string, string>(config).Build();
-            consumer.Subscribe(_topics);
-            
-            _logger.LogInformation("CatalogEventConsumer: Waiting for initial assignment...");
-            var assignmentTimeout = DateTime.UtcNow.AddSeconds(30);
-            while (!stoppingToken.IsCancellationRequested && DateTime.UtcNow < assignmentTimeout)
-            {
-                try
-                {
-                    var msg = consumer.Consume(TimeSpan.FromSeconds(1));
-                    if (msg != null && !msg.IsPartitionEOF)
-                    {
-                        consumer.Commit(msg);
-                        break;
-                    }
-                }
-                catch (ConsumeException) { }
-            }
 
-            _logger.LogInformation("CatalogEventConsumer started and subscribed to topics: {Topics}", string.Join(", ", _topics));
+            using var consumer = new ConsumerBuilder<string, string>(config).Build();
+            consumer.Subscribe(strategies.Keys);
+
+            _logger.LogInformation("CatalogEventConsumer started and subscribed to topics: {Topics}", string.Join(", ", strategies.Keys));
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     var result = consumer.Consume(TimeSpan.FromSeconds(10));
-                    
-                    if (result == null || result.IsPartitionEOF)
-                        continue;
-                    
-                    await ProcessEventAsync(result.Topic, result.Message.Value);
+                    if (result == null || result.IsPartitionEOF) continue;
+
+                    await DispatchAsync(result.Topic, result.Message.Value, strategies);
                     consumer.Commit(result);
                 }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
+                catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error consuming Kafka message");
@@ -95,92 +77,21 @@ public class CatalogEventConsumer : BackgroundService
         }
     }
 
-    private async Task ProcessEventAsync(string topic, string message)
+    private async Task DispatchAsync(string topic, string message, Dictionary<string, IKafkaEventStrategy> strategies)
     {
+        if (!strategies.TryGetValue(topic, out var strategy))
+        {
+            _logger.LogWarning("No strategy registered for topic '{Topic}'", topic);
+            return;
+        }
+
         using var scope = _serviceProvider.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<ICatalogRepository>();
 
         try
         {
             var root = JsonDocument.Parse(message).RootElement;
-            
-            if (topic == "waitlist-opportunity")
-            {
-                JsonElement? seatIdElement = null;
-                
-                if (root.TryGetProperty("SeatId", out var pascalSeatId))
-                    seatIdElement = pascalSeatId;
-                else if (root.TryGetProperty(SeatIdProperty, out var camelSeatId))
-                    seatIdElement = camelSeatId;
-                
-                if (seatIdElement.HasValue && Guid.TryParse(seatIdElement.Value.GetString(), out var seatId))
-                {
-                    var status = (root.TryGetProperty("Status", out var statusProp) || root.TryGetProperty("status", out statusProp))
-                        ? statusProp.GetString() 
-                        : "OFFERED";
-
-                    if (status == "OFFERED")
-                    {
-                        await repository.UpdateSeatStatusAsync(seatId, "reserved", null);
-                        _logger.LogInformation("Seat {SeatId} marked as reserved (opportunity offered)", seatId);
-                    }
-                    else if (status == "EXPIRED" || status == "USED")
-                    {
-                        await repository.UpdateSeatStatusAsync(seatId, "available", null);
-                        _logger.LogInformation("Seat {SeatId} marked as available (opportunity {Status})", seatId, status);
-                    }
-                }
-            }
-            else if (topic == "reservation-created")
-            {
-                if (root.TryGetProperty(SeatIdProperty, out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
-                {
-                    Guid? reservationId = null;
-                    if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
-                        reservationId = resId;
-                    
-                    await repository.UpdateSeatStatusAsync(seatId, "reserved", reservationId);
-                    _logger.LogInformation("Seat {SeatId} marked as reserved", seatId);
-                }
-            }
-            else if (topic == "reservation-expired")
-            {
-                if (root.TryGetProperty(SeatIdProperty, out var seatIdProp) && Guid.TryParse(seatIdProp.GetString(), out var seatId))
-                    await repository.UpdateSeatStatusAsync(seatId, "available");
-                else if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
-                    await repository.UpdateSeatStatusByReservationAsync(resId, "available");
-            }
-            else if (topic == "payment-succeeded")
-            {
-                if (root.TryGetProperty("reservationId", out var resIdProp) && Guid.TryParse(resIdProp.GetString(), out var resId))
-                    await repository.UpdateSeatStatusByReservationAsync(resId, "sold");
-            }
-            else if (topic == "seat-released"
-                && root.TryGetProperty(SeatIdProperty, out var seatIdProp2) && Guid.TryParse(seatIdProp2.GetString(), out var seatId2))
-            {
-                await repository.UpdateSeatStatusAsync(seatId2, "available", null);
-            }
-            else if (topic == "ticket-issued")
-            {
-                if (root.TryGetProperty(SeatIdProperty, out var tiSeatIdProp) && Guid.TryParse(tiSeatIdProp.GetString(), out var tiSeatId))
-                {
-                    var seat = await repository.GetSeatAsync(tiSeatId);
-                    if (seat == null)
-                    {
-                        _logger.LogWarning("ticket-issued: Seat {SeatId} not found in catalog, skipping", tiSeatId);
-                    }
-                    else if (seat.IsSold())
-                    {
-                        _logger.LogInformation("ticket-issued: Seat {SeatId} already sold, skipping", tiSeatId);
-                    }
-                    else
-                    {
-                        seat.Sell();
-                        await repository.SaveChangesAsync();
-                        _logger.LogInformation("ticket-issued: Seat {SeatId} marked as sold", tiSeatId);
-                    }
-                }
-            }
+            await strategy.HandleAsync(root, repository);
         }
         catch (Exception ex)
         {
