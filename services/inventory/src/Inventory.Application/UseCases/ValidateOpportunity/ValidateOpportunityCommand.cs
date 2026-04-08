@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace Inventory.Application.UseCases.CreateReservation;
+namespace Inventory.Application.UseCases.ValidateOpportunity;
 
 public record ValidateOpportunityCommand(string Token) : IRequest<ValidateOpportunityResult>;
 

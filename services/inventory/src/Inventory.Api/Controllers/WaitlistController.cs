@@ -2,6 +2,7 @@ using MediatR;
 using Inventory.Application.UseCases.JoinWaitlist;
 using Inventory.Application.UseCases.GetWaitlistStatus;
 using Inventory.Application.UseCases.CreateReservation;
+using Inventory.Application.UseCases.ValidateOpportunity;
 using Inventory.Application.UseCases.CancelWaitlist;
 using Inventory.Application.UseCases.GetUserOpportunities;
 using Microsoft.AspNetCore.Mvc;

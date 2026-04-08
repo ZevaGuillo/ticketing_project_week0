@@ -1,8 +1,8 @@
 using Inventory.Infrastructure;
 using Inventory.Infrastructure.Configuration;
-using Inventory.Infrastructure.Consumers;
 using Inventory.Infrastructure.Locking;
 using Inventory.Infrastructure.Messaging;
+using Inventory.Infrastructure.Messaging.Strategies;
 using Inventory.Infrastructure.Persistence;
 using Inventory.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
@@ -76,29 +76,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new ProducerBuilder<string?, string>(kafkaConfig).Build());
         services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
-        // Register inventory event consumer
-        services.AddHostedService<Inventory.Infrastructure.Messaging.InventoryEventConsumer>();
+        // Kafka event strategies (Strategy pattern)
+        services.AddScoped<IInventoryEventStrategy, PaymentSucceededStrategy>();
+        services.AddScoped<IInventoryEventStrategy, ReservationExpiredStrategy>();
+        services.AddScoped<IInventoryEventStrategy, SeatsGeneratedStrategy>();
 
-        // Register reservation-expired consumer for waitlist
-        var waitlistConsumerConfig = new ConsumerConfig
-        {
-            BootstrapServers = kafkaBootstrapServers,
-            GroupId = "waitlist-consumer-group",
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false,
-            SessionTimeoutMs = 30000,
-            EnablePartitionEof = true
-        };
-        
-        services.AddSingleton<IHostedService, ReservationExpiredEventConsumer>(sp =>
-        {
-            var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            var consumer = new ConsumerBuilder<string?, string>(waitlistConsumerConfig).Build();
-            var dlqProducer = sp.GetRequiredService<IProducer<string?, string>>();
-            var logger = sp.GetRequiredService<ILogger<ReservationExpiredEventConsumer>>();
-            var waitlistSettings = sp.GetRequiredService<WaitlistSettings>();
-            return new ReservationExpiredEventConsumer(scopeFactory, consumer, dlqProducer, logger, waitlistSettings);
-        });
+        // Unified Kafka consumer — dispatches to strategies by topic
+        services.AddHostedService<InventoryEventConsumer>();
 
         // Register expiry worker as hosted service (optional in tests)
         services.AddSingleton<IHostedService, Inventory.Infrastructure.Workers.ReservationExpiryWorker>(sp =>
@@ -118,21 +102,6 @@ public static class ServiceCollectionExtensions
             return new Inventory.Infrastructure.Workers.OpportunityExpiryWorker(scopeFactory, kafka, logger, waitlistSettings);
         });
 
-        // Register seats-generated Kafka consumer as hosted service
-        var consumerConfig = new ConsumerConfig
-        {
-            BootstrapServers = kafkaBootstrapServers,
-            GroupId = "inventory-seats-consumer",
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
-        };
-        
-        services.AddSingleton<IHostedService, SeatsGeneratedConsumer>(sp =>
-        {
-            var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            var consumer = new ConsumerBuilder<string?, string>(consumerConfig).Build();
-            return new SeatsGeneratedConsumer(scopeFactory, consumer);
-        });
 
         return services;
     }

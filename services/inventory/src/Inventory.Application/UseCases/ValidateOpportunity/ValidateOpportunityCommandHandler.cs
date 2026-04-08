@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Inventory.Application.DTOs;
 using Inventory.Application.UseCases.CreateReservation;
+using Inventory.Application.UseCases.ValidateOpportunity;
 using Inventory.Domain.Entities;
 using Inventory.Domain.Enums;
 using Inventory.Domain.Ports;
@@ -9,7 +10,7 @@ using Inventory.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Inventory.Application.UseCases.CreateReservation;
+namespace Inventory.Application.UseCases.ValidateOpportunity;
 
 public class ValidateOpportunityCommandHandler : IRequestHandler<ValidateOpportunityCommand, ValidateOpportunityResult>
 {

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Inventory.Application.UseCases.CreateReservation;
+using Inventory.Application.UseCases.ValidateOpportunity;
 using Inventory.Domain.Entities;
 using Inventory.Domain.Enums;
 using Inventory.Domain.Ports;
