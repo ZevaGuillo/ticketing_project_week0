@@ -357,6 +357,13 @@ jobs:
           name: merged-coverage-report
           path: merged-coverage
 
+      - name: Comment Coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-report
+          path: merged-coverage/SummaryGitHub.md
+
   trivy-scan-catalog:
     needs: [generate-coverage-report]
     if: always()
