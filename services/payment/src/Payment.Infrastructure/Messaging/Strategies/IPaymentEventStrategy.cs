@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Payment.Infrastructure.EventConsumers.Strategies;
+namespace Payment.Infrastructure.Messaging.Strategies;
 
 public interface IPaymentEventStrategy
 {

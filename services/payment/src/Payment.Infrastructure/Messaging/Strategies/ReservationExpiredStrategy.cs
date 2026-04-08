@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Payment.Domain.Events;
 using Payment.Infrastructure.Services;
 
-namespace Payment.Infrastructure.EventConsumers.Strategies;
+namespace Payment.Infrastructure.Messaging.Strategies;
 
 public class ReservationExpiredStrategy : IPaymentEventStrategy
 {

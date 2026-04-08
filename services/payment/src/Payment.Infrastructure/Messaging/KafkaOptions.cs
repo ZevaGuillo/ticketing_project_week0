@@ -1,7 +1,7 @@
 /// <summary>
 /// Configuration options for Kafka.
 /// </summary>
-namespace Payment.Infrastructure.Events;
+namespace Payment.Infrastructure.Messaging;
 
 public class KafkaOptions
 {

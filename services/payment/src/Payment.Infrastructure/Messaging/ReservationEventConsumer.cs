@@ -3,12 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Payment.Infrastructure.EventConsumers.Strategies;
-using Payment.Infrastructure.Events;
+using Payment.Infrastructure.Messaging.Strategies;
 using Payment.Infrastructure.Services;
 using System.Text.Json;
 
-namespace Payment.Infrastructure.EventConsumers;
+namespace Payment.Infrastructure.Messaging;
 
 /// <summary>
 /// Background service that consumes payment-related events from Kafka.
