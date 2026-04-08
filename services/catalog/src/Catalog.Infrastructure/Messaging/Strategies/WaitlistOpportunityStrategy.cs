@@ -27,8 +27,8 @@ public class WaitlistOpportunityStrategy : IKafkaEventStrategy
 
         if (status == "OFFERED")
         {
-            await repository.UpdateSeatStatusAsync(seatId, "reserved", null);
-            _logger.LogInformation("Seat {SeatId} marked as reserved (opportunity offered)", seatId);
+            await repository.UpdateSeatStatusAsync(seatId, "offered", null);
+            _logger.LogInformation("Seat {SeatId} marked as offered (waitlist opportunity)", seatId);
         }
         else if (status == "EXPIRED" || status == "USED")
         {

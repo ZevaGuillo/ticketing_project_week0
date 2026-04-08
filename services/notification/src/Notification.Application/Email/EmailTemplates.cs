@@ -59,8 +59,15 @@ public static class EmailTemplates
         string seatNumber,
         decimal price,
         string currency,
-        DateTime issuedAt)
+        DateTime issuedAt,
+        bool hasQr = false)
     {
+        var qrSection = hasQr
+            ? @"<div class=""qr-box"">
+        <p style=""margin:0 0 12px; font-weight:bold; color:#374151;"">Código QR de tu ticket</p>
+        <img src=""cid:qrcode"" alt=""QR Code"" width=""160"" height=""160"" style=""display:block;margin:0 auto;"" />
+      </div>"
+            : string.Empty;
         return $@"<!DOCTYPE html>
 <html>
 <head>
@@ -78,6 +85,8 @@ public static class EmailTemplates
     .detail-box td {{ padding: 8px 4px; font-size: 15px; }}
     .detail-box td:first-child {{ color: #6b7280; width: 40%; }}
     .detail-box td:last-child {{ font-weight: bold; color: #1e3a5f; }}
+    .qr-box {{ background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 20px; margin: 20px 0; text-align: center; }}
+    .btn {{ display: inline-block; background-color: #2563eb; color: #ffffff !important; text-decoration: none; padding: 12px 32px; border-radius: 6px; font-size: 15px; font-weight: bold; }}
     .footer {{ padding: 20px 24px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; }}
   </style>
 </head>
@@ -97,7 +106,8 @@ public static class EmailTemplates
           <tr><td>Emitido</td><td>{issuedAt:dd/MM/yyyy HH:mm} UTC</td></tr>
         </table>
       </div>
-      <p>Si tienes alguna pregunta, contacta a nuestro equipo de soporte.</p>
+      {qrSection}
+      <p style=""margin-top:24px; font-size:13px; color:#6b7280;"">Si tienes alguna pregunta, contacta a nuestro equipo de soporte.</p>
     </div>
     <div class=""footer"">
       &copy; Ticketing Platform. Este es un correo automático, por favor no respondas.

@@ -61,6 +61,9 @@ public class TicketIssuedEvent
     [JsonPropertyName("issued_at")]
     public DateTime IssuedAt { get; set; }
 
+    [JsonPropertyName("qr_code_data")]
+    public string QrCodeData { get; set; } = string.Empty;
+
     [JsonPropertyName("timestamp")]
     public DateTime Timestamp { get; set; }
 }

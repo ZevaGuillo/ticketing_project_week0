@@ -151,18 +151,22 @@ public class PaymentSucceededEventConsumer : BackgroundService
                             // Save ticket to database
                             await ticketRepository.CreateAsync(ticket);
 
+                            var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                            var gatewayBaseUrl = config["Gateway:BaseUrl"] ?? "http://gateway:5000";
+
                             // Publish ticket-issued event
                             var ticketEvent = new TicketIssuedEvent
                             {
                                 OrderId = ticket.OrderId,
                                 TicketId = ticket.Id,
                                 CustomerEmail = ticket.CustomerEmail,
-                                TicketPdfUrl = $"/tickets/{pdfPath}",
+                                TicketPdfUrl = $"{gatewayBaseUrl}/fulfillment/tickets/{ticket.Id}",
                                 EventName = ticket.EventName,
                                 SeatNumber = ticket.SeatNumber,
                                 Price = ticket.Price,
                                 Currency = ticket.Currency,
                                 IssuedAt = ticket.GeneratedAt,
+                                QrCodeData = ticket.QrCodeData,
                                 Timestamp = DateTime.UtcNow
                             };
 

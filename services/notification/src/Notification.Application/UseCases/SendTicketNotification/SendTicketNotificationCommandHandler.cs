@@ -10,15 +10,18 @@ public class SendTicketNotificationCommandHandler : IRequestHandler<SendTicketNo
 {
     private readonly IEmailNotificationRepository _repository;
     private readonly IEmailService _emailService;
+    private readonly IQrCodeService _qrCodeService;
     private readonly ILogger<SendTicketNotificationCommandHandler> _logger;
 
     public SendTicketNotificationCommandHandler(
         IEmailNotificationRepository repository,
         IEmailService emailService,
+        IQrCodeService qrCodeService,
         ILogger<SendTicketNotificationCommandHandler> logger)
     {
         _repository = repository;
         _emailService = emailService;
+        _qrCodeService = qrCodeService;
         _logger = logger;
     }
 
@@ -38,14 +41,18 @@ public class SendTicketNotificationCommandHandler : IRequestHandler<SendTicketNo
 
             // Build email content
             var subject = $"Your Ticket for {request.EventName}";
-            var body = BuildEmailBody(request);
+            var qrBytes = !string.IsNullOrEmpty(request.QrCodeData)
+                ? _qrCodeService.GenerateBytes(request.QrCodeData)
+                : null;
+            var body = BuildEmailBody(request, qrBytes != null && qrBytes.Length > 0);
 
             // Send email
             var emailSent = await _emailService.SendAsync(
                 request.RecipientEmail,
                 subject,
                 body,
-                request.TicketPdfUrl);
+                pdfUrl: request.TicketPdfUrl,
+                qrBytes: qrBytes);
 
             // Create and persist notification record
             var notification = new EmailNotification
@@ -84,11 +91,14 @@ public class SendTicketNotificationCommandHandler : IRequestHandler<SendTicketNo
         }
     }
 
-    private string BuildEmailBody(SendTicketNotificationCommand request) =>
-        EmailTemplates.TicketConfirmation(
+    private string BuildEmailBody(SendTicketNotificationCommand request, bool hasQr)
+    {
+        return EmailTemplates.TicketConfirmation(
             request.EventName,
             request.SeatNumber,
             request.Price,
             request.Currency,
-            request.TicketIssuedAt);
+            request.TicketIssuedAt,
+            hasQr);
+    }
 }

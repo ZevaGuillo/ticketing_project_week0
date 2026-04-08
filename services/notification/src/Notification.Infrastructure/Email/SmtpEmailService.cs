@@ -23,15 +23,25 @@ public class SmtpEmailOptions
 public class SmtpEmailService : IEmailService
 {
     private readonly SmtpEmailOptions _options;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SmtpEmailService> _logger;
 
-    public SmtpEmailService(IOptions<SmtpEmailOptions> options, ILogger<SmtpEmailService> logger)
+    public SmtpEmailService(
+        IOptions<SmtpEmailOptions> options,
+        IHttpClientFactory httpClientFactory,
+        ILogger<SmtpEmailService> logger)
     {
         _options = options.Value;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
-    public async Task<bool> SendAsync(string recipientEmail, string subject, string body, string? attachmentPath = null)
+    public async Task<bool> SendAsync(
+        string recipientEmail,
+        string subject,
+        string body,
+        string? pdfUrl = null,
+        byte[]? qrBytes = null)
     {
         if (string.IsNullOrWhiteSpace(recipientEmail) || !recipientEmail.Contains('@'))
         {
@@ -43,11 +53,11 @@ public class SmtpEmailService : IEmailService
         {
             if (_options.UseDevMode)
             {
-                // In dev mode, just log the email instead of sending
-                _logger.LogInformation($"[DEV MODE] Email queued for sending");
-                _logger.LogInformation($"  To: {recipientEmail}");
-                _logger.LogInformation($"  Subject: {subject}");
-                _logger.LogInformation($"  Attachment: {attachmentPath ?? "none"}");
+                _logger.LogInformation("[DEV MODE] Email queued for sending");
+                _logger.LogInformation("  To: {Recipient}", recipientEmail);
+                _logger.LogInformation("  Subject: {Subject}", subject);
+                _logger.LogInformation("  PDF attachment: {Pdf}", pdfUrl ?? "none");
+                _logger.LogInformation("  QR image: {Qr}", qrBytes?.Length > 0 ? $"{qrBytes.Length} bytes" : "none");
                 return true;
             }
 
@@ -56,7 +66,42 @@ public class SmtpEmailService : IEmailService
             message.To.Add(MailboxAddress.Parse(recipientEmail));
             message.Subject = subject;
 
-            var builder = new BodyBuilder { HtmlBody = body };
+            var builder = new BodyBuilder();
+
+            // Embed QR as CID inline image (supported by all major email clients)
+            if (qrBytes != null && qrBytes.Length > 0)
+            {
+                var qrImage = builder.LinkedResources.Add("qrcode.png", qrBytes, new MimeKit.ContentType("image", "png"));
+                qrImage.ContentId = "qrcode";
+                qrImage.ContentDisposition = new ContentDisposition(ContentDisposition.Inline);
+            }
+
+            builder.HtmlBody = body;
+
+            // Download and attach PDF
+            if (!string.IsNullOrEmpty(pdfUrl))
+            {
+                try
+                {
+                    var httpClient = _httpClientFactory.CreateClient("gateway");
+                    var pdfResponse = await httpClient.GetAsync(pdfUrl);
+                    if (pdfResponse.IsSuccessStatusCode)
+                    {
+                        var pdfBytes = await pdfResponse.Content.ReadAsByteArrayAsync();
+                        builder.Attachments.Add("ticket.pdf", pdfBytes, new MimeKit.ContentType("application", "pdf"));
+                        _logger.LogInformation("PDF attached from {Url}", pdfUrl);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Could not download PDF from {Url}: {Status}", pdfUrl, pdfResponse.StatusCode);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to attach PDF from {Url}", pdfUrl);
+                }
+            }
+
             message.Body = builder.ToMessageBody();
 
             using var client = new SmtpClient();

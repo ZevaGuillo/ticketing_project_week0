@@ -17,9 +17,19 @@ public class WaitlistOpportunityStrategy : INotificationEventStrategy
     {
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<WaitlistOpportunityStrategy>>();
 
-        var evt = JsonSerializer.Deserialize<WaitlistOpportunityEvent>(
-            root.GetRawText(),
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        // Try both PascalCase (actual Kafka events) and camelCase (model annotations) 
+        WaitlistOpportunityEvent? evt = null;
+        try
+        {
+            // First try with PropertyNameCaseInsensitive to handle both cases
+            evt = JsonSerializer.Deserialize<WaitlistOpportunityEvent>(
+                root.GetRawText(),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Failed to deserialize waitlist-opportunity event: {EventData}", root.GetRawText());
+        }
 
         if (evt == null)
         {

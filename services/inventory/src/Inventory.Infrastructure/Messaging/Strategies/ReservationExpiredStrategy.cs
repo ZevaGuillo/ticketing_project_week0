@@ -22,10 +22,14 @@ public class ReservationExpiredStrategy : IInventoryEventStrategy
         var kafkaProducer = scope.ServiceProvider.GetService<IKafkaProducer>();
         var waitlistSettings = scope.ServiceProvider.GetRequiredService<WaitlistSettings>();
 
-        var reservationId = root.TryGetProperty("reservationId", out var rProp) ? rProp.GetString() : null;
-        var seatIdStr = root.TryGetProperty("seatId", out var sProp) ? sProp.GetString() : null;
-        var eventIdStr = root.TryGetProperty("eventId", out var eProp) ? eProp.GetString() : null;
-        var section = root.TryGetProperty("section", out var secProp) ? secProp.GetString() : null;
+        var reservationId = (root.TryGetProperty("ReservationId", out var rProp) || root.TryGetProperty("reservationId", out rProp)) 
+            ? rProp.GetString() : null;
+        var seatIdStr = (root.TryGetProperty("SeatId", out var sProp) || root.TryGetProperty("seatId", out sProp))
+            ? sProp.GetString() : null;
+        var eventIdStr = (root.TryGetProperty("EventId", out var eProp) || root.TryGetProperty("eventId", out eProp))
+            ? eProp.GetString() : null;
+        var section = (root.TryGetProperty("Section", out var secProp) || root.TryGetProperty("section", out secProp))
+            ? secProp.GetString() : null;
 
         if (!Guid.TryParse(seatIdStr, out var seatId) || !Guid.TryParse(eventIdStr, out var eventId) || string.IsNullOrEmpty(section))
         {
@@ -43,13 +47,14 @@ public class ReservationExpiredStrategy : IInventoryEventStrategy
             return;
         }
 
-        if (!availableSeat.Reserved)
-        {
-            logger.LogInformation("Seat {SeatId} is not reserved (possibly already sold), skipping waitlist", seatId);
-            return;
-        }
+        logger.LogInformation("Processing seat {SeatId}: Reserved={Reserved}, Event={EventId}, Section={Section}", 
+            seatId, availableSeat.Reserved, eventId, section);
 
-        availableSeat.Reserved = false;
+        if (availableSeat.Reserved)
+        {
+            logger.LogWarning("Seat {SeatId} is still reserved, this shouldn't happen after expiry. Setting Reserved=false", seatId);
+            availableSeat.Reserved = false;
+        }
 
         var waitlistEntries = await dbContext.WaitlistEntries
             .Where(w => w.EventId == eventId && w.Section == section && w.Status == WaitlistStatus.ACTIVE)
@@ -127,7 +132,7 @@ public class ReservationExpiredStrategy : IInventoryEventStrategy
             };
 
             await kafkaProducer.ProduceAsync("waitlist-opportunity", JsonSerializer.Serialize(waitlistEvent));
-            logger.LogInformation("Published waitlist-opportunity event for user {UserId}", selectedUserId);
+            logger.LogInformation("Published waitlist-opportunity event for user {UserId}, seat {SeatId} will be marked as offered", selectedUserId, seatId);
         }
 
         logger.LogInformation("Successfully processed reservation-expired: {ReservationId}", reservationId);

@@ -71,6 +71,9 @@ public class ReservationExpiryWorker : BackgroundService
 
             db.Reservations.Update(res);
 
+            // Save changes BEFORE publishing events to prevent race condition
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
             // publish event with complete information for waitlist processing
             var @event = new
             {
@@ -85,6 +88,7 @@ public class ReservationExpiryWorker : BackgroundService
             try
             {
                 await _producer.ProduceAsync("reservation-expired", json, res.SeatId.ToString("N")).ConfigureAwait(false);
+                Console.WriteLine($"Published reservation-expired event for reservation {res.Id}, seat {res.SeatId}");
             }
             catch (Exception ex)
             {
@@ -109,7 +113,5 @@ public class ReservationExpiryWorker : BackgroundService
                 Console.WriteLine($"Failed to publish seat-released for {res.SeatId}: {ex.Message}");
             }
         }
-
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

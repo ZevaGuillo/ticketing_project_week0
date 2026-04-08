@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
         services.Configure<SmtpEmailOptions>(
             configuration.GetSection(SmtpEmailOptions.Section));
         services.AddScoped<IEmailService, SmtpEmailService>();
+        services.AddScoped<IQrCodeService, QrCodeService>();
 
         // Notification event strategies (Strategy pattern)
         services.AddScoped<INotificationEventStrategy, TicketIssuedStrategy>();
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
 
         // Unified Kafka consumer — dispatches to strategies by topic
         services.AddHttpClient("identity");
+        services.AddHttpClient("gateway");
         services.AddHostedService<NotificationEventConsumer>();
 
         return services;
