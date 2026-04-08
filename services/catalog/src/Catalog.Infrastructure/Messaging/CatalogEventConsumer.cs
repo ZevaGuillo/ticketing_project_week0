@@ -14,7 +14,7 @@ public class CatalogEventConsumer : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CatalogEventConsumer> _logger;
     private readonly string _bootstrapServers;
-    private readonly string[] _topics = { "reservation-created", "reservation-expired", "payment-succeeded", "seat-released", "waitlist-opportunity" };
+    private readonly string[] _topics = { "reservation-created", "reservation-expired", "payment-succeeded", "seat-released", "waitlist-opportunity", "ticket-issued" };
     private readonly string _groupId = "catalog-service-group";
 
     public CatalogEventConsumer(IServiceProvider serviceProvider, ILogger<CatalogEventConsumer> logger, IConfiguration configuration)
@@ -159,6 +159,27 @@ public class CatalogEventConsumer : BackgroundService
                 && root.TryGetProperty(SeatIdProperty, out var seatIdProp2) && Guid.TryParse(seatIdProp2.GetString(), out var seatId2))
             {
                 await repository.UpdateSeatStatusAsync(seatId2, "available", null);
+            }
+            else if (topic == "ticket-issued")
+            {
+                if (root.TryGetProperty(SeatIdProperty, out var tiSeatIdProp) && Guid.TryParse(tiSeatIdProp.GetString(), out var tiSeatId))
+                {
+                    var seat = await repository.GetSeatAsync(tiSeatId);
+                    if (seat == null)
+                    {
+                        _logger.LogWarning("ticket-issued: Seat {SeatId} not found in catalog, skipping", tiSeatId);
+                    }
+                    else if (seat.IsSold())
+                    {
+                        _logger.LogInformation("ticket-issued: Seat {SeatId} already sold, skipping", tiSeatId);
+                    }
+                    else
+                    {
+                        seat.Sell();
+                        await repository.SaveChangesAsync();
+                        _logger.LogInformation("ticket-issued: Seat {SeatId} marked as sold", tiSeatId);
+                    }
+                }
             }
         }
         catch (Exception ex)

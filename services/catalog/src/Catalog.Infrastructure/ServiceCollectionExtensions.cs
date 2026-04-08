@@ -12,7 +12,6 @@ using Catalog.Application.Ports;
 using Catalog.Application.UseCases.GetEventSeatmap;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Messaging;
-using Catalog.Infrastructure.Consumers;
 
 namespace Catalog.Infrastructure;
 
@@ -51,22 +50,6 @@ public static class ServiceCollectionExtensions
 
         // Kafka consumers
         services.AddHostedService<CatalogEventConsumer>();
-
-        var consumerConfig = new ConsumerConfig
-        {
-            BootstrapServers = kafkaBootstrapServers,
-            GroupId = "catalog-ticket-issued-consumer",
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
-        };
-        
-        // Using factory registration for the consumer too
-        services.AddSingleton<IHostedService, TicketIssuedConsumer>(sp =>
-        {
-            var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            var consumer = new ConsumerBuilder<string?, string>(consumerConfig).Build();
-            return new TicketIssuedConsumer(scopeFactory, consumer);
-        });
         
         // Add JWT Authentication
         var jwtKey = configuration["Jwt:Key"]!;
