@@ -358,8 +358,7 @@ jobs:
           path: merged-coverage
 
   trivy-scan-catalog:
-    needs: [filter, generate-coverage-report]
-    if: needs.filter.outputs.catalog == 'true'
+    needs: [generate-coverage-report]
     name: "Security Scan: Catalog"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -367,8 +366,7 @@ jobs:
       dockerfile_path: "services/catalog/src/Catalog.Api/Dockerfile"
 
   trivy-scan-identity:
-    needs: [filter, generate-coverage-report]
-    if: needs.filter.outputs.identity == 'true'
+    needs: [generate-coverage-report]
     name: "Security Scan: Identity"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -376,8 +374,7 @@ jobs:
       dockerfile_path: "services/identity/src/Identity.Api/Dockerfile"
 
   trivy-scan-fulfillment:
-    needs: [filter, generate-coverage-report]
-    if: needs.filter.outputs.fulfillment == 'true'
+    needs: [generate-coverage-report]
     name: "Security Scan: Fulfillment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -385,8 +382,7 @@ jobs:
       dockerfile_path: "services/fulfillment/src/Fulfillment.Api/Dockerfile"
 
   trivy-scan-inventory:
-    needs: [filter, generate-coverage-report]
-    if: needs.filter.outputs.inventory == 'true'
+    needs: [generate-coverage-report]
     name: "Security Scan: Inventory"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -394,8 +390,7 @@ jobs:
       dockerfile_path: "services/inventory/src/Inventory.Api/Dockerfile"
 
   trivy-scan-notification:
-    needs: [filter, generate-coverage-report]
-    if: needs.filter.outputs.notification == 'true'
+    needs: [generate-coverage-report]
     name: "Security Scan: Notification"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -403,8 +398,7 @@ jobs:
       dockerfile_path: "services/notification/src/Notification.Api/Dockerfile"
 
   trivy-scan-ordering:
-    needs: [filter, generate-coverage-report]
-    if: needs.filter.outputs.ordering == 'true'
+    needs: [generate-coverage-report]
     name: "Security Scan: Ordering"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -412,8 +406,7 @@ jobs:
       dockerfile_path: "services/ordering/src/Ordering.Api/Dockerfile"
 
   trivy-scan-payment:
-    needs: [filter, generate-coverage-report]
-    if: needs.filter.outputs.payment == 'true'
+    needs: [generate-coverage-report]
     name: "Security Scan: Payment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
