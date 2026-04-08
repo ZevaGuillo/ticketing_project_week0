@@ -1,11 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Yarp.ReverseProxy;
-using Yarp.ReverseProxy.Transforms;
-using Gateway.Api.Constants;
 using Gateway.Api.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -54,38 +50,7 @@ proxyBuilder.LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 proxyBuilder.AddTransforms(transforms =>
 {
-    transforms.AddRequestTransform(context =>
-    {
-        // Prefer userId from JWT claims (authenticated routes) over client-supplied header
-        var jwtUserId = context.HttpContext.User.FindFirstValue("sub");
-        var headerUserId = context.HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
-        var userId = !string.IsNullOrEmpty(jwtUserId) ? jwtUserId : headerUserId;
-        
-        context.ProxyRequest.Headers.Remove("X-User-Id");
-        
-        if (!string.IsNullOrEmpty(userId))
-        {
-            context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Id", userId);
-        }
-        
-        var jwtRole = context.HttpContext.User.FindFirstValue("role");
-        var headerRole = context.HttpContext.Request.Headers["X-User-Role"].FirstOrDefault();
-        var userRole = !string.IsNullOrEmpty(jwtRole) ? jwtRole : headerRole;
-        context.ProxyRequest.Headers.Remove("X-User-Role");
-        if (!string.IsNullOrEmpty(userRole))
-        {
-            context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Role", userRole);
-        }
-
-        var userEmail = context.HttpContext.User.FindFirstValue("email");
-        if (!string.IsNullOrEmpty(userEmail))
-        {
-            context.ProxyRequest.Headers.Remove("X-User-Email");
-            context.ProxyRequest.Headers.TryAddWithoutValidation("X-User-Email", userEmail);
-        }
-        
-        return ValueTask.CompletedTask;
-    });
+    transforms.RequestTransforms.Add(new ClaimsForwardingTransform());
 });
 
 builder.Services.AddEndpointsApiExplorer();

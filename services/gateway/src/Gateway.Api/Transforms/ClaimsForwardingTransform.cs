@@ -10,18 +10,26 @@ public class ClaimsForwardingTransform : RequestTransform
     public override ValueTask ApplyAsync(RequestTransformContext context)
     {
         var httpContext = context.HttpContext;
-        var userId = httpContext.User.FindFirstValue("sub");
-        var userRole = httpContext.User.FindFirstValue("role");
-        var userEmail = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Email);
 
+        // Prefer JWT claims (authenticated routes) over client-supplied headers
+        var userId = httpContext.User.FindFirstValue(GatewayClaims.Subject)
+            ?? httpContext.Request.Headers[GatewayHeaders.UserId].FirstOrDefault();
+
+        context.ProxyRequest.Headers.Remove(GatewayHeaders.UserId);
         if (!string.IsNullOrEmpty(userId))
-            context.ProxyRequest.Headers.Add(GatewayHeaders.UserId, userId);
+            context.ProxyRequest.Headers.TryAddWithoutValidation(GatewayHeaders.UserId, userId);
 
+        var userRole = httpContext.User.FindFirstValue(GatewayClaims.Role)
+            ?? httpContext.Request.Headers[GatewayHeaders.UserRole].FirstOrDefault();
+
+        context.ProxyRequest.Headers.Remove(GatewayHeaders.UserRole);
         if (!string.IsNullOrEmpty(userRole))
-            context.ProxyRequest.Headers.Add(GatewayHeaders.UserRole, userRole);
+            context.ProxyRequest.Headers.TryAddWithoutValidation(GatewayHeaders.UserRole, userRole);
 
+        var userEmail = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Email);
+        context.ProxyRequest.Headers.Remove(GatewayHeaders.UserEmail);
         if (!string.IsNullOrEmpty(userEmail))
-            context.ProxyRequest.Headers.Add(GatewayHeaders.UserEmail, userEmail);
+            context.ProxyRequest.Headers.TryAddWithoutValidation(GatewayHeaders.UserEmail, userEmail);
 
         return ValueTask.CompletedTask;
     }
