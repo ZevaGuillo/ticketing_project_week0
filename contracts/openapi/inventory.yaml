@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Inventory Service API
   description: Seat reservation, inventory management, and waitlist service
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: SpecKit Team
 
@@ -20,6 +20,14 @@ paths:
       operationId: createReservation
       tags:
         - Inventory
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Authenticated user identifier. Optional for guest reservations.
       requestBody:
         required: true
         content:
@@ -36,10 +44,10 @@ paths:
                 customerId:
                   type: string
                   format: uuid
+                  description: Optional; derived from X-User-Id header when authenticated
               required:
                 - eventId
                 - seatId
-                - customerId
       responses:
         '201':
           description: Reservation created successfully
@@ -60,12 +68,12 @@ paths:
                   status:
                     type: string
                     enum: [active, expired, confirmed]
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: Seat or event not found
         '409':
           description: Seat already reserved
-        '422':
-          description: Version conflict (seat changed)
-        '500':
-          description: Internal server error
 
   /reservations/{reservationId}:
     get:
@@ -346,6 +354,14 @@ paths:
       responses:
         '200':
           description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
 
 components:
   securitySchemes:

@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
   title: Fulfillment Service API
-  description: Ticket generation and fulfillment service
-  version: 1.0.0
+  description: Ticket generation service. Tickets are created automatically via the payment-succeeded Kafka event, not through a direct API call.
+  version: 1.1.0
   contact:
     name: SpecKit Team
 
@@ -13,41 +13,32 @@ servers:
     description: Production environment
 
 paths:
-  /tickets:
-    post:
-      summary: Generate ticket
-      description: Create ticket with PDF and QR code after successful payment
-      operationId: generateTicket
+  /tickets/{id}:
+    get:
+      summary: Download ticket as PDF
+      description: |
+        Retrieve a generated ticket. Supports two formats:
+        - Pass a plain UUID to get ticket metadata.
+        - Pass `{UUID}.pdf` to download the PDF file directly.
+      operationId: getTicket
       tags:
         - Fulfillment
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                paymentId:
-                  type: string
-                  format: uuid
-                orderId:
-                  type: string
-                  format: uuid
-                customerId:
-                  type: string
-                  format: uuid
-                eventId:
-                  type: string
-                  format: uuid
-              required:
-                - paymentId
-                - orderId
-                - customerId
-                - eventId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ticket ID (UUID) or ticket ID with `.pdf` suffix to download the PDF
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6.pdf
       responses:
-        '201':
-          description: Ticket generated successfully
+        '200':
+          description: Ticket found. Returns PDF file when `.pdf` suffix is used, otherwise JSON metadata.
           content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
             application/json:
               schema:
                 type: object
@@ -64,27 +55,8 @@ paths:
                   status:
                     type: string
                     enum: [generated, delivered, cancelled]
-        '422':
-          description: Payment not successful or invalid
-        '500':
-          description: PDF/QR generation error
-
-  /tickets/{ticketId}:
-    get:
-      summary: Get ticket details
-      operationId: getTicket
-      tags:
-        - Fulfillment
-      parameters:
-        - name: ticketId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Ticket found
+        '400':
+          description: Invalid ticket ID format
         '404':
           description: Ticket not found
 
@@ -97,6 +69,17 @@ paths:
       responses:
         '200':
           description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: fulfillment
 
 components:
   securitySchemes:
