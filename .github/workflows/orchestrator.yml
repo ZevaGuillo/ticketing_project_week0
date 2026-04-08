@@ -359,6 +359,7 @@ jobs:
 
   trivy-scan-catalog:
     needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Catalog"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -367,6 +368,7 @@ jobs:
 
   trivy-scan-identity:
     needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Identity"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -375,6 +377,7 @@ jobs:
 
   trivy-scan-fulfillment:
     needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Fulfillment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -383,6 +386,7 @@ jobs:
 
   trivy-scan-inventory:
     needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Inventory"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -391,6 +395,7 @@ jobs:
 
   trivy-scan-notification:
     needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Notification"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -399,6 +404,7 @@ jobs:
 
   trivy-scan-ordering:
     needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Ordering"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -407,6 +413,7 @@ jobs:
 
   trivy-scan-payment:
     needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Payment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
