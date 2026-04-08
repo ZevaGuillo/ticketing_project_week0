@@ -358,7 +358,7 @@ jobs:
           path: merged-coverage
 
       - name: Comment Coverage on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && hashFiles('merged-coverage/SummaryGitHub.md') != ''
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: coverage-report
