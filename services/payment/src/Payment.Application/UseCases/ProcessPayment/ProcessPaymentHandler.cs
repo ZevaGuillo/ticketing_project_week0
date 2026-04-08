@@ -1,8 +1,8 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Payment.Application.DTOs;
-using Payment.Application.Events;
 using Payment.Application.Ports;
+using Payment.Domain.Events;
 using System.Text.Json;
 
 namespace Payment.Application.UseCases.ProcessPayment;

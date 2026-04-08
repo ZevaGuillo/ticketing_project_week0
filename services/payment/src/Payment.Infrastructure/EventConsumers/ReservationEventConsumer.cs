@@ -2,6 +2,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Payment.Domain.Events;
 using Payment.Infrastructure.Events;
 using Payment.Infrastructure.Services;
 using System.Text.Json;
