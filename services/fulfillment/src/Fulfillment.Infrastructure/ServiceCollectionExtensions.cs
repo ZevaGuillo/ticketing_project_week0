@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddControllers();
 
         // Add MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Fulfillment.Application.UseCases.ProcessPaymentSucceeded.ProcessPaymentSucceededHandler).Assembly));
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Fulfillment.Application.UseCases.ProcessPaymentSucceeded.ProcessPaymentSucceededCommandHandler).Assembly));
 
         services.AddDbContext<FulfillmentDbContext>(options =>
         {

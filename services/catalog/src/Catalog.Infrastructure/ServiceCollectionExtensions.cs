@@ -3,10 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using System.Security.Claims;
 using Confluent.Kafka;
 using Catalog.Application.Ports;
 using Catalog.Application.UseCases.GetEventSeatmap;
@@ -59,60 +55,12 @@ public static class ServiceCollectionExtensions
 
         // Kafka consumer
         services.AddHostedService<CatalogEventConsumer>();
-        
-        // Add JWT Authentication
-        var jwtKey = configuration["Jwt:Key"]!;
-        var jwtIssuer = configuration["Jwt:Issuer"]!;
-        var jwtAudience = configuration["Jwt:Audience"]!;
-        
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtIssuer,
-                    ValidAudience = jwtAudience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-                };
-            });
-
-        // Add Authorization with Admin policy
-        services.AddAuthorization(options =>
-        {
-            options.AddPolicy("RequireAdmin", policy =>
-                policy.RequireAssertion(context =>
-                {
-                    // For MVP: Check if user email contains "admin" or matches test admin
-                    var emailClaim = context.User.FindFirst(ClaimTypes.Email)?.Value;
-                    return !string.IsNullOrEmpty(emailClaim) && 
-                           (emailClaim.Contains("admin", StringComparison.OrdinalIgnoreCase) ||
-                            emailClaim.Equals("test@example.com", StringComparison.OrdinalIgnoreCase));
-                }));
-        });
 
         return services;
     }
 
     public static WebApplication UseInfrastructure(this WebApplication app)
     {
-        // Apply migrations automatically on startup
-        using (var scope = app.Services.CreateScope())
-        {
-            try
-            {
-                var dbContext = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
-                dbContext.Database.Migrate();
-                Console.WriteLine("✅ Catalog migrations applied successfully");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️ Warning: Could not apply migrations: {ex.Message}");
-            }
-        }
 
         // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())

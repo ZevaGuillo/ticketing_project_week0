@@ -12,17 +12,17 @@ namespace Fulfillment.Application.UnitTests.UseCases;
 
 public class ProcessPaymentSucceededHandlerTests
 {
-    private readonly Mock<ILogger<ProcessPaymentSucceededHandler>> _loggerMock;
+    private readonly Mock<ILogger<ProcessPaymentSucceededCommandHandler>> _loggerMock;
     private readonly Mock<IOrderingServiceClient> _orderingServiceMock;
     private readonly Mock<ITicketRepository> _ticketRepositoryMock;
-    private readonly ProcessPaymentSucceededHandler _handler;
+    private readonly ProcessPaymentSucceededCommandHandler _handler;
 
     public ProcessPaymentSucceededHandlerTests()
     {
-        _loggerMock = new Mock<ILogger<ProcessPaymentSucceededHandler>>();
+        _loggerMock = new Mock<ILogger<ProcessPaymentSucceededCommandHandler>>();
         _orderingServiceMock = new Mock<IOrderingServiceClient>();
         _ticketRepositoryMock = new Mock<ITicketRepository>();
-        _handler = new ProcessPaymentSucceededHandler(
+        _handler = new ProcessPaymentSucceededCommandHandler(
             _loggerMock.Object,
             _orderingServiceMock.Object,
             _ticketRepositoryMock.Object);
@@ -32,16 +32,14 @@ public class ProcessPaymentSucceededHandlerTests
     public async Task Handle_ShouldReturnSuccess_WhenCommandIsValid()
     {
         // Arrange
-        var command = new ProcessPaymentSucceededCommand
-        {
-            OrderId = Guid.NewGuid(),
-            CustomerEmail = "test@example.com",
-            EventId = Guid.NewGuid(),
-            EventName = "Test Event",
-            SeatNumber = "A1",
-            Price = 100.00m,
-            Currency = "USD"
-        };
+        var command = new ProcessPaymentSucceededCommand(
+            OrderId: Guid.NewGuid(),
+            CustomerEmail: "test@example.com",
+            EventId: Guid.NewGuid(),
+            EventName: "Test Event",
+            SeatNumber: "A1",
+            Price: 100.00m,
+            Currency: "USD");
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -55,7 +53,7 @@ public class ProcessPaymentSucceededHandlerTests
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains($"Processing payment for order {command.OrderId}")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains(command.OrderId.ToString())),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

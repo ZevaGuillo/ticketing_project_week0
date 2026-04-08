@@ -185,6 +185,9 @@ services:
       - ASPNETCORE_URLS=http://+:5001
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_catalog;Include Error Detail=true
       - Kafka__BootstrapServers=kafka:9092
+      - Jwt__Key=dev-secret-key-minimum-32-chars-required-for-security
+      - Jwt__Issuer=SpecKit.Identity
+      - Jwt__Audience=SpecKit.Services
     depends_on:
       postgres:
         condition: service_healthy

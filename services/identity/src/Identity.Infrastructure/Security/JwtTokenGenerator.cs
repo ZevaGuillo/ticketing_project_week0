@@ -44,6 +44,8 @@ public class JwtTokenGenerator : ITokenGenerator
 
         var expiresAt = DateTime.UtcNow.AddMinutes(_expirationMinutes);
 
+        var signingKey = new SymmetricSecurityKey(key) { KeyId = "speckit-hmac-key" };
+
         var descriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
@@ -51,7 +53,7 @@ public class JwtTokenGenerator : ITokenGenerator
             Issuer = _issuer,
             Audience = _audience,
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
+                signingKey,
                 SecurityAlgorithms.HmacSha256)
         };
 
