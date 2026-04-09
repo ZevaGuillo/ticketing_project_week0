@@ -24,7 +24,7 @@
 
 ## HU-001 — Registro de Usuario en Lista de Espera para Eventos Agotados
 
-### Escenario 1 y 3: Oferta de registro, registro exitoso y confirmación al usuario
+### Escenario 1: Oferta de registro, registro exitoso y confirmación al usuario
 
 #### CP_HU001_01 — Registro exitoso en lista de espera y visualización de confirmación
 
@@ -33,28 +33,24 @@
 | **Propósito** | Validar el flujo completo y exitoso de registro en la lista de espera para un usuario autenticado que encuentra una sección agotada, asegurando que se muestre la opción, se procese el registro y se presente el mensaje de confirmación. |
 | **Técnica(s)** | Caso de Uso, Partición de Equivalencia |
 | **Prioridad** | Alta |
-| **Precondiciones** | Usuario autenticado en la plataforma. El evento "Concierto Sinfónico" existe. La sección "Platea Central" tiene 0 asientos disponibles. El usuario NO tiene una suscripción activa previa para ese contexto. |
+| **Precondiciones** | Usuario autenticado en la plataforma. El evento "Concierto Sinfónico" existe. La sección "General" tiene 0 asientos disponibles. El usuario NO tiene una suscripción activa previa para esa sección y evento. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario autenticado en la plataforma Ticketing
-Y accedo a la página de detalles del evento "Concierto Sinfónico"
-  donde la sección "Platea Central" no tiene asientos disponibles
-Cuando intento interactuar con la sección "Platea Central"
-Entonces el sistema debe mostrar una opción visible y clara para
-  "Unirse a la lista de espera", asociada específicamente a esa sección y evento
-
-Cuando selecciono la opción para unirme y confirmo mi registro
-Entonces el sistema debe registrar mi suscripción en la base de datos,
-  asociándola a mi identificador de usuario, al evento "Concierto Sinfónico"
-  y a la sección "Platea Central"
-Y debo visualizar en pantalla un mensaje de confirmación, como
-  "¡Te has unido a la lista de espera! Te notificaremos si se liberan asientos."
+Given el usuario está autenticado en la plataforma Ticketing
+And existe un evento "Concierto Sinfónico" con la sección "General" totalmente reservada
+And no tengo una suscripción activa previa para esa sección y evento
+When accedo a la página de detalles del evento "Concierto Sinfónico"
+And hago clic en un asiento reservado de la sección "General"
+Then el sistema debe mostrar una opción visible y clara para "Unirse a la lista de espera" asociada a esa sección y evento
+When selecciono la opción para unirme y confirmo mi registro
+Then el sistema debe registrar mi suscripción en la base de datos asociándola a mi usuario, al evento "Concierto Sinfónico" y a la sección "General"
+And debo visualizar un mensaje de confirmación "¡Te has unido a la lista de espera! Te notificaremos si se liberan asientos."
 ```
 
 **Resultado esperado:**
-- La opción "Unirse a la lista de espera" es visible en pantalla para la sección "Platea Central".
+- La opción "Unirse a la lista de espera" es visible en pantalla para la sección "General".
 - Se crea un registro en `WAITLIST_ENTRIES` con `status = 'active'`, vinculado al usuario, evento y sección correctos.
 - Se muestra el mensaje de confirmación al usuario.
 
@@ -69,17 +65,17 @@ Y debo visualizar en pantalla un mensaje de confirmación, como
 | **Propósito** | Verificar que la opción para unirse a la lista de espera no se presente si la sección de un evento tiene uno o más asientos disponibles. |
 | **Técnica(s)** | Partición de Equivalencia, Análisis de Valores Límite (Disponibilidad > 0) |
 | **Prioridad** | Alta |
-| **Precondiciones** | Usuario autenticado. El evento "Obra de Teatro Clásico" existe. La sección "Balcón Izquierdo" tiene al menos 1 asiento disponible. |
+| **Precondiciones** | Usuario autenticado. El evento "Concierto Sinfónico" existe. La sección "General" tiene al menos 1 asiento disponible. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario autenticado en la plataforma Ticketing
-Y accedo a la página de detalles del evento "Obra de Teatro Clásico"
-Y la sección "Balcón Izquierdo" tiene al menos un asiento disponible
-Cuando visualizo el mapa de asientos de la sección "Balcón Izquierdo"
-Entonces el sistema no debe mostrar ninguna opción para unirse a una lista de espera
-Y debo poder proceder con el flujo normal de selección y compra de asientos
+Given el usuario está autenticado en la plataforma Ticketing
+And existe un evento "Concierto Sinfónico" con la sección "General" con asientos disponibles
+When accedo a la página de detalles del evento "Concierto Sinfónico"
+And visualizo el mapa de asientos de la sección "General"
+Then el sistema no debe mostrar ninguna opción para unirse a una lista de espera
+And debo poder proceder con el flujo normal de selección y compra de asientos
 ```
 
 **Resultado esperado:**
@@ -97,18 +93,22 @@ Y debo poder proceder con el flujo normal de selección y compra de asientos
 | **Propósito** | Validar la regla de negocio que impide que un usuario se suscriba más de una vez al mismo contexto (usuario + evento + sección). |
 | **Técnica(s)** | Pruebas de Transición de Estado |
 | **Prioridad** | Alta |
-| **Precondiciones** | Usuario autenticado. Existe una suscripción activa (`status = 'active'`) en `WAITLIST_ENTRIES` para ese usuario, el evento "Concierto Sinfónico" y la sección "Platea Central". |
+| **Precondiciones** | Usuario autenticado. Existe una suscripción activa (`status = 'active'`) en `WAITLIST_ENTRIES` para ese usuario, el evento "Concierto Sinfónico" y la sección "General". |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario autenticado que ya se encuentra registrado
-  en la lista de espera para la sección "Platea Central"
-  del evento "Concierto Sinfónico"
-Cuando accedo nuevamente a la página de detalles de dicho evento y sección
-Entonces el sistema no debe mostrar la opción para "Unirse a la lista de espera"
-Y en su lugar, debe mostrar un indicador visual o mensaje que confirme
-  mi estado actual, como "Ya estás en la lista de espera"
+Given el usuario está autenticado en la plataforma Ticketing
+And existe un evento "Concierto Sinfónico" con la sección "General" totalmente reservada
+And no tengo una suscripción activa previa para esa sección y evento
+When accedo a la página de detalles del evento "Concierto Sinfónico"
+And hago clic en un asiento reservado de la sección "General"
+And selecciono la opción para unirme y confirmo mi registro
+Then el botón de unirse a la lista de espera debe mostrar "On Waitlist"
+When accedo nuevamente a la página de detalles de dicho evento y sección
+And hago clic en un asiento reservado de la sección "General"
+Then el botón de unirse a la lista de espera debe mostrar "On Waitlist"
+And no se debe crear un registro duplicado en WAITLIST_ENTRIES
 ```
 
 **Resultado esperado:**
@@ -125,19 +125,16 @@ Y en su lugar, debe mostrar un indicador visual o mensaje que confirme
 | **Propósito** | Asegurar que solo los usuarios autenticados puedan registrarse, cumpliendo con RNF-007. |
 | **Técnica(s)** | Pruebas de Seguridad (Control de Acceso), Caso de Uso |
 | **Prioridad** | Alta |
-| **Precondiciones** | Usuario no autenticado (sesión de invitado). La sección "General" del evento "Festival de Jazz" tiene 0 asientos disponibles. |
+| **Precondiciones** | Usuario no autenticado (sesión de invitado). La sección "General" del evento "Concierto Sinfónico" tiene 0 asientos disponibles. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario visitante (no autenticado) en la plataforma
-Y accedo a la página del evento "Festival de Jazz",
-  cuya sección "General" está agotada
-Cuando selecciono la opción visible para unirme a la lista de espera
-Entonces el sistema debe redirigirme a la página de inicio de sesión
-  o solicitar la autenticación a través de un modal
-Y el registro en la lista de espera no debe completarse
-  hasta que mi autenticación sea exitosa
+Given soy un usuario visitante (no autenticado) en la plataforma
+And accedo a la página del evento "Concierto Sinfónico", cuya sección "General" está agotada
+When selecciono la opción visible para unirme a la lista de espera
+Then el sistema debe redirigirme a la página de inicio de sesión o solicitar la autenticación a través de un modal
+And el registro en la lista de espera no debe completarse hasta que mi autenticación sea exitosa
 ```
 
 **Resultado esperado:**
@@ -153,21 +150,18 @@ Y el registro en la lista de espera no debe completarse
 | **Propósito** | Confirmar que la unicidad de la suscripción se gestiona a nivel de sección, permitiendo a un usuario estar en múltiples listas dentro de un mismo evento. |
 | **Técnica(s)** | Pruebas Combinatorias |
 | **Prioridad** | Media |
-| **Precondiciones** | Usuario autenticado. Existe suscripción activa para la sección "Platea" del evento "Concierto de Rock". La sección "VIP" del mismo evento tiene 0 asientos disponibles. |
+| **Precondiciones** | Usuario autenticado. Existe suscripción activa para la sección "General" del evento "Concierto Sinfónico". La sección "VIP" del mismo evento tiene 0 asientos disponibles. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario autenticado y ya estoy en la lista de espera
-  para la sección "Platea" del evento "Concierto de Rock"
-Y la sección "VIP" del mismo evento también se encuentra agotada
-Cuando accedo a la sección "VIP" y selecciono la opción para unirme
-  a su respectiva lista de espera
-Y confirmo mi registro
-Entonces el sistema debe registrar exitosamente mi nueva suscripción
-  para la sección "VIP"
-Y mi cuenta debe mantener activas ambas suscripciones de forma independiente:
-  una para "Platea" y otra para "VIP" del "Concierto de Rock"
+Given el usuario está autenticado en la plataforma Ticketing
+And está en la lista de espera para la sección "General" del evento "Concierto Sinfónico"
+And la sección "VIP" del mismo evento también se encuentra agotada
+When accedo a la sección "VIP" y selecciono la opción para unirme a su respectiva lista de espera
+And confirmo mi registro
+Then el sistema debe registrar exitosamente mi nueva suscripción para la sección "VIP"
+And mi cuenta debe mantener activas ambas suscripciones de forma independiente: una para "General" y otra para "VIP" del "Concierto Sinfónico"
 ```
 
 **Resultado esperado:**
@@ -187,21 +181,16 @@ Y mi cuenta debe mantener activas ambas suscripciones de forma independiente:
 | **Propósito** | Confirmar que un usuario con una suscripción activa ve el componente informativo correcto y no la opción para unirse nuevamente. |
 | **Técnica(s)** | Caso de Uso, Pruebas de Estado |
 | **Prioridad** | Alta |
-| **Precondiciones** | Usuario "ClienteA" autenticado. Existe suscripción activa en `WAITLIST_ENTRIES` para "ClienteA", sección "VIP" del "Evento A". |
+| **Precondiciones** | Usuario autenticado. Existe suscripción activa en `WAITLIST_ENTRIES` para el usuario, sección "VIP" del evento "Concierto Sinfónico". |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario autenticado con una suscripción activa
-  en la lista de espera para la sección "VIP" del "Evento A"
-Cuando navego a la página de detalles del "Evento A"
-  y observo la sección "VIP"
-Entonces el sistema no debe mostrar la opción para "Unirme a la lista de espera"
-Y en su lugar, debo visualizar un componente informativo claro,
-  como un banner o una alerta
-Y este componente debe contener el texto exacto:
-  "Ya estás en la lista de espera para esta sección.
-  Te notificaremos si se liberan asientos."
+Given el usuario está autenticado con una suscripción activa en la lista de espera para la sección "VIP" del evento "Concierto Sinfónico"
+When navego a la página de detalles del evento "Concierto Sinfónico" y observo la sección "VIP"
+Then el sistema no debe mostrar la opción para "Unirme a la lista de espera"
+And en su lugar, debo visualizar un componente informativo claro, como un banner o una alerta
+And este componente debe contener el texto exacto: "Ya estás en la lista de espera para esta sección. Te notificaremos si se liberan asientos."
 ```
 
 **Resultado esperado:**
@@ -219,25 +208,21 @@ Y este componente debe contener el texto exacto:
 | **Propósito** | Asegurar que el estado de suscripción de un usuario no es visible para otro usuario diferente, mostrando a este último la opción de registro estándar. |
 | **Técnica(s)** | Partición de Equivalencia (Usuarios distintos), Pruebas de Seguridad (Aislamiento de datos) |
 | **Prioridad** | Alta |
-| **Precondiciones** | "ClienteA" tiene suscripción activa para sección "VIP" del "Evento A". "ClienteC" está autenticado en sesión diferente y no tiene suscripción para ese contexto. La sección "VIP" del "Evento A" tiene 0 asientos disponibles. |
+| **Precondiciones** | UsuarioA tiene suscripción activa para sección "VIP" del evento "Concierto Sinfónico". UsuarioB está autenticado en sesión diferente y no tiene suscripción para ese contexto. La sección "VIP" del evento tiene 0 asientos disponibles. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el usuario "ClienteA" tiene una suscripción activa
-  para la sección "VIP" del "Evento A"
-Y yo soy el usuario "ClienteC", estoy autenticado en una sesión diferente
-  y no tengo suscripción para ese contexto
-Cuando navego a la página de detalles del "Evento A"
-  y observo la sección "VIP", que está agotada
-Entonces el sistema no debe mostrarme ningún banner informativo
-  sobre la suscripción de "ClienteA"
-Y el sistema debe mostrarme la opción para "Unirme a la lista de espera"
+Given el usuario "UsuarioA" tiene una suscripción activa para la sección "VIP" del evento "Concierto Sinfónico"
+And yo soy el usuario "UsuarioB", estoy autenticado en una sesión diferente y no tengo suscripción para ese contexto
+When navego a la página de detalles del evento "Concierto Sinfónico" y observo la sección "VIP", que está agotada
+Then el sistema no debe mostrarme ningún banner informativo sobre la suscripción de "UsuarioA"
+And el sistema debe mostrarme la opción para "Unirme a la lista de espera"
 ```
 
 **Resultado esperado:**
-- "ClienteC" no ve el banner de suscripción activa.
-- "ClienteC" ve el botón "Unirme a la lista de espera".
+- "UsuarioB" no ve el banner de suscripción activa.
+- "UsuarioB" ve el botón "Unirme a la lista de espera".
 
 ---
 
@@ -250,18 +235,16 @@ Y el sistema debe mostrarme la opción para "Unirme a la lista de espera"
 | **Propósito** | Validar que un usuario no autenticado no ve ningún estado de suscripción y se le presenta la opción de unirse a la lista. |
 | **Técnica(s)** | Partición de Equivalencia (Rol de usuario: invitado) |
 | **Prioridad** | Media |
-| **Precondiciones** | Sesión de invitado (sin autenticación). La sección "VIP" del "Evento A" tiene 0 asientos disponibles. |
+| **Precondiciones** | Sesión de invitado (sin autenticación). La sección "VIP" del evento "Concierto Sinfónico" tiene 0 asientos disponibles. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario visitante (no autenticado) en la plataforma
-Y la sección "VIP" del "Evento A" no tiene asientos disponibles
-Cuando navego a la página de detalles del "Evento A"
-  y observo la sección "VIP"
-Entonces el sistema no debe mostrar ningún banner informativo
-  relacionado con suscripciones
-Y el sistema debe mostrar la opción para "Unirme a la lista de espera"
+Given soy un usuario visitante (no autenticado) en la plataforma
+And la sección "VIP" del evento "Concierto Sinfónico" no tiene asientos disponibles
+When navego a la página de detalles del evento "Concierto Sinfónico" y observo la sección "VIP"
+Then el sistema no debe mostrar ningún banner informativo relacionado con suscripciones
+And el sistema debe mostrar la opción para "Unirme a la lista de espera"
 ```
 
 **Resultado esperado:**
@@ -279,21 +262,16 @@ Y el sistema debe mostrar la opción para "Unirme a la lista de espera"
 | **Propósito** | Verificar que si la suscripción de un usuario ya no está activa, el sistema revierte la interfaz para permitirle unirse nuevamente. |
 | **Técnica(s)** | Pruebas de Transición de Estado |
 | **Prioridad** | Alta |
-| **Precondiciones** | Usuario "ClienteA" autenticado. Su suscripción para la sección "VIP" del "Evento A" tiene `status = 'expired'` en `WAITLIST_ENTRIES`. La sección "VIP" continúa con 0 asientos disponibles. |
+| **Precondiciones** | Usuario autenticado. Su suscripción para la sección "VIP" del evento "Concierto Sinfónico" tiene `status = 'expired'` en `WAITLIST_ENTRIES`. La sección "VIP" continúa con 0 asientos disponibles. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy el usuario "ClienteA" y estoy autenticado
-Y mi suscripción previa para la sección "VIP" del "Evento A"
-  ahora tiene un estado de "expirada"
-Y la sección "VIP" del "Evento A" continúa sin asientos disponibles
-Cuando navego a la página de detalles del "Evento A"
-  y observo la sección "VIP"
-Entonces el sistema no debe mostrar el banner informativo
-  de suscripción activa
-Y el sistema debe mostrarme nuevamente la opción para
-  "Unirme a la lista de espera"
+Given el usuario está autenticado y mi suscripción previa para la sección "VIP" del evento "Concierto Sinfónico" ahora tiene un estado de "expirada"
+And la sección "VIP" del evento "Concierto Sinfónico" continúa sin asientos disponibles
+When navego a la página de detalles del evento "Concierto Sinfónico" y observo la sección "VIP"
+Then el sistema no debe mostrar el banner informativo de suscripción activa
+And el sistema debe mostrarme nuevamente la opción para "Unirme a la lista de espera"
 ```
 
 **Resultado esperado:**
@@ -313,21 +291,18 @@ Y el sistema debe mostrarme nuevamente la opción para
 | **Propósito** | Validar que al hacer clic en la opción de cancelar, el sistema presenta correctamente el modal de confirmación con todos sus elementos requeridos. |
 | **Técnica(s)** | Caso de Uso, Pruebas de Interfaz de Usuario (UI) |
 | **Prioridad** | Alta |
-| **Precondiciones** | Usuario autenticado en la página del "Evento A". El usuario tiene una suscripción activa, por lo que el banner informativo está visible. |
+| **Precondiciones** | Usuario autenticado en la página del evento. El usuario tiene una suscripción activa, por lo que el banner informativo está visible. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario autenticado y estoy en la página del "Evento A"
-Y tengo una suscripción activa a la lista de espera,
-  por lo que visualizo el banner informativo "Ya estás en la lista de espera..."
-Cuando hago clic en el enlace o botón "Cancelar suscripción"
-Entonces el sistema debe mostrar un modal de confirmación
-Y el título del modal debe ser "Confirmar Cancelación"
-Y el texto del cuerpo del modal debe ser "¿Estás seguro de que quieres
-  abandonar la lista de espera? Perderás tu lugar actual."
-Y el modal debe contener un botón con el texto "Confirmar"
-  y otro con el texto "Cerrar"
+Given el usuario está autenticado y está en la página del evento "Concierto Sinfónico"
+And tengo una suscripción activa a la lista de espera, por lo que visualizo el banner informativo "Ya estás en la lista de espera..."
+When hago clic en el enlace o botón "Cancelar suscripción"
+Then el sistema debe mostrar un modal de confirmación
+And el título del modal debe ser "Confirmar Cancelación"
+And el texto del cuerpo del modal debe ser "¿Estás seguro de que quieres abandonar la lista de espera? Perderás tu lugar actual."
+And el modal debe contener un botón con el texto "Confirmar" y otro con el texto "Cerrar"
 ```
 
 **Resultado esperado:**
@@ -344,26 +319,28 @@ Y el modal debe contener un botón con el texto "Confirmar"
 | **Propósito** | Verificar que tras la confirmación del usuario, la suscripción se cancela en el sistema y la interfaz se actualiza en tiempo real para reflejar el cambio. |
 | **Técnica(s)** | Pruebas de Transición de Estado, Caso de Uso |
 | **Prioridad** | Alta |
-| **Precondiciones** | El modal de confirmación de cancelación está visible. |
+| **Precondiciones** | otro usuario reserva el asiento 1 de fila 1 en la sección "General" del evento "Concierto Sinfónico". El usuario está autenticado en la plataforma Ticketing. |
 
 **Pasos:**
 
 ```gherkin
-Dado que he iniciado el proceso de cancelación
-  y el modal de confirmación está visible
-Cuando hago clic en el botón "Confirmar"
-Entonces el estado de mi suscripción en la base de datos
-  debe cambiar a "cancelled"
-Y debo visualizar una notificación de tipo "toast" con el mensaje exacto:
-  "Has cancelado tu suscripción a la lista de espera."
-Y el banner informativo de suscripción activa debe desaparecer de la página
-Y el botón para "Unirme a la lista de espera" debe volver
-  a estar visible y funcional
+Given otro usuario reserva el asiento 1 de fila 1 en la sección "General" del evento "Concierto Sinfónico"
+And el usuario está autenticado en la plataforma Ticketing
+And accedo a la página de detalles del evento "Concierto Sinfónico"
+When intento interactuar con un asiento reservado de la sección "General"
+And selecciono la opción para unirme a la lista de espera
+And debo visualizar un indicador de confirmación de lista de espera
+When accedo a la página "My Waitlist"
+Then debo ver mi suscripción al evento "Concierto Sinfónico" en la lista
+When cancelo mi suscripción al evento "Concierto Sinfónico"
+Then la suscripción al evento "Concierto Sinfónico" debe desaparecer de la lista
+When recargo la página "My Waitlist"
+Then no debo ver mi suscripción al evento "Concierto Sinfónico" en la lista
 ```
 
 **Resultado esperado:**
 - El registro en `WAITLIST_ENTRIES` tiene `status = 'cancelled'`.
-- El toast de éxito se muestra con el texto exacto.
+- El toast de éxito se muestra con el mensaje "Has cancelado tu suscripción a la lista de espera."
 - La UI refleja el cambio sin necesidad de recargar la página.
 
 ---
@@ -382,14 +359,11 @@ Y el botón para "Unirme a la lista de espera" debe volver
 **Pasos:**
 
 ```gherkin
-Dado que he iniciado el proceso de cancelación
-  y el modal de confirmación está visible
-Cuando hago clic en el botón "Cerrar"
-Entonces el modal de confirmación debe cerrarse
-Y mi suscripción a la lista de espera debe permanecer
-  en estado "activa" en el sistema
-Y la interfaz de la página del evento debe mantenerse sin cambios,
-  mostrando el banner de suscripción activa
+Given he iniciado el proceso de cancelación y el modal de confirmación está visible
+When hago clic en el botón "Cerrar"
+Then el modal de confirmación debe cerrarse
+And mi suscripción a la lista de espera debe permanecer en estado "activa" en el sistema
+And la interfaz de la página del evento debe mantenerse sin cambios, mostrando el banner de suscripción activa
 ```
 
 **Resultado esperado:**
@@ -411,12 +385,11 @@ Y la interfaz de la página del evento debe mantenerse sin cambios,
 **Pasos:**
 
 ```gherkin
-Dado que he iniciado el proceso de cancelación
-  y el modal de confirmación está visible
-Cuando presiono la tecla "Escape" en mi teclado para cerrar el modal
-Entonces el modal de confirmación debe cerrarse
-Y mi suscripción a la lista de espera debe permanecer en estado "activa"
-Y la interfaz de la página del evento no debe sufrir ninguna modificación
+Given he iniciado el proceso de cancelación y el modal de confirmación está visible
+When presiono la tecla "Escape" en mi teclado para cerrar el modal
+Then el modal de confirmación debe cerrarse
+And mi suscripción a la lista de espera debe permanecer en estado "activa"
+And la interfaz de la página del evento no debe sufrir ninguna modificación
 ```
 
 **Resultado esperado:**
@@ -440,16 +413,13 @@ Y la interfaz de la página del evento no debe sufrir ninguna modificación
 **Pasos:**
 
 ```gherkin
-Dado que he iniciado el proceso de cancelación
-  y el modal de confirmación está visible
-Y el servicio de backend fallará al procesar la solicitud de cancelación
-Cuando hago clic en el botón "Confirmar"
-Entonces el modal de confirmación debe cerrarse
-Y el sistema debe mostrar una notificación de error, como
-  "No se pudo cancelar la suscripción. Por favor, inténtalo de nuevo."
-Y mi suscripción debe permanecer en estado "activa"
-Y la interfaz de la página del evento debe seguir mostrando
-  el banner de suscripción activa
+Given he iniciado el proceso de cancelación y el modal de confirmación está visible
+And el servicio de backend fallará al procesar la solicitud de cancelación
+When hago clic en el botón "Confirmar"
+Then el modal de confirmación debe cerrarse
+And el sistema debe mostrar una notificación de error, como "No se pudo cancelar la suscripción. Por favor, inténtalo de nuevo."
+And mi suscripción debe permanecer en estado "activa"
+And la interfaz de la página del evento debe seguir mostrando el banner de suscripción activa
 ```
 
 **Resultado esperado:**
@@ -470,27 +440,22 @@ Y la interfaz de la página del evento debe seguir mostrando
 | **Propósito** | Verificar que la transición de un asiento del estado `reservado` a `disponible` (por expiración del TTL) genera y publica correctamente un evento `SeatReleased`. |
 | **Técnica(s)** | Pruebas de Transición de Estado, Pruebas Basadas en Eventos |
 | **Prioridad** | Alta |
-| **Precondiciones** | El asiento "A-12" del "Evento X" tiene `status = 'reserved'` en la base de datos. Su reserva temporal tiene un TTL configurado (puede reducirse a segundos en el ambiente de pruebas). |
+| **Precondiciones** | El asiento tiene estado `reserved` en la base de datos. Su reserva temporal tiene un TTL configurado (puede reducirse a segundos en el ambiente de pruebas). |
 
 **Pasos:**
 
 ```gherkin
-Dado que existe un asiento con ID "A-12" en estado "reservado"
-  para el "Evento X"
-Y su reserva temporal tiene un tiempo de vida (TTL) definido
-Cuando el tiempo de vida (TTL) de la reserva para el asiento "A-12"
-  expira sin que se complete la compra
-Entonces el estado del asiento "A-12" en la base de datos de inventario
-  debe actualizarse a "disponible"
-Y un evento de negocio del tipo "SeatReleased" debe ser publicado
-  en el topic "inventory-events"
-Y el contenido del evento debe incluir los identificadores del asiento ("A-12"),
-  del evento ("Evento X") y de la sección correspondiente
+Given existe un asiento con estado "reservado" para el evento "Concierto Sinfónico"
+And su reserva temporal tiene un tiempo de vida (TTL) definido
+When el tiempo de vida (TTL) de la reserva para el asiento expira sin que se complete la compra
+Then el estado del asiento en la base de datos de inventario debe actualizarse a "disponible"
+And un evento de negocio del tipo "SeatReleased" debe ser publicado en el topic "seat-released"
+And el contenido del evento debe incluir los identificadores del asiento, del evento y de la sección correspondiente
 ```
 
 **Resultado esperado:**
-- El campo `status` del asiento "A-12" es `'available'` en la BD.
-- Se confirma la publicación de un mensaje `SeatReleased` en el topic `inventory-events` con los identificadores correctos.
+- El campo `status` del asiento es `'available'` en la BD.
+- Se confirma la publicación de un mensaje `SeatReleased` en el topic `seat-released` con los identificadores correctos.
 
 ---
 
@@ -503,23 +468,20 @@ Y el contenido del evento debe incluir los identificadores del asiento ("A-12"),
 | **Propósito** | Asegurar que cuando un asiento pasa de `reservado` a `vendido` por una compra exitosa, el sistema NO publica un evento `SeatReleased`. |
 | **Técnica(s)** | Pruebas de Transición de Estado (Flujo negativo) |
 | **Prioridad** | Alta |
-| **Precondiciones** | El asiento "B-05" tiene `status = 'reserved'`. El TTL de la reserva aún no ha expirado. |
+| **Precondiciones** | El asiento tiene estado `reserved`. El TTL de la reserva aún no ha expirado. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el asiento "B-05" se encuentra en estado "reservado" por un usuario
-Cuando el usuario completa exitosamente el proceso de pago
-  para esa reserva antes de que expire el TTL
-Entonces el estado del asiento "B-05" en la base de datos
-  debe actualizarse a "sold"
-Y el sistema NO debe publicar ningún evento del tipo "SeatReleased"
-  en el topic "inventory-events"
+Given el asiento se encuentra en estado "reservado" por un usuario
+When el usuario completa exitosamente el proceso de pago para esa reserva antes de que expire el TTL
+Then el estado del asiento en la base de datos debe actualizarse a "sold"
+And el sistema NO debe publicar ningún evento del tipo "SeatReleased" en el topic "seat-released"
 ```
 
 **Resultado esperado:**
-- El campo `status` del asiento "B-05" es `'sold'` en la BD.
-- No se registra ningún mensaje `SeatReleased` en el topic `inventory-events`.
+- El campo `status` del asiento es `'sold'` en la BD.
+- No se registra ningún mensaje `SeatReleased` en el topic `seat-released`.
 
 ---
 
@@ -530,22 +492,20 @@ Y el sistema NO debe publicar ningún evento del tipo "SeatReleased"
 | **Propósito** | Confirmar que la transición `disponible → vendido` no se considera una liberación de inventario y no genera el evento. |
 | **Técnica(s)** | Pruebas de Transición de Estado (Flujo negativo) |
 | **Prioridad** | Alta |
-| **Precondiciones** | El asiento "C-10" tiene `status = 'available'` en la BD. |
+| **Precondiciones** | El asiento tiene estado `available` en la BD. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el asiento "C-10" se encuentra en estado "disponible"
-Cuando un proceso de sistema o una compra directa
-  cambia su estado a "sold"
-Entonces el sistema NO debe publicar un evento del tipo "SeatReleased"
-  en el topic "inventory-events"
-Y el estado final del asiento "C-10" debe ser "sold"
+Given el asiento se encuentra en estado "disponible"
+When un proceso de sistema o una compra directa cambia su estado a "sold"
+Then el sistema NO debe publicar un evento del tipo "SeatReleased" en el topic "seat-released"
+And el estado final del asiento debe ser "sold"
 ```
 
 **Resultado esperado:**
-- El campo `status` del asiento "C-10" es `'sold'` en la BD.
-- No se registra ningún mensaje `SeatReleased` en el topic `inventory-events`.
+- El campo `status` del asiento es `'sold'` en la BD.
+- No se registra ningún mensaje `SeatReleased` en el topic `seat-released`.
 
 ---
 
@@ -558,23 +518,20 @@ Y el estado final del asiento "C-10" debe ser "sold"
 | **Propósito** | Verificar que si una reserva es cancelada por un proceso administrativo (no por expiración de TTL), cambiando el asiento a `disponible`, el sistema también genera el evento `SeatReleased`. |
 | **Técnica(s)** | Pruebas de Transición de Estado |
 | **Prioridad** | Media |
-| **Precondiciones** | El asiento "D-08" tiene `status = 'reserved'` en la BD. |
+| **Precondiciones** | El asiento tiene estado `reserved` en la BD. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el asiento "D-08" se encuentra en estado "reservado"
-Cuando un administrador o un proceso de sistema
-  cancela la reserva manualmente, liberando el asiento
-Entonces el estado del asiento "D-08" en la base de datos
-  debe actualizarse a "disponible"
-Y un evento de negocio del tipo "SeatReleased" debe ser publicado
-  en el topic "inventory-events"
+Given el asiento se encuentra en estado "reservado"
+When un administrador o un proceso de sistema cancela la reserva manualmente, liberando el asiento
+Then el estado del asiento en la base de datos debe actualizarse a "disponible"
+And un evento de negocio del tipo "SeatReleased" debe ser publicado en el topic "seat-released"
 ```
 
 **Resultado esperado:**
-- El campo `status` del asiento "D-08" es `'available'` en la BD.
-- Se confirma la publicación del mensaje `SeatReleased` en el topic `inventory-events`.
+- El campo `status` del asiento es `'available'` en la BD.
+- Se confirma la publicación del mensaje `SeatReleased` en el topic `seat-released`.
 
 ---
 
@@ -589,23 +546,18 @@ Y un evento de negocio del tipo "SeatReleased" debe ser publicado
 | **Propósito** | Verificar que el sistema selecciona correctamente al primer usuario elegible (FIFO), actualiza el estado de su suscripción y publica el evento de oportunidad. |
 | **Técnica(s)** | Pruebas Basadas en Eventos, Pruebas de Transición de Estado, Validación FIFO |
 | **Prioridad** | Alta |
-| **Precondiciones** | Existen dos suscripciones activas en `WAITLIST_ENTRIES` para la sección "VIP" del "Evento A": "UsuarioX" con `joined_at = 10:00` y "UsuarioY" con `joined_at = 10:05`. Se publica un evento `SeatReleased` para ese contexto en el topic `inventory-events`. |
+| **Precondiciones** | Existen dos suscripciones activas en `WAITLIST_ENTRIES` para la sección "VIP" del evento "Concierto Sinfónico": UsuarioX con `joined_at = 10:00` y UsuarioY con `joined_at = 10:05`. Se publica un evento `SeatReleased` para ese contexto. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el servicio de lista de espera consume un evento "SeatReleased"
-  para la sección "VIP" del "Evento A"
-Y la lista de espera para ese contexto contiene a "UsuarioY"
-  (suscrito a las 10:05) y a "UsuarioX" (suscrito a las 10:00)
-Y ambas suscripciones están en estado "activa"
-Cuando el evento es procesado por el sistema
-Entonces el estado de la suscripción de "UsuarioX" en la base de datos
-  debe cambiar de "activa" a "ofrecida"
-Y el estado de la suscripción de "UsuarioY" debe permanecer como "activa"
-Y un nuevo evento "WaitlistOpportunityGranted" debe ser publicado,
-  conteniendo el ID de "UsuarioX", los detalles del "Evento A" / "Sección VIP"
-  y un TTL para la oportunidad
+Given el servicio de lista de espera consume un evento "SeatReleased" para la sección "VIP" del evento "Concierto Sinfónico"
+And la lista de espera para ese contexto contiene a "UsuarioY" (suscrito a las 10:05) y a "UsuarioX" (suscrito a las 10:00)
+And ambas suscripciones están en estado "activa"
+When el evento es procesado por el sistema
+Then el estado de la suscripción de "UsuarioX" en la base de datos debe cambiar de "activa" a "ofrecida"
+And el estado de la suscripción de "UsuarioY" debe permanecer como "activa"
+And un nuevo evento "WaitlistOpportunityGranted" debe ser publicado, conteniendo el ID de "UsuarioX", los detalles del evento y sección y un TTL para la oportunidad
 ```
 
 **Resultado esperado:**
@@ -624,19 +576,16 @@ Y un nuevo evento "WaitlistOpportunityGranted" debe ser publicado,
 | **Propósito** | Asegurar que si no hay usuarios en la lista de espera para el contexto del asiento liberado, el sistema no realiza ninguna acción ni publica eventos innecesarios. |
 | **Técnica(s)** | Pruebas de Flujo Negativo |
 | **Prioridad** | Alta |
-| **Precondiciones** | No existe ninguna suscripción activa en `WAITLIST_ENTRIES` para la sección "General" del "Evento B". Se publica un evento `SeatReleased` para ese contexto. |
+| **Precondiciones** | No existe ninguna suscripción activa en `WAITLIST_ENTRIES` para la sección "General" del evento. Se publica un evento `SeatReleased` para ese contexto. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el servicio de lista de espera consume un evento "SeatReleased"
-  para la sección "General" del "Evento B"
-Y no existe ninguna suscripción activa en la lista de espera
-  para ese contexto específico
-Cuando el evento es procesado por el sistema
-Entonces no se debe modificar el estado de ninguna suscripción
-  en la base de datos
-Y no se debe publicar ningún evento del tipo "WaitlistOpportunityGranted"
+Given el servicio de lista de espera consume un evento "SeatReleased" para la sección "General" del evento "Concierto Sinfónico"
+And no existe ninguna suscripción activa en la lista de espera para ese contexto específico
+When el evento es procesado por el sistema
+Then no se debe modificar el estado de ninguna suscripción en la base de datos
+And no se debe publicar ningún evento del tipo "WaitlistOpportunityGranted"
 ```
 
 **Resultado esperado:**
@@ -654,20 +603,17 @@ Y no se debe publicar ningún evento del tipo "WaitlistOpportunityGranted"
 | **Propósito** | Validar que el sistema ignora a los usuarios cuyas suscripciones no están en estado `activa` y selecciona correctamente al siguiente usuario elegible en la cola FIFO. |
 | **Técnica(s)** | Pruebas de Transición de Estado, Partición de Equivalencia (Estados de suscripción) |
 | **Prioridad** | Alta |
-| **Precondiciones** | En `WAITLIST_ENTRIES` para la sección "Platea" del "Evento C" existen: "UsuarioA" con `joined_at = 09:00` y `status = 'cancelled'`, y "UsuarioB" con `joined_at = 09:05` y `status = 'active'`. |
+| **Precondiciones** | En `WAITLIST_ENTRIES` para la sección "VIP" del evento existen: UsuarioA con `joined_at = 09:00` y `status = 'cancelled'`, y UsuarioB con `joined_at = 09:05` y `status = 'active'`. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el servicio consume un evento "SeatReleased"
-  para la sección "Platea" del "Evento C"
-Y la lista de espera contiene a "UsuarioA"
-  (suscrito a las 09:00 con estado "cancelled")
-  y a "UsuarioB" (suscrito a las 09:05 con estado "activa")
-Cuando el evento es procesado
-Entonces el sistema debe ignorar a "UsuarioA" y seleccionar a "UsuarioB"
-Y el estado de la suscripción de "UsuarioB" debe cambiar a "ofrecida"
-Y el estado de la suscripción de "UsuarioA" debe permanecer como "cancelled"
+Given el servicio consume un evento "SeatReleased" para la sección "VIP" del evento "Concierto Sinfónico"
+And la lista de espera contiene a "UsuarioA" (suscrito a las 09:00 con estado "cancelled") y a "UsuarioB" (suscrito a las 09:05 con estado "activa")
+When el evento es procesado
+Then el sistema debe ignorar a "UsuarioA" y seleccionar a "UsuarioB"
+And el estado de la suscripción de "UsuarioB" debe cambiar a "ofrecida"
+And el estado de la suscripción de "UsuarioA" debe permanecer como "cancelled"
 ```
 
 **Resultado esperado:**
@@ -684,24 +630,21 @@ Y el estado de la suscripción de "UsuarioA" debe permanecer como "cancelled"
 | **Propósito** | Asegurar que un evento de liberación de asiento para un evento/sección no afecte a las listas de espera de otros contextos. |
 | **Técnica(s)** | Pruebas de Aislamiento de Datos |
 | **Prioridad** | Alta |
-| **Precondiciones** | Existen suscripciones activas en `WAITLIST_ENTRIES` para el "Evento Y", sección "General". La lista de espera para el "Evento Z", sección "General" está vacía. Se publica `SeatReleased` para "Evento Z" / sección "General". |
+| **Precondiciones** | Existen suscripciones activas en `WAITLIST_ENTRIES` para el evento "Concierto A", sección "General". La lista de espera para el evento "Concierto B", sección "General" está vacía. Se publica `SeatReleased` para "Concierto B" / sección "General". |
 
 **Pasos:**
 
 ```gherkin
-Dado que el servicio consume un evento "SeatReleased"
-  para el "Evento Z", sección "General"
-Y existe una lista de espera con usuarios activos
-  para el "Evento Y", sección "General"
-Y la lista de espera para el "Evento Z", sección "General" está vacía
-Cuando el evento es procesado
-Entonces el sistema no debe seleccionar a ningún usuario
-  de la lista de espera del "Evento Y"
-Y no se debe publicar ningún evento "WaitlistOpportunityGranted"
+Given el servicio consume un evento "SeatReleased" para el evento "Concierto B", sección "General"
+And existe una lista de espera con usuarios activos para el evento "Concierto A", sección "General"
+And la lista de espera para el evento "Concierto B", sección "General" está vacía
+When el evento es procesado
+Then el sistema no debe seleccionar a ningún usuario de la lista de espera del evento "Concierto A"
+And no se debe publicar ningún evento "WaitlistOpportunityGranted"
 ```
 
 **Resultado esperado:**
-- Las suscripciones del "Evento Y" permanecen sin cambios en `WAITLIST_ENTRIES`.
+- Las suscripciones del evento "Concierto A" permanecen sin cambios en `WAITLIST_ENTRIES`.
 - No se publica ningún `WaitlistOpportunityGranted`.
 
 ---
@@ -717,28 +660,22 @@ Y no se debe publicar ningún evento "WaitlistOpportunityGranted"
 | **Propósito** | Verificar que el sistema consume un evento de oportunidad, compone el correo electrónico correctamente y lo entrega al proveedor de servicios para su envío cuando el usuario es elegible. |
 | **Técnica(s)** | Pruebas Basadas en Eventos, Caso de Uso (Flujo Principal) |
 | **Prioridad** | Alta |
-| **Precondiciones** | Se publica un evento `WaitlistOpportunityGranted` con `userId = "user123"`, `eventId = "EventoA"`, `sectionId = "VIP"` y `opportunityTTL = "10 minutos"` en el topic de Kafka. El usuario "user123" tiene `status = 'active'` y correo `"cliente@email.com"` verificado. |
+| **Precondiciones** | Se publica un evento `WaitlistOpportunityGranted` con datos del usuario, evento y sección. El usuario tiene cuenta activa y correo verificado. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el servicio de notificaciones consume un evento
-  "WaitlistOpportunityGranted" del topic de Kafka
-Y el evento contiene el userId "user123", eventId "EventoA",
-  sectionId "VIP" y un opportunityTTL de "10 minutos"
-Y el usuario "user123" tiene una cuenta en estado "activa"
-  con el correo electrónico verificado "cliente@email.com"
-Cuando el evento es procesado por el servicio de notificaciones
-Entonces el sistema debe componer un correo electrónico
-  dirigido a "cliente@email.com"
-Y el contenido del correo debe incluir el nombre del evento,
-  la sección y la duración de la oportunidad ("10 minutos")
-Y el sistema debe registrar la entrega exitosa de la solicitud
-  de envío al proveedor de servicios de email
+Given el servicio de notificaciones consume un evento "WaitlistOpportunityGranted" del topic de Kafka
+And el evento contiene el userId, eventId, sectionId y un opportunityTTL
+And el usuario tiene una cuenta en estado "activa" con el correo electrónico verificado
+When el evento es procesado por el servicio de notificaciones
+Then el sistema debe componer un correo electrónico dirigido al correo del usuario
+And el contenido del correo debe incluir el nombre del evento, la sección y la duración de la oportunidad
+And el sistema debe registrar la entrega exitosa de la solicitud de envío al proveedor de servicios de email
 ```
 
 **Resultado esperado:**
-- Se registra un nuevo mail en `EMAIL_NOTIFICATIONS` con `status = 'sent'` y `recipient_email = 'cliente@email.com'`.
+- Se registra un nuevo mail en `EMAIL_NOTIFICATIONS` con `status = 'sent'` y `recipient_email` correcto.
 - El SMTP local (Mailhog) captura el email con el contenido correcto.
 
 ---
@@ -752,18 +689,15 @@ Y el sistema debe registrar la entrega exitosa de la solicitud
 | **Propósito** | Asegurar que el correo electrónico generado contenga explícitamente el tiempo límite de la oportunidad. |
 | **Técnica(s)** | Pruebas de Contenido, Caso de Uso |
 | **Prioridad** | Media |
-| **Precondiciones** | Se procesa un evento `WaitlistOpportunityGranted` con `opportunityTTL = "15 minutos"`. El usuario destinatario tiene cuenta activa. |
+| **Precondiciones** | Se procesa un evento `WaitlistOpportunityGranted` con un TTL definido. El usuario destinatario tiene cuenta activa. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el sistema está procesando un evento "WaitlistOpportunityGranted"
-  con un TTL de "15 minutos"
-Cuando se compone el correo electrónico de notificación para el usuario
-Entonces el cuerpo del correo debe contener un texto claro que indique
-  la vigencia, como "Tienes 15 minutos para completar tu compra."
-Y el correo debe incluir un enlace único y seguro
-  que dirija al usuario al flujo de compra
+Given el sistema está procesando un evento "WaitlistOpportunityGranted" con un TTL definido
+When se compone el correo electrónico de notificación para el usuario
+Then el cuerpo del correo debe contener un texto claro que indique la vigencia, como "Tienes X minutos para completar tu compra."
+And el correo debe incluir un enlace único y seguro que dirija al usuario al flujo de compra
 ```
 
 **Resultado esperado:**
@@ -778,19 +712,16 @@ Y el correo debe incluir un enlace único y seguro
 | **Propósito** | Verificar que el sistema valida correctamente la vigencia de la oportunidad cuando el usuario intenta usarla después de que expiró. |
 | **Técnica(s)** | Pruebas de Integración, Pruebas de Transición de Estado |
 | **Prioridad** | Alta |
-| **Precondiciones** | El usuario recibió una notificación con un TTL de 10 minutos. Han transcurrido más de 10 minutos desde el envío. |
+| **Precondiciones** | El usuario recibió una notificación con un TTL definido. Han transcurrido más tiempo que el TTL desde el envío. |
 
 **Pasos:**
 
 ```gherkin
-Dado que un usuario recibió una notificación de oportunidad
-  con un TTL de 10 minutos
-Cuando el usuario hace clic en el enlace de compra del correo electrónico
-  después de que han transcurrido 12 minutos
-Entonces el sistema debe validar que la oportunidad ha expirado
-Y debe mostrar al usuario un mensaje informativo, como
-  "Lo sentimos, tu oportunidad de compra ha expirado."
-Y no debe permitirle continuar con el proceso de compra
+Given un usuario recibió una notificación de oportunidad con un TTL de X minutos
+When el usuario hace clic en el enlace de compra del correo electrónico después de que han transcurrido más tiempo que el TTL
+Then el sistema debe validar que la oportunidad ha expirado
+And debe mostrar al usuario un mensaje informativo, como "Lo sentimos, tu oportunidad de compra ha expirado."
+And no debe permitirle continuar con el proceso de compra
 ```
 
 **Resultado esperado:**
@@ -808,24 +739,20 @@ Y no debe permitirle continuar con el proceso de compra
 | **Propósito** | Asegurar que el sistema descarta el envío de notificaciones si la cuenta del usuario destinatario está inactiva. |
 | **Técnica(s)** | Partición de Equivalencia (Estado de cuenta), Pruebas de Flujo Negativo |
 | **Prioridad** | Alta |
-| **Precondiciones** | Se publica un evento `WaitlistOpportunityGranted` para `userId = "user456"`. El usuario "user456" tiene `status = 'inactive'` en la BD. |
+| **Precondiciones** | Se publica un evento `WaitlistOpportunityGranted` para un usuario. El usuario tiene `status = 'inactive'` en la BD. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el servicio de notificaciones consume un evento
-  "WaitlistOpportunityGranted" para el userId "user456"
-Y la cuenta del usuario "user456" se encuentra en estado "inactiva"
-  en la base de datos
-Cuando el evento es procesado
-Entonces el sistema NO debe componer ni intentar enviar
-  ningún correo electrónico
-Y el evento debe ser marcado como procesado o descartado
-  para evitar reintentos de envío
+Given el servicio de notificaciones consume un evento "WaitlistOpportunityGranted" para un usuario
+And la cuenta del usuario se encuentra en estado "inactiva" en la base de datos
+When el evento es procesado
+Then el sistema NO debe componer ni intentar enviar ningún correo electrónico
+And el evento debe ser marcado como procesado o descartado para evitar reintentos de envío
 ```
 
 **Resultado esperado:**
-- No se registra ningún email en `EMAIL_NOTIFICATIONS` para "user456".
+- No se registra ningún email en `EMAIL_NOTIFICATIONS` para ese usuario.
 - El SMTP local (Mailhog) no captura ningún email dirigido a ese usuario.
 - El evento queda marcado como procesado.
 
@@ -838,22 +765,20 @@ Y el evento debe ser marcado como procesado o descartado
 | **Propósito** | Asegurar que el sistema descarta el envío de notificaciones si la cuenta del usuario destinatario está suspendida. |
 | **Técnica(s)** | Partición de Equivalencia (Estado de cuenta), Pruebas de Flujo Negativo |
 | **Prioridad** | Alta |
-| **Precondiciones** | Se publica un evento `WaitlistOpportunityGranted` para `userId = "user789"`. El usuario "user789" tiene `status = 'suspended'` en la BD. |
+| **Precondiciones** | Se publica un evento `WaitlistOpportunityGranted` para un usuario. El usuario tiene `status = 'suspended'` en la BD. |
 
 **Pasos:**
 
 ```gherkin
-Dado que el servicio de notificaciones consume un evento
-  "WaitlistOpportunityGranted" para el userId "user789"
-Y la cuenta del usuario "user789" se encuentra en estado "suspendida"
-Cuando el evento es procesado
-Entonces el sistema NO debe enviar ningún correo electrónico al usuario
-Y el evento debe ser gestionado como completado
-  para no generar reintentos
+Given el servicio de notificaciones consume un evento "WaitlistOpportunityGranted" para un usuario
+And la cuenta del usuario se encuentra en estado "suspendida" en la base de datos
+When el evento es procesado
+Then el sistema NO debe enviar ningún correo electrónico al usuario
+And el evento debe ser gestionado como completado para no generar reintentos
 ```
 
 **Resultado esperado:**
-- No se registra ningún email en `EMAIL_NOTIFICATIONS` para "user789".
+- No se registra ningún email en `EMAIL_NOTIFICATIONS` para ese usuario.
 - El evento queda marcado como completado sin envío.
 
 ---
@@ -869,29 +794,27 @@ Y el evento debe ser gestionado como completado
 | **Propósito** | Verificar que un usuario que accede con un token de oportunidad válido y vigente es redirigido al checkout con un asiento reservado a su nombre. |
 | **Técnica(s)** | Caso de Uso (Flujo Principal), Pruebas de Transición de Estado |
 | **Prioridad** | Alta |
-| **Precondiciones** | El usuario tiene un token de oportunidad válido. La oportunidad asociada al token tiene `status = 'offered'` y el TTL no ha expirado. El asiento correspondiente está disponible. |
+| **Precondiciones** | otro usuario reserva el asiento 1 de fila 1 en la sección "VIP" del evento "Concierto Sinfónico". El usuario está autenticado en la plataforma Ticketing. |
 
 **Pasos:**
 
 ```gherkin
-Dado que soy un usuario que ha recibido una oportunidad de compra
-  y accedo a la URL con un token válido
-Y la oportunidad asociada a mi token está en estado "offered"
-  y su TTL no ha expirado
-Cuando el sistema procesa mi solicitud de acceso
-Entonces el estado de mi oportunidad en la base de datos
-  debe cambiar de "offered" a "in_progress"
-Y el sistema debe crear una nueva reserva temporal para el asiento
-  correspondiente, con el TTL estándar de 15 minutos
-Y debo ser redirigido automáticamente a la página de checkout
-Y la página de checkout debe mostrar el asiento reservado
-  en mi carrito de compra
+Given otro usuario reserva el asiento 1 de fila 1 en la sección "VIP" del evento "Concierto Sinfónico"
+And el usuario está autenticado en la plataforma Ticketing
+And accedo a la página de detalles del evento "Concierto Sinfónico"
+When intento interactuar con un asiento reservado de la sección "VIP"
+And selecciono la opción para unirme a la lista de espera
+And debo visualizar un indicador de confirmación de lista de espera
+When la oportunidad de compra se habilita para el usuario
+And el usuario selecciona el asiento ofrecido de la sección "VIP"
+Then debe visualizarse el panel de oportunidad de compra para el asiento
 ```
 
 **Resultado esperado:**
-- El registro en `NOTIFICATION_TOKENS` tiene `is_used = true` o la oportunidad pasa a `in_progress`.
-- Se crea un registro en `RESERVATIONS` con `status = 'NOTIFIED_PENDING'` y `expires_at = NOW() + 15 min`.
-- El usuario es redirigido a `/checkout` con el asiento en carrito.
+- El registro en `OPPORTUNITY_WINDOWS` tiene `status = 'in_progress'` o similar.
+- Se crea un registro en `RESERVATIONS` con el TTL estándar de 15 minutos.
+- El usuario es redirigido automáticamente a la página de checkout.
+- La página de checkout debe mostrar el asiento reservado en mi carrito de compra.
 
 ---
 
@@ -904,18 +827,17 @@ Y la página de checkout debe mostrar el asiento reservado
 | **Propósito** | Asegurar que el sistema impida el acceso al flujo de compra si la oportunidad del usuario ya ha expirado. |
 | **Técnica(s)** | Pruebas de Flujo Negativo, Análisis de Valores Límite (TTL) |
 | **Prioridad** | Alta |
-| **Precondiciones** | El usuario tiene un token de oportunidad. El TTL de la oportunidad ya ha expirado (`expires_at < NOW()`). |
+| **Precondiciones** | El usuario tiene un token de oportunidad. El TTL de la oportunidad ya ha expirado. |
 
 **Pasos:**
 
 ```gherkin
-Dado que accedo a la URL de oportunidad con un token válido
-Pero el tiempo límite (TTL) de mi oportunidad ya ha expirado
-Cuando el sistema procesa mi solicitud
-Entonces no se debe crear ninguna reserva de asiento a mi nombre
-Y no debo ser redirigido a la página de checkout
-Y en su lugar, debo visualizar una página o mensaje que indique claramente:
-  "Lo sentimos, tu oportunidad de compra ha expirado."
+Given accedo a la URL de oportunidad con un token válido
+But el tiempo límite (TTL) de mi oportunidad ya ha expirado
+When el sistema procesa mi solicitud
+Then no se debe crear ninguna reserva de asiento a mi nombre
+And no debo ser redirigido a la página de checkout
+And en su lugar, debo visualizar una página o mensaje que indique claramente: "Lo sentimos, tu oportunidad de compra ha expirado."
 ```
 
 **Resultado esperado:**
@@ -938,15 +860,11 @@ Y en su lugar, debo visualizar una página o mensaje que indique claramente:
 **Pasos:**
 
 ```gherkin
-Dado que ya he accedido exitosamente a la URL de oportunidad
-  y mi oportunidad está en estado "in_progress"
-Cuando intento acceder a la misma URL de oportunidad por segunda vez
-  (por ejemplo, desde otro navegador o pestaña)
-Entonces el sistema debe validar que la oportunidad ya fue reclamada
-Y debe mostrar un mensaje informativo como:
-  "Esta oportunidad de compra ya está siendo procesada."
-Y no debe crear una segunda reserva
-  ni redirigirme nuevamente al checkout
+Given ya he accedido exitosamente a la URL de oportunidad y mi oportunidad está en estado "in_progress"
+When intento acceder a la misma URL de oportunidad por segunda vez (por ejemplo, desde otro navegador o pestaña)
+Then el sistema debe validar que la oportunidad ya fue reclamada
+And debe mostrar un mensaje informativo como: "Esta oportunidad de compra ya está siendo procesada."
+And no debe crear una segunda reserva ni redirigirme nuevamente al checkout
 ```
 
 **Resultado esperado:**
@@ -964,20 +882,15 @@ Y no debe crear una segunda reserva
 | **Propósito** | Asegurar que el sistema actualiza el estado de una oportunidad a `expired` y desencadena el proceso para notificar al siguiente usuario en la cola cuando el TTL vence sin ser utilizada. |
 | **Técnica(s)** | Pruebas de Sistema (Procesos Temporizados), Pruebas de Transición de Estado |
 | **Prioridad** | Alta |
-| **Precondiciones** | Una oportunidad fue asignada a un usuario con `status = 'offered'` y TTL de 10 minutos. El TTL puede configurarse en segundos en el ambiente de pruebas. Existe al menos un usuario más en la cola para ese contexto. |
+| **Precondiciones** | Una oportunidad fue asignada a un usuario con `status = 'offered'` y TTL definido. El TTL puede configurarse en segundos en el ambiente de pruebas. Existe al menos un usuario más en la cola para ese contexto. |
 
 **Pasos:**
 
 ```gherkin
-Dado que una oportunidad de compra con un TTL de 10 minutos
-  fue asignada a un usuario y su estado es "offered"
-Cuando transcurren los 10 minutos sin que el usuario
-  acceda a la URL de oportunidad
-Entonces el estado de esa oportunidad en la base de datos
-  debe cambiar automáticamente a "expired"
-Y el sistema debe iniciar el proceso para seleccionar
-  al siguiente usuario elegible en la lista de espera
-  para ese mismo contexto
+Given una oportunidad de compra con un TTL de X minutos fue asignada a un usuario y su estado es "offered"
+When transcurren los X minutos sin que el usuario acceda a la URL de oportunidad
+Then el estado de esa oportunidad en la base de datos debe cambiar automáticamente a "expired"
+And el sistema debe iniciar el proceso para seleccionar al siguiente usuario elegible en la lista de espera para ese mismo contexto
 ```
 
 **Resultado esperado:**
