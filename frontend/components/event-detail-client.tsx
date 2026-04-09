@@ -211,6 +211,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
                 opportunities={opportunities}
                 onSeatReserved={() => mutate()} 
                 onWaitlistJoined={loadWaitlistStatus}
+                joinedWaitlistSections={waitlistSections.map(w => w.section)}
               />
             ) : null}
           </div>

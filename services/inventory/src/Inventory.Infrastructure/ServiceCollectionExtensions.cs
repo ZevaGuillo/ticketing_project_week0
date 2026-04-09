@@ -78,7 +78,9 @@ public static class ServiceCollectionExtensions
 
         // Kafka event strategies (Strategy pattern)
         services.AddScoped<IInventoryEventStrategy, PaymentSucceededStrategy>();
+        services.AddScoped<IInventoryEventStrategy, PaymentFailedStrategy>();
         services.AddScoped<IInventoryEventStrategy, ReservationExpiredStrategy>();
+        services.AddScoped<IInventoryEventStrategy, SeatReleasedInventoryStrategy>();
         services.AddScoped<IInventoryEventStrategy, SeatsGeneratedStrategy>();
 
         // Unified Kafka consumer — dispatches to strategies by topic

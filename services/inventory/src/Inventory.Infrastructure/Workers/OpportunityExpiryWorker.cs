@@ -225,6 +225,21 @@ public class OpportunityExpiryWorker : BackgroundService
                 // Waitlist exhausted — release the seat so it becomes purchasable by anyone.
                 seat.Reserved = false;
                 await db.SaveChangesAsync(cancellationToken);
+
+                // Notify Catalog so the seat status flips back to "available" for the frontend.
+                if (kafkaProducer != null)
+                {
+                    var releasedEvent = new
+                    {
+                        seatId = seat.Id.ToString("D"),
+                        eventId = expiredEntry.EventId.ToString("D"),
+                        section = expiredEntry.Section,
+                        releasedAt = DateTime.UtcNow,
+                        reason = "waitlist_processed"
+                    };
+                    await kafkaProducer.ProduceAsync("seat-released", System.Text.Json.JsonSerializer.Serialize(releasedEvent));
+                }
+
                 _logger.LogInformation(
                     "Waitlist exhausted for event {EventId} section {Section}. Seat {SeatId} released to general availability.",
                     expiredEntry.EventId, expiredEntry.Section, seatId);

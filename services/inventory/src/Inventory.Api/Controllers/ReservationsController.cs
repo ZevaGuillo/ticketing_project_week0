@@ -38,8 +38,18 @@ public class ReservationsController : ControllerBase
         var customerId = !string.IsNullOrEmpty(request.CustomerId) ? request.CustomerId : userId;
         
         var command = new CreateReservationCommand(request.SeatId, request.EventId, customerId);
-        var response = await _mediator.Send(command, cancellationToken);
-
-        return Created($"/reservations/{response.ReservationId}", response);
+        try
+        {
+            var response = await _mediator.Send(command, cancellationToken);
+            return Created($"/reservations/{response.ReservationId}", response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
     }
 }

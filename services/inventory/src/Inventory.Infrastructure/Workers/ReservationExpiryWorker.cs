@@ -95,12 +95,14 @@ public class ReservationExpiryWorker : BackgroundService
                 Console.WriteLine($"Failed to publish reservation-expired for {res.Id}: {ex.Message}");
             }
 
-            // Publish seat-released event to notify Catalog service to update seat status
+            // Publish seat-released event to notify Catalog and trigger waitlist processing
             var seatReleasedEvent = new
             {
                 seatId = res.SeatId.ToString("D"),
                 eventId = res.EventId.ToString("D"),
-                status = "available"
+                section = seat?.Section,
+                releasedAt = DateTime.UtcNow,
+                reason = "ttl_expired"
             };
 
             var seatReleasedJson = JsonSerializer.Serialize(seatReleasedEvent);

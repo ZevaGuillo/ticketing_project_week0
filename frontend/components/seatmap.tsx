@@ -15,15 +15,16 @@ interface SeatmapProps {
   onSeatReserved?: () => void
   onWaitlistJoined?: (section: string) => void
   opportunities?: UserOpportunity[]
+  joinedWaitlistSections?: string[]
 }
 
-export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, opportunities = [] }: SeatmapProps) {
+export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, opportunities = [], joinedWaitlistSections = [] }: SeatmapProps) {
   const { user } = useAuth()
   const { reserveSeatAndAddToCart, isAddingToCart, isSeatInCart, removeSeatFromCart } = useCart()
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
-  const [joiningWaitlist, setJoiningWaitlist] = useState<string | null>(null)
-  const [waitlistJoined, setWaitlistJoined] = useState<string | null>(null)
+  const [joiningSection, setJoiningSection] = useState<string | null>(null)
+  const [joinedSections, setJoinedSections] = useState<Set<string>>(new Set())
 
   const opportunitiesBySeatId = useMemo(() => {
     const map = new Map<string, UserOpportunity>()
@@ -68,7 +69,6 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
     }
     setSelectedSeat((prev) => (prev?.id === seat.id ? null : seat))
     setLocalError(null)
-    setWaitlistJoined(null)
   }, [isSeatInCart])
 
   const handleReserve = useCallback(async () => {
@@ -96,28 +96,39 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
     }
   }, [selectedSeat, reserveSeatAndAddToCart, isSeatInCart, removeSeatFromCart, onSeatReserved, opportunitiesBySeatId, eventId])
 
-  const handleJoinWaitlist = useCallback(async () => {
-    if (!selectedSeat || !user) return
-    
+  const handleJoinWaitlistForSection = useCallback(async (section: string) => {
+    if (!user) return
+
     setLocalError(null)
-    setJoiningWaitlist(selectedSeat.id)
+    setJoiningSection(section)
 
     try {
-      await joinWaitlist(
-        { eventId, section: selectedSeat.sectionCode },
-        user.id
-      )
-      setWaitlistJoined(selectedSeat.id)
-      setSelectedSeat(null)
-      onWaitlistJoined?.(selectedSeat.sectionCode)
+      await joinWaitlist({ eventId, section }, user.id)
+      setJoinedSections(prev => new Set(prev).add(section))
+      onWaitlistJoined?.(section)
     } catch (err) {
       setLocalError(
         err instanceof Error ? err.message : "Failed to join waitlist"
       )
     } finally {
-      setJoiningWaitlist(null)
+      setJoiningSection(null)
     }
-  }, [selectedSeat, user, eventId, onWaitlistJoined])
+  }, [user, eventId, onWaitlistJoined])
+
+  // A section is "full" when every single seat is reserved or sold
+  const fullSections = useMemo(() => {
+    const full = new Set<string>()
+    const sectionsWithOpportunity = new Set(opportunities.map(o => o.section))
+    for (const [sectionCode, rows] of sections.entries()) {
+      const allSeats = Array.from(rows.values()).flat()
+      const userHasSeatHere = allSeats.some(s => isSeatInCart(s.id))
+      const userHasOpportunityHere = sectionsWithOpportunity.has(sectionCode)
+      if (!userHasSeatHere && !userHasOpportunityHere && allSeats.length > 0 && allSeats.every(s => s.status !== "available")) {
+        full.add(sectionCode)
+      }
+    }
+    return full
+  }, [sections, isSeatInCart, opportunities])
 
   const hasOpportunityForSelected = selectedSeat ? opportunitiesBySeatId.has(selectedSeat.id) : false
   const isUnavailable = selectedSeat && selectedSeat.status !== "available" && !hasOpportunityForSelected
@@ -137,9 +148,32 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([sectionCode, rows]) => (
             <div key={sectionCode} className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-accent uppercase tracking-wider">
-                Section {sectionCode}
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-accent uppercase tracking-wider">
+                  Section {sectionCode}
+                </h3>
+                {fullSections.has(sectionCode) && user && (() => {
+                  const alreadyJoined = joinedSections.has(sectionCode) || joinedWaitlistSections.includes(sectionCode)
+                  const isJoining = joiningSection === sectionCode
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                      onClick={() => !alreadyJoined && handleJoinWaitlistForSection(sectionCode)}
+                      disabled={isJoining || alreadyJoined}
+                    >
+                      {isJoining ? (
+                        <><Loader2 className="size-3 animate-spin" />Joining...</>
+                      ) : alreadyJoined ? (
+                        <><Bell className="size-3" />On Waitlist</>
+                      ) : (
+                        <><Bell className="size-3" />Join Waitlist</>
+                      )}
+                    </Button>
+                  )
+                })()}
+              </div>
               <div className="flex flex-col gap-1.5">
                 {Array.from(rows.entries())
                   .sort(([a], [b]) => a - b)
@@ -202,39 +236,6 @@ export function Seatmap({ seatmap, eventId, onSeatReserved, onWaitlistJoined, op
             )}
           </div>
           <div className="flex gap-2">
-            {isUnavailable && user && (
-              <Button
-                onClick={handleJoinWaitlist}
-                disabled={joiningWaitlist === selectedSeat.id || waitlistJoined === selectedSeat.id}
-                variant="outline"
-                className="border-amber-500 text-amber-600 hover:bg-amber-50"
-              >
-                {(() => {
-                  if (joiningWaitlist === selectedSeat.id) {
-                    return (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        Joining...
-                      </>
-                    )
-                  }
-                  if (waitlistJoined === selectedSeat.id) {
-                    return (
-                      <>
-                        <Bell className="size-4" />
-                        Joined Waitlist
-                      </>
-                    )
-                  }
-                  return (
-                    <>
-                      <Bell className="size-4" />
-                      Join Waitlist
-                    </>
-                  )
-                })()}
-              </Button>
-            )}
             {(selectedSeat.status === "available" || hasOpportunityForSelected) && (
               <Button
                 onClick={handleReserve}

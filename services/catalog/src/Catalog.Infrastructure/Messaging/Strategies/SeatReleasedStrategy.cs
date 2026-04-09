@@ -9,7 +9,9 @@ public class SeatReleasedStrategy : IKafkaEventStrategy
 
     public async Task HandleAsync(JsonElement root, ICatalogRepository repository)
     {
-        if (root.TryGetProperty("seatId", out var sp) && Guid.TryParse(sp.GetString(), out var seatId))
-            await repository.UpdateSeatStatusAsync(seatId, "available", null);
+        if (!root.TryGetProperty("seatId", out var sp) || !Guid.TryParse(sp.GetString(), out var seatId))
+            return;
+
+        await repository.UpdateSeatStatusAsync(seatId, "available", null);
     }
 }
