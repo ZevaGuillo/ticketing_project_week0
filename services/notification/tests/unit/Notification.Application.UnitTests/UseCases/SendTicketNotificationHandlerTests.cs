@@ -10,6 +10,7 @@ public class SendTicketNotificationHandlerTests
 {
     private readonly Mock<IEmailNotificationRepository> _repositoryMock;
     private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly Mock<IQrCodeService> _qrCodeServiceMock;
     private readonly Mock<ILogger<SendTicketNotificationCommandHandler>> _loggerMock;
     private readonly SendTicketNotificationCommandHandler _handler;
 
@@ -17,8 +18,13 @@ public class SendTicketNotificationHandlerTests
     {
         _repositoryMock = new Mock<IEmailNotificationRepository>();
         _emailServiceMock = new Mock<IEmailService>();
+        _qrCodeServiceMock = new Mock<IQrCodeService>();
         _loggerMock = new Mock<ILogger<SendTicketNotificationCommandHandler>>();
-        _handler = new SendTicketNotificationCommandHandler(_repositoryMock.Object, _emailServiceMock.Object, _loggerMock.Object);
+        _handler = new SendTicketNotificationCommandHandler(
+            _repositoryMock.Object, 
+            _emailServiceMock.Object,
+            _qrCodeServiceMock.Object, 
+            _loggerMock.Object);
     }
 
     [Fact]
@@ -48,7 +54,7 @@ public class SendTicketNotificationHandlerTests
             .ReturnsAsync((EmailNotification?)null);
 
         _emailServiceMock
-            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), null, null))
             .ReturnsAsync(true);
 
         _repositoryMock
@@ -72,7 +78,7 @@ public class SendTicketNotificationHandlerTests
         // [VERIFICAR: COMPORTAMIENTO] - ¿Se siguio el PROCESO tecnico correcto (Mocks)?
         // Verificamos que se llamo al servicio de email REALMENTE.
         _emailServiceMock.Verify(
-            e => e.SendAsync(customerEmail, It.IsAny<string>(), It.IsAny<string>(), command.TicketPdfUrl),
+            e => e.SendAsync(customerEmail, It.IsAny<string>(), It.IsAny<string>(), null, null),
             Times.Once);
 
         // Verificamos que se PERSISTIO en la base de datos.
@@ -125,7 +131,7 @@ public class SendTicketNotificationHandlerTests
 
         // [VERIFICAR: SILENCIO] - ¡AQUI USAMOS TIMES.NEVER!
         // Verificamos que el "Portero" (if) detuvo el envio de email (Comportamiento).
-        _emailServiceMock.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _emailServiceMock.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), null, null), Times.Never);
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<EmailNotification>()), Times.Never);
         
         // [REFÁCTOR]: Una vez en verde, podriamos limpiar la logica de mapeo en el Handler.
@@ -153,7 +159,7 @@ public class SendTicketNotificationHandlerTests
             .ReturnsAsync((EmailNotification?)null);
 
         _emailServiceMock
-            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), null, null))
             .ReturnsAsync(false);
 
         EmailNotification? capturedNotification = null;

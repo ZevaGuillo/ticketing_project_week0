@@ -3,8 +3,8 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Notification.Application.Email;
-using Notification.Application.Ports;
+using MediatR;
+using Notification.Application.UseCases.SendWaitlistNotification;
 using Notification.Domain.Events;
 
 namespace Notification.Infrastructure.Messaging.Strategies;
@@ -17,11 +17,9 @@ public class WaitlistOpportunityStrategy : INotificationEventStrategy
     {
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<WaitlistOpportunityStrategy>>();
 
-        // Try both PascalCase (actual Kafka events) and camelCase (model annotations) 
         WaitlistOpportunityEvent? evt = null;
         try
         {
-            // First try with PropertyNameCaseInsensitive to handle both cases
             evt = JsonSerializer.Deserialize<WaitlistOpportunityEvent>(
                 root.GetRawText(),
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -44,13 +42,12 @@ public class WaitlistOpportunityStrategy : INotificationEventStrategy
         }
 
         var httpFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
-        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
         var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var identityBaseUrl = config["IdentityService:BaseUrl"] ?? "http://identity:5001";
         var catalogBaseUrl = config["CatalogService:BaseUrl"] ?? "http://catalog:5001";
 
-        // Resolve user email from Identity service
         var httpClient = httpFactory.CreateClient("identity");
         UserLookupResult? userInfo = null;
         try
@@ -73,7 +70,6 @@ public class WaitlistOpportunityStrategy : INotificationEventStrategy
             return;
         }
 
-        // Resolve event name from Catalog service
         var eventName = $"Evento {evt.EventId.ToString()[..8].ToUpper()}";
         try
         {
@@ -92,16 +88,22 @@ public class WaitlistOpportunityStrategy : INotificationEventStrategy
             logger.LogWarning(ex, "Could not resolve event name from Catalog for eventId {EventId}", evt.EventId);
         }
 
-        var expiresAt = evt.CreatedAt.AddSeconds(evt.OpportunityTTL);
-        var purchaseUrl = $"http://localhost:3000/events/{evt.EventId}";
-        var subject = "¡Tienes una oportunidad de compra!";
-        var body = EmailTemplates.WaitlistOpportunity(userInfo.Email, evt.Section, expiresAt, eventName, purchaseUrl);
+        var command = new SendWaitlistNotificationCommand(
+            OpportunityId: evt.OpportunityId,
+            WaitlistEntryId: evt.WaitlistEntryId,
+            UserId: evt.UserId,
+            RecipientEmail: userInfo.Email,
+            EventName: eventName,
+            Section: evt.Section,
+            OpportunityTTL: evt.OpportunityTTL,
+            CreatedAt: evt.CreatedAt);
 
-        var sent = await emailService.SendAsync(userInfo.Email, subject, body);
-        if (sent)
-            logger.LogInformation("Waitlist opportunity email sent to {Email} for opportunity {Id}", userInfo.Email, evt.OpportunityId);
+        var result = await mediator.Send(command, ct);
+
+        if (result.Success)
+            logger.LogInformation("Waitlist notification processed for opportunity {OpportunityId}: {Message}", evt.OpportunityId, result.Message);
         else
-            logger.LogWarning("Failed to send waitlist opportunity email to {Email} for opportunity {Id}", userInfo.Email, evt.OpportunityId);
+            logger.LogError("Failed to process waitlist notification for opportunity {OpportunityId}: {Message}", evt.OpportunityId, result.Message);
     }
 
     private record UserLookupResult(Guid UserId, string Email);

@@ -32,6 +32,7 @@
   "required": [
     "seatId",
     "eventId",
+    "section",
     "releasedAt",
     "reason"
   ],

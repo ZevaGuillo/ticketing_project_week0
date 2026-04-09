@@ -38,7 +38,8 @@ public class JoinWaitlistCommandHandler : IRequestHandler<JoinWaitlistCommand, J
             request.UserId, request.EventId, request.Section, cancellationToken);
 
         WaitlistEntry entry;
-        if (existingEntry != null)
+        if (existingEntry != null && (existingEntry.Status == WaitlistStatus.EXPIRED ||
+            existingEntry.Status == WaitlistStatus.CANCELLED))
         {
             existingEntry.Status = WaitlistStatus.ACTIVE;
             existingEntry.JoinedAt = DateTime.UtcNow;
