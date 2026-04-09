@@ -54,7 +54,12 @@ public class SendTicketNotificationHandlerTests
             .ReturnsAsync((EmailNotification?)null);
 
         _emailServiceMock
-            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), null, null))
+            .Setup(e => e.SendAsync(
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()))
             .ReturnsAsync(true);
 
         _repositoryMock
@@ -78,7 +83,12 @@ public class SendTicketNotificationHandlerTests
         // [VERIFICAR: COMPORTAMIENTO] - ¿Se siguio el PROCESO tecnico correcto (Mocks)?
         // Verificamos que se llamo al servicio de email REALMENTE.
         _emailServiceMock.Verify(
-            e => e.SendAsync(customerEmail, It.IsAny<string>(), It.IsAny<string>(), null, null),
+            e => e.SendAsync(
+                customerEmail, 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()),
             Times.Once);
 
         // Verificamos que se PERSISTIO en la base de datos.
@@ -131,7 +141,14 @@ public class SendTicketNotificationHandlerTests
 
         // [VERIFICAR: SILENCIO] - ¡AQUI USAMOS TIMES.NEVER!
         // Verificamos que el "Portero" (if) detuvo el envio de email (Comportamiento).
-        _emailServiceMock.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), null, null), Times.Never);
+        _emailServiceMock.Verify(
+            e => e.SendAsync(
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()), 
+            Times.Never);
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<EmailNotification>()), Times.Never);
         
         // [REFÁCTOR]: Una vez en verde, podriamos limpiar la logica de mapeo en el Handler.
@@ -159,7 +176,12 @@ public class SendTicketNotificationHandlerTests
             .ReturnsAsync((EmailNotification?)null);
 
         _emailServiceMock
-            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), null, null))
+            .Setup(e => e.SendAsync(
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()))
             .ReturnsAsync(false);
 
         EmailNotification? capturedNotification = null;
