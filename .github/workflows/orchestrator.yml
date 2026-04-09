@@ -460,7 +460,7 @@ jobs:
         run: |
           docker compose -f infra/docker-compose.yml up -d
           echo "Waiting for services to be ready..."
-          sleep 45
+          sleep 60
           
       - name: Run System Quality Check
         run: bash system-quality-check.sh
