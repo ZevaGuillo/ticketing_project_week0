@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Ordering.Application.Ports;
+using Ordering.Domain.Events;
 
 namespace Ordering.Infrastructure.Events;
 

@@ -11,7 +11,7 @@ namespace Catalog.Api.Controllers;
 
 [ApiController]
 [Route("admin")]
-[AllowAnonymous] // Temporary: Allow anonymous access for testing
+[Authorize(Roles = "Admin")]
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;

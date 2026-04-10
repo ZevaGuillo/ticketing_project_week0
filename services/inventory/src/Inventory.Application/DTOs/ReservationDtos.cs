@@ -4,7 +4,8 @@ namespace Inventory.Application.DTOs;
 
 public record CreateReservationRequest(
     Guid SeatId,
-    string CustomerId
+    Guid EventId,
+    string? CustomerId = null
 );
 
 public record CreateReservationResponse(

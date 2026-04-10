@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Ordering.Application.Ports;
 using Ordering.Application.UseCases.AddToCart;
 using Ordering.Infrastructure.Events;
+using Ordering.Infrastructure.Events.Strategies;
 using Ordering.Infrastructure.Persistence;
 
 namespace Ordering.Infrastructure;
@@ -42,6 +43,11 @@ public static class ServiceCollectionExtensions
 
         // Register Kafka consumer as hosted service
         services.AddHostedService<ReservationEventConsumer>();
+
+        // Register event strategies
+        services.AddScoped<IOrderingEventStrategy, ReservationCreatedStrategy>();
+        services.AddScoped<IOrderingEventStrategy, ReservationExpiredStrategy>();
+        services.AddScoped<IOrderingEventStrategy, PaymentSucceededStrategy>();
         
         return services;
     }

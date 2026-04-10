@@ -3,6 +3,7 @@ using FluentAssertions;
 using Inventory.Application.UseCases.CreateReservation;
 using Inventory.Domain.Entities;
 using Inventory.Domain.Ports;
+using Inventory.Infrastructure.Configuration;
 using Inventory.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -27,10 +28,13 @@ public class CreateReservationCommandHandlerTests
         _redisLockMock = new Mock<IRedisLock>();
         _kafkaProducerMock = new Mock<IKafkaProducer>();
         
+        var reservationSettings = new ReservationSettings { TTLMinutes = 15 };
+        
         _handler = new CreateReservationCommandHandler(
             _context,
             _redisLockMock.Object,
-            _kafkaProducerMock.Object);
+            _kafkaProducerMock.Object,
+            reservationSettings);
     }
 
     [Fact]
@@ -42,7 +46,7 @@ public class CreateReservationCommandHandlerTests
         _context.Seats.Add(seat);
         await _context.SaveChangesAsync();
 
-        var command = new CreateReservationCommand(seatId, "customer-123");
+        var command = new CreateReservationCommand(seatId, Guid.NewGuid(), "customer-123");
         
         _redisLockMock.Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>()))
             .ReturnsAsync("valid-lock-token");
@@ -73,7 +77,7 @@ public class CreateReservationCommandHandlerTests
         _context.Seats.Add(seat);
         await _context.SaveChangesAsync();
 
-        var command = new CreateReservationCommand(seatId, "customer-123");
+        var command = new CreateReservationCommand(seatId, Guid.NewGuid(), "customer-123");
         
         _redisLockMock.Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>()))
             .ReturnsAsync("valid-lock-token");
@@ -87,7 +91,7 @@ public class CreateReservationCommandHandlerTests
     {
         // Arrange
         var seatId = Guid.NewGuid();
-        var command = new CreateReservationCommand(seatId, "customer-123");
+        var command = new CreateReservationCommand(seatId, Guid.NewGuid(), "customer-123");
         
         _redisLockMock.Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>()))
             .ReturnsAsync((string?)null); // Failure to acquire lock
@@ -101,7 +105,7 @@ public class CreateReservationCommandHandlerTests
     {
         // Arrange
         var seatId = Guid.NewGuid();
-        var command = new CreateReservationCommand(seatId, "customer-123");
+        var command = new CreateReservationCommand(seatId, Guid.NewGuid(), "customer-123");
         
         _redisLockMock.Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>()))
             .ReturnsAsync("valid-lock-token");
@@ -114,7 +118,7 @@ public class CreateReservationCommandHandlerTests
     public async Task Handle_WithEmptySeatId_ShouldThrowArgumentException()
     {
         // Arrange
-        var command = new CreateReservationCommand(Guid.Empty, "customer-123");
+        var command = new CreateReservationCommand(Guid.Empty, Guid.NewGuid(), "customer-123");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => _handler.Handle(command, CancellationToken.None));
@@ -124,7 +128,7 @@ public class CreateReservationCommandHandlerTests
     public async Task Handle_WithEmptyCustomerId_ShouldThrowArgumentException()
     {
         // Arrange
-        var command = new CreateReservationCommand(Guid.NewGuid(), "");
+        var command = new CreateReservationCommand(Guid.NewGuid(), Guid.NewGuid(), "");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => _handler.Handle(command, CancellationToken.None));

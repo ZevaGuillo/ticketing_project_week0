@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Payment.Application.Ports;
 using Payment.Application.UseCases.ProcessPayment;
-using Payment.Infrastructure.Events;
-using Payment.Infrastructure.EventConsumers;
+using Payment.Infrastructure.Messaging;
+using Payment.Infrastructure.Messaging.Strategies;
 using Payment.Infrastructure.Messaging;
 using Payment.Infrastructure.Persistence;
 using Payment.Infrastructure.Services;
@@ -63,6 +63,10 @@ public static class ServiceCollectionExtensions
         
         // Kafka event consumers
         services.AddHostedService<ReservationEventConsumer>();
+
+        // Register event strategies
+        services.AddScoped<IPaymentEventStrategy, ReservationCreatedStrategy>();
+        services.AddScoped<IPaymentEventStrategy, ReservationExpiredStrategy>();
         
         // Payment simulation
         services.AddScoped<IPaymentSimulatorService, PaymentSimulatorService>();

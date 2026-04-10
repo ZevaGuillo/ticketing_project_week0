@@ -19,6 +19,11 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(x => x.Email == email);
     }
 
+    public async Task<User?> GetByIdAsync(Guid id)
+    {
+        return await _context.Users.FindAsync(id);
+    }
+
     public async Task SaveAsync(User user)
     {
         _context.Users.Add(user);

@@ -37,7 +37,7 @@ export default async function EventsPage() {
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="size-4" />
             <AlertDescription>
-              Failed to load events. Make sure the Catalog service is running on localhost:50001. Error: {error}
+              Failed to load events. Make sure the API Gateway is running on localhost:5000. Error: {error}
             </AlertDescription>
           </Alert>
         )}

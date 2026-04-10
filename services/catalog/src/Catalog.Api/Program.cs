@@ -1,9 +1,39 @@
+using System.Text;
 using Catalog.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddControllers();
+
+var jwtKey = builder.Configuration["Jwt:Key"]!;
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
+var jwtAudience = builder.Configuration["Jwt:Audience"]!;
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = signingKey,
+            // always return the known key regardless of token's kid header
+            IssuerSigningKeyResolver = (_, _, _, _) => [signingKey],
+            ClockSkew = TimeSpan.Zero,
+            RoleClaimType = "role"
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 // Add CORS policy for frontend on localhost:3000
 builder.Services.AddCors(options =>
@@ -22,6 +52,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 var app = builder.Build();
 
 app.UseInfrastructure();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 Console.WriteLine("🚀 Catalog API is starting...");
 Console.WriteLine("📍 Listening on http://0.0.0.0:5004");

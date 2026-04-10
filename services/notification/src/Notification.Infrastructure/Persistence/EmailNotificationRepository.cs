@@ -24,6 +24,12 @@ public class EmailNotificationRepository : IEmailNotificationRepository
             .FirstOrDefaultAsync(n => n.OrderId == orderId);
     }
 
+    public async Task<EmailNotification?> GetByOpportunityIdAsync(Guid opportunityId)
+    {
+        return await _context.EmailNotifications
+            .FirstOrDefaultAsync(n => n.OpportunityId == opportunityId);
+    }
+
     public async Task<EmailNotification> AddAsync(EmailNotification notification)
     {
         await _context.EmailNotifications.AddAsync(notification);

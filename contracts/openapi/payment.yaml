@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Payment Service API
   description: Payment processing and validation service
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: SpecKit Team
 
@@ -16,7 +16,7 @@ paths:
   /payments:
     post:
       summary: Process payment
-      description: Validate order state, re-check reservation, simulate charge, publish payment-succeeded or payment-failed
+      description: Validate order state, re-check reservation, simulate charge, publish payment-succeeded or payment-failed event
       operationId: processPayment
       tags:
         - Payment
@@ -33,9 +33,17 @@ paths:
                 customerId:
                   type: string
                   format: uuid
+                reservationId:
+                  type: string
+                  format: uuid
+                  description: Reservation ID to re-validate before charging
                 amount:
                   type: number
                   format: decimal
+                currency:
+                  type: string
+                  example: ARS
+                  description: ISO 4217 currency code
                 paymentMethod:
                   type: string
                   enum: [credit_card, debit_card, wallet]
@@ -43,6 +51,7 @@ paths:
                 - orderId
                 - customerId
                 - amount
+                - currency
                 - paymentMethod
       responses:
         '200':
@@ -63,8 +72,14 @@ paths:
                     enum: [succeeded, failed, pending]
                   transactionId:
                     type: string
+        '400':
+          description: Invalid request or missing required fields
+        '401':
+          description: Payment not authorized for this customer
+        '404':
+          description: Order not found
         '422':
-          description: Order invalid or payment declined
+          description: Order in invalid state or payment declined
         '500':
           description: Payment processor error
 
@@ -84,6 +99,22 @@ paths:
       responses:
         '200':
           description: Payment status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentId:
+                    type: string
+                    format: uuid
+                  orderId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [succeeded, failed, pending]
+                  transactionId:
+                    type: string
         '404':
           description: Payment not found
 
@@ -96,6 +127,17 @@ paths:
       responses:
         '200':
           description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: Healthy
+                  service:
+                    type: string
+                    example: Payment
 
 components:
   securitySchemes:

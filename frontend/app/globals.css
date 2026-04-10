@@ -41,6 +41,7 @@
   --seat-available: oklch(0.72 0.19 155);
   --seat-reserved: oklch(0.8 0.16 85);
   --seat-sold: oklch(0.58 0.22 27);
+  --seat-offered: oklch(0.68 0.22 145);
 }
 
 @theme inline {
@@ -86,6 +87,7 @@
   --color-seat-available: var(--seat-available);
   --color-seat-reserved: var(--seat-reserved);
   --color-seat-sold: var(--seat-sold);
+  --color-seat-offered: var(--seat-offered);
 }
 
 @layer base {

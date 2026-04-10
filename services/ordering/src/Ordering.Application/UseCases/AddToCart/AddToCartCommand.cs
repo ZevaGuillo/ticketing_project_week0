@@ -8,5 +8,8 @@ public record AddToCartCommand(
     Guid SeatId,
     decimal Price,
     string? UserId = null,
-    string? GuestToken = null
+    string? GuestToken = null,
+    string? UserEmail = null,
+    string? EventName = null,
+    string? SeatLabel = null
 ) : IRequest<AddToCartResponse>;

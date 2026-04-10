@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Notification.Application.Ports;
 using Notification.Infrastructure.Email;
-using Notification.Infrastructure.Events;
+using Notification.Infrastructure.Messaging;
+using Notification.Infrastructure.Messaging.Strategies;
 using Notification.Infrastructure.Persistence;
 
 namespace Notification.Infrastructure;
@@ -18,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddControllers();
 
         // Add MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Notification.Application.UseCases.SendTicketNotification.SendTicketNotificationHandler).Assembly));
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Notification.Application.UseCases.SendTicketNotification.SendTicketNotificationCommandHandler).Assembly));
 
         // Add Database
         services.AddDbContext<NotificationDbContext>(options =>
@@ -34,11 +35,16 @@ public static class ServiceCollectionExtensions
         services.Configure<SmtpEmailOptions>(
             configuration.GetSection(SmtpEmailOptions.Section));
         services.AddScoped<IEmailService, SmtpEmailService>();
+        services.AddScoped<IQrCodeService, QrCodeService>();
 
-        // Add Kafka Event Consumer
-        services.Configure<KafkaOptions>(
-            configuration.GetSection(KafkaOptions.Section));
-        services.AddHostedService<TicketIssuedEventConsumer>();
+        // Notification event strategies (Strategy pattern)
+        services.AddScoped<INotificationEventStrategy, TicketIssuedStrategy>();
+        services.AddScoped<INotificationEventStrategy, WaitlistOpportunityStrategy>();
+
+        // Unified Kafka consumer — dispatches to strategies by topic
+        services.AddHttpClient("identity");
+        services.AddHttpClient("gateway");
+        services.AddHostedService<NotificationEventConsumer>();
 
         return services;
     }

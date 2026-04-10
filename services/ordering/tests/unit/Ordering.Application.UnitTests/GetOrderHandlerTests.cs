@@ -11,12 +11,12 @@ namespace Ordering.Application.UnitTests.UseCases.GetOrder;
 public class GetOrderHandlerTests
 {
     private readonly Mock<IOrderRepository> _orderRepositoryMock;
-    private readonly GetOrderHandler _handler;
+    private readonly GetOrderQueryHandler _handler;
 
     public GetOrderHandlerTests()
     {
         _orderRepositoryMock = new Mock<IOrderRepository>();
-        _handler = new GetOrderHandler(_orderRepositoryMock.Object);
+        _handler = new GetOrderQueryHandler(_orderRepositoryMock.Object);
     }
 
     [Fact]

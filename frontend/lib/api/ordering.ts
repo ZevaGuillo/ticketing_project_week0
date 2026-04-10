@@ -1,4 +1,4 @@
-import { API_CONFIG, RETRY_DELAY_MS, RETRY_ADD_TO_CART_ATTEMPTS } from "./config"
+import { API_CONFIG, RETRY_DELAY_MS, RETRY_ADD_TO_CART_ATTEMPTS, authHeaders } from "./config"
 import type {
   AddToCartRequest,
   AddToCartResponse,
@@ -13,13 +13,13 @@ function delay(ms: number) {
 export async function addToCart(
   data: AddToCartRequest
 ): Promise<AddToCartResponse> {
-  const url = `${API_CONFIG.ordering}/cart/add`
+  const url = `${API_CONFIG.gateway}${API_CONFIG.ordering}/cart/add`
   console.log(`[addToCart] Calling ${url}`, data)
   
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(data),
     })
     
@@ -44,7 +44,7 @@ export async function addToCart(
     console.error(`[addToCart] Network error:`, err)
     if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
       throw new Error(
-        `Failed to connect to Ordering service at ${API_CONFIG.ordering}. Make sure the service is running.`
+        `Failed to connect to API Gateway at ${API_CONFIG.gateway}. Make sure the service is running.`
       )
     }
     throw err
@@ -79,9 +79,9 @@ export async function addToCartWithRetry(
 }
 
 export async function checkout(data: CheckoutRequest): Promise<Order> {
-  const res = await fetch(`${API_CONFIG.ordering}/orders/checkout`, {
+  const res = await fetch(`${API_CONFIG.gateway}${API_CONFIG.ordering}/orders/checkout`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(data),
   })
   if (res.status === 404) {

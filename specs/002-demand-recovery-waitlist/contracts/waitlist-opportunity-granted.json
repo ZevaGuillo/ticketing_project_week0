@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Waitlist Opportunity Granted Event",
+  "description": "Event published when a user is selected from waitlist and granted a purchase opportunity",
+  "type": "object",
+  "properties": {
+    "opportunityId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique opportunity identifier"
+    },
+    "waitlistEntryId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Waitlist entry that triggered this opportunity"
+    },
+    "userId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "User being granted the opportunity"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Event identifier"
+    },
+    "seatId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Available seat identifier"
+    },
+    "section": {
+      "type": "string",
+      "description": "Seat section"
+    },
+    "opportunityTTL": {
+      "type": "integer",
+      "description": "TTL in seconds for the opportunity (600 = 10 minutes)"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the opportunity was created"
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "description": "SHA256 hash to prevent duplicate processing"
+    }
+  },
+  "required": [
+    "opportunityId",
+    "waitlistEntryId",
+    "userId",
+    "eventId",
+    "seatId",
+    "section",
+    "opportunityTTL",
+    "createdAt",
+    "idempotencyKey"
+  ],
+  "additionalProperties": false
+}

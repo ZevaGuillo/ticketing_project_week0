@@ -357,20 +357,16 @@ jobs:
           name: merged-coverage-report
           path: merged-coverage
 
-  sonar-scan-unified:
-    needs: [filter, generate-coverage-report]
-    if: always() && !cancelled()
-    name: "SonarCloud Unified Scan"
-    uses: ./.github/workflows/sonar-analysis.yml
-    with:
-      project_key: "JostinAlvaradoS_ticketing_project_week0"
-      organization: "jostinalvarados"
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Comment Coverage on PR
+        if: github.event_name == 'pull_request' && hashFiles('merged-coverage/SummaryGitHub.md') != ''
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-report
+          path: merged-coverage/SummaryGitHub.md
 
   trivy-scan-catalog:
-    needs: [filter, sonar-scan-unified]
-    if: needs.filter.outputs.catalog == 'true'
+    needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Catalog"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -378,8 +374,8 @@ jobs:
       dockerfile_path: "services/catalog/src/Catalog.Api/Dockerfile"
 
   trivy-scan-identity:
-    needs: [filter, sonar-scan-unified]
-    if: needs.filter.outputs.identity == 'true'
+    needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Identity"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -387,8 +383,8 @@ jobs:
       dockerfile_path: "services/identity/src/Identity.Api/Dockerfile"
 
   trivy-scan-fulfillment:
-    needs: [filter, sonar-scan-unified]
-    if: needs.filter.outputs.fulfillment == 'true'
+    needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Fulfillment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -396,8 +392,8 @@ jobs:
       dockerfile_path: "services/fulfillment/src/Fulfillment.Api/Dockerfile"
 
   trivy-scan-inventory:
-    needs: [filter, sonar-scan-unified]
-    if: needs.filter.outputs.inventory == 'true'
+    needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Inventory"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -405,8 +401,8 @@ jobs:
       dockerfile_path: "services/inventory/src/Inventory.Api/Dockerfile"
 
   trivy-scan-notification:
-    needs: [filter, sonar-scan-unified]
-    if: needs.filter.outputs.notification == 'true'
+    needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Notification"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -414,8 +410,8 @@ jobs:
       dockerfile_path: "services/notification/src/Notification.Api/Dockerfile"
 
   trivy-scan-ordering:
-    needs: [filter, sonar-scan-unified]
-    if: needs.filter.outputs.ordering == 'true'
+    needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Ordering"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -423,8 +419,8 @@ jobs:
       dockerfile_path: "services/ordering/src/Ordering.Api/Dockerfile"
 
   trivy-scan-payment:
-    needs: [filter, sonar-scan-unified]
-    if: needs.filter.outputs.payment == 'true'
+    needs: [generate-coverage-report]
+    if: always()
     name: "Security Scan: Payment"
     uses: ./.github/workflows/trivy-scan.yml
     with:
@@ -464,7 +460,7 @@ jobs:
         run: |
           docker compose -f infra/docker-compose.yml up -d
           echo "Waiting for services to be ready..."
-          sleep 45
+          sleep 60
           
       - name: Run System Quality Check
         run: bash system-quality-check.sh

@@ -14,8 +14,16 @@ import { createReservation } from "@/lib/api/inventory"
 import { processPayment } from "@/lib/api/payment"
 import { useAuth } from "@/context/auth-context"
 
-const CART_STORAGE_KEY = "ticketing_cart"
-const RESERVATIONS_STORAGE_KEY = "ticketing_reservations"
+const CART_STORAGE_KEY_PREFIX = "ticketing_cart_"
+const RESERVATIONS_STORAGE_KEY_PREFIX = "ticketing_reservations_"
+
+function cartStorageKey(userId: string) {
+  return `${CART_STORAGE_KEY_PREFIX}${userId}`
+}
+
+function reservationsStorageKey(userId: string) {
+  return `${RESERVATIONS_STORAGE_KEY_PREFIX}${userId}`
+}
 
 interface CartContextType {
   order: Order | null
@@ -24,7 +32,7 @@ interface CartContextType {
   isCheckingOut: boolean
   isProcessingPayment: boolean
   error: string | null
-  reserveSeatAndAddToCart: (seat: Seat) => Promise<void>
+  reserveSeatAndAddToCart: (seat: Seat, eventId: string, eventName?: string, opportunityToken?: string) => Promise<void>
   removeSeatFromCart: (seatId: string) => void
   isSeatInCart: (seatId: string) => boolean
   doCheckout: () => Promise<Order>
@@ -51,71 +59,88 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
 
-  // Hydrate from localStorage on mount
+  // Hydrate from user-scoped localStorage when userId changes
   useEffect(() => {
+    if (!userId) {
+      // No user logged in — clear cart state
+      setOrder(null)
+      setReservations([])
+      setIsHydrated(true)
+      return
+    }
+
     try {
-      const storedOrder = localStorage.getItem(CART_STORAGE_KEY)
-      const storedReservations = localStorage.getItem(RESERVATIONS_STORAGE_KEY)
+      const storedOrder = localStorage.getItem(cartStorageKey(userId))
+      const storedReservations = localStorage.getItem(reservationsStorageKey(userId))
 
       if (storedOrder) {
         const parsedOrder = JSON.parse(storedOrder)
         setOrder(parsedOrder)
-        console.log("[CartProvider] Loaded order from localStorage:", parsedOrder)
+        console.log("[CartProvider] Loaded order for user", userId, parsedOrder)
+      } else {
+        setOrder(null)
       }
 
       if (storedReservations) {
         const parsedReservations = JSON.parse(storedReservations)
         setReservations(parsedReservations)
-        console.log("[CartProvider] Loaded reservations from localStorage:", parsedReservations)
+        console.log("[CartProvider] Loaded reservations for user", userId, parsedReservations)
+      } else {
+        setReservations([])
       }
     } catch (err) {
       console.error("[CartProvider] Error loading from localStorage:", err)
+      setOrder(null)
+      setReservations([])
     }
     setIsHydrated(true)
-  }, [])
+  }, [userId])
 
-  // Persist order to localStorage whenever it changes
+  // Persist order to user-scoped localStorage whenever it changes
   useEffect(() => {
-    if (!isHydrated) return
+    if (!isHydrated || !userId) return
     try {
       if (order) {
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(order))
+        localStorage.setItem(cartStorageKey(userId), JSON.stringify(order))
       } else {
-        localStorage.removeItem(CART_STORAGE_KEY)
+        localStorage.removeItem(cartStorageKey(userId))
       }
     } catch (err) {
       console.error("[CartProvider] Error saving order to localStorage:", err)
     }
-  }, [order, isHydrated])
+  }, [order, isHydrated, userId])
 
-  // Persist reservations to localStorage whenever they change
+  // Persist reservations to user-scoped localStorage whenever they change
   useEffect(() => {
-    if (!isHydrated) return
+    if (!isHydrated || !userId) return
     try {
       if (reservations.length > 0) {
-        localStorage.setItem(RESERVATIONS_STORAGE_KEY, JSON.stringify(reservations))
+        localStorage.setItem(reservationsStorageKey(userId), JSON.stringify(reservations))
       } else {
-        localStorage.removeItem(RESERVATIONS_STORAGE_KEY)
+        localStorage.removeItem(reservationsStorageKey(userId))
       }
     } catch (err) {
       console.error("[CartProvider] Error saving reservations to localStorage:", err)
     }
-  }, [reservations, isHydrated])
+  }, [reservations, isHydrated, userId])
 
   const clearError = useCallback(() => setError(null), [])
   const clearCart = useCallback(() => {
     setOrder(null)
     setReservations([])
     setError(null)
-    localStorage.removeItem(CART_STORAGE_KEY)
-    localStorage.removeItem(RESERVATIONS_STORAGE_KEY)
+    if (userId) {
+      localStorage.removeItem(cartStorageKey(userId))
+      localStorage.removeItem(reservationsStorageKey(userId))
+    }
     console.log("[CartProvider] Cart cleared and localStorage cleaned")
-  }, [])
+  }, [userId])
 
   const reserveSeatAndAddToCart = useCallback(
-    async (seat: Seat) => {
-      // Step 0: Initial validation - remove restrictive auth check if we want to allow guest flow
-      // if (!userId) throw new Error("User not authenticated")
+    async (seat: Seat, eventId: string, eventName?: string, opportunityToken?: string) => {
+      if (!userId) {
+        throw new Error("Debes iniciar sesión para reservar asientos")
+      }
       
       // Check if seat is already in cart
       const seatAlreadyInCart = reservations.some(r => r.seatId === seat.id)
@@ -127,12 +152,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(null)
 
       try {
-        // Step 1: Create reservation
-        console.log(`[reserveSeatAndAddToCart] Creating reservation for seat ${seat.id}`)
+        // Step 1: Create reservation (with opportunity token if available)
+        console.log(`[reserveSeatAndAddToCart] Creating reservation for seat ${seat.id}`, opportunityToken ? `with opportunity token` : 'without token')
         const reservation = await createReservation({
           seatId: seat.id,
-          customerId: userId || "guest-user", // Fallback for guest
-        })
+          eventId: eventId,
+          customerId: userId,
+          opportunityToken
+        }, userId)
         console.log(`[reserveSeatAndAddToCart] Reservation created:`, reservation)
 
         const reservationInfo: ReservationInfo = {
@@ -152,6 +179,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           seatId: seat.id,
           price: seat.price,
           userId: userId || null, // Allow null for guest
+          eventName: eventName || null,
+          seatLabel: `${seat.sectionCode}${seat.rowNumber}-${seat.seatNumber}`,
         })
         console.log(`[reserveSeatAndAddToCart] Add to cart response:`, response)
 
@@ -215,8 +244,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     
     // If the cart becomes empty, clean up completely
-    if (reservations.length <= 1) {
-      localStorage.removeItem(RESERVATIONS_STORAGE_KEY)
+    if (reservations.length <= 1 && userId) {
+      localStorage.removeItem(reservationsStorageKey(userId))
     }
   }, [order, reservations])
 
@@ -235,7 +264,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Clear cart and reservations after successful checkout
       if (result && result.state && result.state !== "draft") {
         setReservations([])
-        localStorage.removeItem(RESERVATIONS_STORAGE_KEY)
+        if (userId) localStorage.removeItem(reservationsStorageKey(userId))
         console.log("[doCheckout] Cart reservations cleared after successful checkout")
       }
       
@@ -293,7 +322,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       // Clear cart and reservations after successful payment
       setReservations([])
-      localStorage.removeItem(RESERVATIONS_STORAGE_KEY)
+      if (userId) localStorage.removeItem(reservationsStorageKey(userId))
       console.log("[processOrderPayment] Cart cleared after successful payment")
       
       return updatedOrder

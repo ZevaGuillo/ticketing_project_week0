@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Identity Service API
   description: Authentication and token generation service for SpecKit Ticketing
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: SpecKit Team
 
@@ -13,7 +13,7 @@ servers:
     description: Production environment
 
 paths:
-  /token:
+  /auth/token:
     post:
       summary: Issue JWT token
       description: Authenticate user by email and password, return JWT token
@@ -62,17 +62,17 @@ paths:
                     format: email
                     description: Authenticated user email
         '400':
+          description: Email is required or invalid request body
+        '401':
           description: Invalid credentials
-        '500':
-          description: Internal server error
 
-  /users:
+  /auth/register:
     post:
-      summary: Create a new user
-      description: Register a new user with email and password
-      operationId: createUser
+      summary: Register a new user
+      description: Create a new user account with email, password, and optional role
+      operationId: registerUser
       tags:
-        - User Management
+        - Authentication
       requestBody:
         required: true
         content:
@@ -117,9 +117,7 @@ paths:
                     enum: [User, Admin]
                     description: User role
         '400':
-          description: Invalid request or user already exists
-        '500':
-          description: Internal server error
+          description: Invalid request, validation error, or user already exists
 
   /health:
     get:
@@ -138,9 +136,64 @@ paths:
                 properties:
                   status:
                     type: string
-                    enum: [healthy, unhealthy]
-        '503':
-          description: Service is unavailable
+                    example: healthy
+                  service:
+                    type: string
+                    example: identity
+
+  /auth/health:
+    get:
+      summary: Auth health check
+      description: Alternative health check endpoint for the auth subsystem
+      operationId: authHealthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: identity
+
+  /internal/users/{id}:
+    get:
+      summary: Get user by ID (internal)
+      description: Internal endpoint used by the gateway to resolve user details from JWT claims. Not exposed publicly.
+      operationId: getInternalUser
+      tags:
+        - Internal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User identifier
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                    format: email
+        '404':
+          description: User not found
 
 components:
   securitySchemes:
@@ -148,6 +201,3 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
-security:
-  - bearerAuth: []

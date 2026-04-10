@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddControllers();
 
         // Add MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Fulfillment.Application.UseCases.ProcessPaymentSucceeded.ProcessPaymentSucceededHandler).Assembly));
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Fulfillment.Application.UseCases.ProcessPaymentSucceeded.ProcessPaymentSucceededCommandHandler).Assembly));
 
         services.AddDbContext<FulfillmentDbContext>(options =>
         {
@@ -34,6 +34,12 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<IOrderingServiceClient, OrderingServiceClient>(client =>
         {
             var url = configuration["OrderingService:Url"] ?? "http://speckit-ordering:5003";
+            client.BaseAddress = new Uri(url);
+        });
+
+        services.AddHttpClient("identity", client =>
+        {
+            var url = configuration["IdentityService:BaseUrl"] ?? "http://identity:5001";
             client.BaseAddress = new Uri(url);
         });
         

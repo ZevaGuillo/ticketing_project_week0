@@ -331,4 +331,20 @@ public class AddToCartHandlerTests
         result.ErrorMessage.Should().Be("Seat already reserved");
         _orderRepositoryMock.Verify(x => x.GetDraftOrderAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_WithEmptyUserIdAndNoGuestToken_ShouldReturnFailure()
+    {
+        var command = new AddToCartCommand(
+            ReservationId: Guid.NewGuid(),
+            SeatId: Guid.NewGuid(),
+            Price: 99.99m,
+            UserId: null,
+            GuestToken: null);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Either UserId or GuestToken must be provided");
+    }
 }
