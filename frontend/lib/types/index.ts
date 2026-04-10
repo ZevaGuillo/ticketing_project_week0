@@ -22,7 +22,10 @@ export interface Seat {
 
 export interface CreateReservationRequest {
   seatId: string
+  eventId: string
   customerId: string
+  // Optional token for waitlist opportunities
+  opportunityToken?: string
 }
 
 export interface CreateReservationResponse {
@@ -41,6 +44,8 @@ export interface AddToCartRequest {
   price: number
   userId?: string | null
   guestToken?: string | null
+  eventName?: string | null
+  seatLabel?: string | null
 }
 
 // Server returns the Order directly, or wrapped in a success response

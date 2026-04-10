@@ -6,6 +6,7 @@ public interface IEmailNotificationRepository
 {
     Task<EmailNotification?> GetByIdAsync(Guid id);
     Task<EmailNotification?> GetByOrderIdAsync(Guid orderId);
+    Task<EmailNotification?> GetByOpportunityIdAsync(Guid opportunityId);
     Task<EmailNotification> AddAsync(EmailNotification notification);
     Task<EmailNotification> UpdateAsync(EmailNotification notification);
     Task<bool> SaveChangesAsync();

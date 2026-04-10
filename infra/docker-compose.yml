@@ -44,7 +44,6 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-    # Use Zookeeper 'ruok' command for a reliable health check
     healthcheck:
       test: ["CMD-SHELL", "bash -c \"echo ruok | nc -w 2 localhost 2181 | grep imok || exit 1\""]
       interval: 10s
@@ -94,6 +93,8 @@ services:
         kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic payment-succeeded &&
         kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic payment-failed &&
         kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic ticket-issued &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic seat-released &&
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 --topic waitlist-opportunity &&
         echo 'Topics created successfully!' &&
         kafka-topics --list --bootstrap-server kafka:9092
       "
@@ -126,18 +127,42 @@ services:
       "
     restart: "no"
 
-# Application services (built from repo for local development)
+  # API Gateway - exposed to external clients
+  gateway:
+    build:
+      context: ..
+      dockerfile: services/gateway/src/Gateway.Api/Dockerfile
+    container_name: speckit-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - Jwt__Key=dev-secret-key-minimum-32-chars-required-for-security
+      - Jwt__Issuer=SpecKit.Identity
+      - Jwt__Audience=SpecKit.Services
+    depends_on:
+      - identity
+      - catalog
+      - inventory
+      - ordering
+      - payment
+      - fulfillment
+
+  # Internal services - only accessible via gateway (no host ports exposed)
   identity:
     build:
       context: ..
       dockerfile: services/identity/src/Identity.Api/Dockerfile
     container_name: speckit-identity
-    ports:
-      - "50000:5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5001
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_identity;Include Error Detail=true
       - Kafka__BootstrapServers=kafka:9092
+      - Jwt__Key=dev-secret-key-minimum-32-chars-required-for-security
+      - Jwt__Issuer=SpecKit.Identity
+      - Jwt__Audience=SpecKit.Services
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,18 +175,19 @@ services:
       migrations:
         condition: service_completed_successfully
 
-
   catalog:
     build:
       context: ..
       dockerfile: services/catalog/src/Catalog.Api/Dockerfile
     container_name: speckit-catalog
-    ports:
-      - "50001:5001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5001
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_catalog;Include Error Detail=true
       - Kafka__BootstrapServers=kafka:9092
+      - Jwt__Key=dev-secret-key-minimum-32-chars-required-for-security
+      - Jwt__Issuer=SpecKit.Identity
+      - Jwt__Audience=SpecKit.Services
     depends_on:
       postgres:
         condition: service_healthy
@@ -177,10 +203,9 @@ services:
       context: ..
       dockerfile: services/inventory/src/Inventory.Api/Dockerfile
     container_name: speckit-inventory
-    ports:
-      - "50002:5002"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5002
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_inventory;Include Error Detail=true
       - ConnectionStrings__Redis=redis:6379
       - Kafka__BootstrapServers=kafka:9092
@@ -201,8 +226,6 @@ services:
       context: ..
       dockerfile: services/ordering/src/Ordering.Api/Dockerfile
     container_name: speckit-ordering
-    ports:
-      - "5003:5003"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5003
@@ -225,10 +248,9 @@ services:
       context: ..
       dockerfile: services/fulfillment/src/Fulfillment.Api/Dockerfile
     container_name: speckit-fulfillment
-    ports:
-      - "50004:5004"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5004
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_fulfillment;Include Error Detail=true
       - Kafka__BootstrapServers=kafka:9092
     depends_on:
@@ -244,16 +266,15 @@ services:
         condition: service_completed_successfully
     volumes:
       - fulfillment-data:/app/data/tickets
+
   payment:
     build:
       context: ..
       dockerfile: services/payment/src/Payment.Api/Dockerfile
     container_name: speckit-payment
-    ports:
-      - "5004:5004"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5004
+      - ASPNETCORE_URLS=http://+:5005
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_payment;Include Error Detail=true
       - Kafka__BootstrapServers=kafka:9092
     depends_on:
@@ -273,17 +294,21 @@ services:
       context: ..
       dockerfile: services/notification/src/Notification.Api/Dockerfile
     container_name: speckit-notification
-    ports:
-      - "50005:5005"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5005
+      - ASPNETCORE_URLS=http://+:5006
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres;SearchPath=bc_notification;Include Error Detail=true
       - Kafka__BootstrapServers=kafka:9092
-      - SmtpEmailOptions__UseDevMode=true
-      - SmtpEmailOptions__SmtpServer=localhost
-      - SmtpEmailOptions__SmtpPort=587
-      - SmtpEmailOptions__FromEmail=noreply@ticketing.local
+      - Email__Smtp__Host=smtp.gmail.com
+      - Email__Smtp__Port=587
+      - Email__Smtp__EnableSsl=true
+      - Email__Smtp__UseDevMode=${SMTP_DEV_MODE:-false}
+      - Email__Smtp__FromAddress=${GMAIL_USER}
+      - Email__Smtp__FromName=Ticketing Platform
+      - Email__Smtp__Username=${GMAIL_USER}
+      - Email__Smtp__Password=${GMAIL_APP_PASSWORD}
+      - IdentityService__BaseUrl=http://identity:5001
+      - CatalogService__BaseUrl=http://catalog:5001
     depends_on:
       postgres:
         condition: service_healthy
@@ -294,12 +319,6 @@ services:
       migrations:
         condition: service_completed_successfully
 
-# Useful environment variables (for .NET apps or local dev use)
-# Use these values when configuring your services' connection strings.
-# Example POSTGRES_URL: Host=postgres;Port=5432;Database=ticketing;Username=postgres;Password=postgres
-# Example REDIS_URL: redis:6379
-# Example KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-
 networks:
   default:
     name: speckit-net
@@ -307,15 +326,3 @@ networks:
 volumes:
   postgres-data:
   fulfillment-data:
-
-# Notes:
-# - This compose file is targeted for local development only.
-# - Postgres data is mounted at ./data/postgres so it persists between restarts.
-# - Healthchecks use simple TCP or client commands; adjust per your environment.
-
-
-
-
-
-
-

@@ -12,6 +12,43 @@ Verify all services are healthy:
 docker compose ps
 ```
 
+## Architecture Overview
+
+```
+                                    ┌─────────────────┐
+                                    │   Frontend      │
+                                    │  (localhost:3000)│
+                                    └────────┬────────┘
+                                             │
+                                    ┌────────▼────────┐
+                                    │    Gateway      │
+                                    │ (localhost:5000) │◄── Only exposed port
+                                    │   (YARP)        │
+                                    └────────┬────────┘
+                                             │
+                    ┌────────────────────────┼────────────────────────┐
+                    │                        │                        │
+           ┌────────▼────────┐     ┌────────▼────────┐     ┌────────▼────────┐
+           │     Identity     │     │     Catalog      │     │    Inventory    │
+           │  (internal:5001)  │     │  (internal:5001) │     │  (internal:5002) │
+           └───────────────────┘     └───────────────────┘     └───────────────────┘
+                    │                                                         │
+           ┌────────▼────────┐                                       ┌────────▼────────┐
+           │     Ordering     │                                       │    Payment      │
+           │  (internal:5003) │                                       │  (internal:5005) │
+           └───────────────────┘                                       └───────────────────┘
+                    │
+           ┌────────▼────────┐
+           │   Fulfillment    │
+           │  (internal:5004) │
+           └───────────────────┘
+```
+
+**Network Model:**
+- Gateway is the **only exposed service** (port 5000)
+- All backend services communicate internally via Docker DNS
+- No direct access to internal services from outside
+
 ## Smoke Test
 
 Run the infrastructure smoke test to verify all services are running:
@@ -26,7 +63,7 @@ This script verifies:
 - ✓ PostgreSQL is responding
 - ✓ Redis is responding
 - ✓ Kafka broker is responding
-- ✓ Identity Service health endpoint (if running)
+- ✓ Gateway health endpoint (if running)
 
 ## PostgreSQL Connection String
 
@@ -59,37 +96,34 @@ optionsBuilder.UseNpgsql(connectionString);
 | `bc_fulfillment` | Fulfillment | Ticket generation & PDF storage |
 | `bc_notification` | Notification | Notification state & delivery logs |
 
-## Database Roles (Recommended Setup)
-
-For production-like environments, create roles per schema:
-
-```sql
--- Connect to PostgreSQL and run:
-CREATE ROLE bc_identity_user WITH LOGIN PASSWORD 'identity_password';
-CREATE ROLE bc_catalog_user WITH LOGIN PASSWORD 'catalog_password';
-CREATE ROLE bc_inventory_user WITH LOGIN PASSWORD 'inventory_password';
-CREATE ROLE bc_ordering_user WITH LOGIN PASSWORD 'ordering_password';
-CREATE ROLE bc_payment_user WITH LOGIN PASSWORD 'payment_password';
-CREATE ROLE bc_fulfillment_user WITH LOGIN PASSWORD 'fulfillment_password';
-CREATE ROLE bc_notification_user WITH LOGIN PASSWORD 'notification_password';
-
--- Grant schema privileges
-GRANT USAGE ON SCHEMA bc_identity TO bc_identity_user;
-GRANT CREATE ON SCHEMA bc_identity TO bc_identity_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA bc_identity TO bc_identity_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA bc_identity TO bc_identity_user;
-
--- Repeat for each schema...
-```
-
 ## Services & Ports
 
-| Service | Port | Role |
-|---------|------|------|
-| PostgreSQL | 5432 | Single database, multi-schema |
-| Redis | 6379 | Distributed locks, reservation cache |
-| Zookeeper | 2181 | Kafka coordination |
-| Kafka Broker | 9092 | Event streaming (localhost for dev) |
+| Service | Port | Exposure |
+|--------|------|----------|
+| **Gateway** | 5000 | **Public** (YARP reverse proxy) |
+| PostgreSQL | 5432 | Internal only |
+| Redis | 6379 | Internal only |
+| Zookeeper | 2181 | Internal only |
+| Kafka Broker | 9092 | Internal only |
+| Identity | 5001 | Internal (via gateway) |
+| Catalog | 5001 | Internal (via gateway) |
+| Inventory | 5002 | Internal (via gateway) |
+| Ordering | 5003 | Internal (via gateway) |
+| Payment | 5005 | Internal (via gateway) |
+| Fulfillment | 5004 | Internal (via gateway) |
+| Notification | 5006 | Internal (via gateway) |
+
+## Gateway Routes
+
+| Path | Backend Service | Auth Required |
+|------|----------------|--------------|
+| `/auth/*` | Identity | No |
+| `/catalog/*` | Catalog | No |
+| `/inventory/*` | Inventory | Yes (JWT) |
+| `/ordering/*` | Ordering | Yes (JWT) |
+| `/payment/*` | Payment | Yes (JWT) |
+| `/fulfillment/*` | Fulfillment | Yes (JWT) |
+| `/admin/*` | Various | Yes (Admin role) |
 
 ## Migration & Schema Initialization
 
@@ -109,7 +143,6 @@ dotnet ef database update
 ```bash
 docker compose down
 # Preserve volumes:
-
 
 docker compose down
 # Remove all data:
@@ -133,6 +166,12 @@ docker exec speckit-redis redis-cli ping
 ```bash
 docker compose logs kafka
 docker compose logs zookeeper
+```
+
+**Gateway routing issues:**
+```bash
+docker compose logs gateway
+# Check YARP configuration in appsettings.json
 ```
 
 **Reset all data:**

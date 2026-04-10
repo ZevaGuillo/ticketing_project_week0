@@ -79,7 +79,7 @@ jobs:
 
       - name: Apply Database Migrations (Strict Validation)
         run: |
-          cd /Users/jostinalvarados/Dev/Sofka/ticketing_project_week0
+          cd $GITHUB_WORKSPACE
           chmod +x migrate-all-test.sh
           
           # Export explicit connection string for migrations
@@ -121,7 +121,7 @@ jobs:
 
       - name: Run E2E System Test
         run: |
-          cd /Users/jostinalvarados/Dev/Sofka/ticketing_project_week0
+          cd $GITHUB_WORKSPACE
           chmod +x system-e2e-test.sh
           bash ./system-e2e-test.sh || {
             echo "[E2E FAILED] Test execution failed"

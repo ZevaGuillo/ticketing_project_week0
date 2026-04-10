@@ -52,6 +52,18 @@ public class TicketIssuedEvent
     [JsonPropertyName("seat_number")]
     public string SeatNumber { get; set; } = string.Empty;
 
+    [JsonPropertyName("price")]
+    public decimal Price { get; set; }
+
+    [JsonPropertyName("currency")]
+    public string Currency { get; set; } = "USD";
+
+    [JsonPropertyName("issued_at")]
+    public DateTime IssuedAt { get; set; }
+
+    [JsonPropertyName("qr_code_data")]
+    public string QrCodeData { get; set; } = string.Empty;
+
     [JsonPropertyName("timestamp")]
     public DateTime Timestamp { get; set; }
 }

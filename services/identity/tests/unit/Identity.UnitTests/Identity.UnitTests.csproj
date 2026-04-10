@@ -27,6 +27,7 @@
     <ProjectReference Include="../../../src/Identity.Domain/Identity.Domain.csproj" />
     <ProjectReference Include="../../../src/Identity.Application/Identity.Application.csproj" />
     <ProjectReference Include="../../../src/Identity.Infrastructure/Identity.Infrastructure.csproj" />
+    <ProjectReference Include="../../Common/Identity.Tests.Common.csproj" />
   </ItemGroup>
 
 </Project>

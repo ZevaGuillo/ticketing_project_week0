@@ -1,11 +1,14 @@
+using Inventory.Infrastructure;
+using Inventory.Infrastructure.Configuration;
+using Inventory.Infrastructure.Locking;
+using Inventory.Infrastructure.Messaging;
+using Inventory.Infrastructure.Messaging.Strategies;
+using Inventory.Infrastructure.Persistence;
+using Inventory.Domain.Ports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Inventory.Domain.Ports;
-using Inventory.Infrastructure.Persistence;
-using Inventory.Infrastructure.Locking;
-using Inventory.Infrastructure.Messaging;
-using Inventory.Infrastructure.Consumers;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Confluent.Kafka;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +19,32 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        // Configure Reservation settings
+        services.AddSingleton<ReservationSettings>(sp =>
+        {
+            var options = new ReservationSettings();
+            configuration.GetSection("Reservation").Bind(options);
+            var envValue = Environment.GetEnvironmentVariable("Reservation__TTLMinutes");
+            if (int.TryParse(envValue, out var ttlMinutes) && ttlMinutes > 0)
+            {
+                options.TTLMinutes = ttlMinutes;
+            }
+            return options;
+        });
+
+        // Configure Waitlist settings
+        services.AddSingleton<WaitlistSettings>(sp =>
+        {
+            var options = new WaitlistSettings();
+            configuration.GetSection("Waitlist").Bind(options);
+            var envValue = Environment.GetEnvironmentVariable("Waitlist__OpportunityTTLMinutes");
+            if (int.TryParse(envValue, out var ttlMinutes) && ttlMinutes > 0)
+            {
+                options.OpportunityTTLMinutes = ttlMinutes;
+            }
+            return options;
+        });
+        
         services.AddDbContext<InventoryDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("Default"), 
@@ -30,6 +59,10 @@ public static class ServiceCollectionExtensions
         // Lazy registration for Redis to avoid connection on EF build
         services.AddSingleton<IConnectionMultiplexer>(sp => ConnectionMultiplexer.Connect(redisConn));
         services.AddScoped<IRedisLock, RedisLock>();
+        services.AddScoped<WaitlistRedisConfiguration>();
+        services.AddScoped<IReservationRepository, ReservationRepository>();
+        services.AddScoped<IWaitlistRepository, WaitlistRepository>();
+        services.AddScoped<IOpportunityWindowRepository, OpportunityWindowRepository>();
 
         // Configure Kafka producer
         var kafkaBootstrapServers = configuration.GetConnectionString("Kafka") ?? configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
@@ -43,8 +76,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new ProducerBuilder<string?, string>(kafkaConfig).Build());
         services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
-        // Register inventory event consumer
-        services.AddHostedService<Inventory.Infrastructure.Messaging.InventoryEventConsumer>();
+        // Kafka event strategies (Strategy pattern)
+        services.AddScoped<IInventoryEventStrategy, PaymentSucceededStrategy>();
+        services.AddScoped<IInventoryEventStrategy, PaymentFailedStrategy>();
+        services.AddScoped<IInventoryEventStrategy, ReservationExpiredStrategy>();
+        services.AddScoped<IInventoryEventStrategy, SeatReleasedInventoryStrategy>();
+        services.AddScoped<IInventoryEventStrategy, SeatsGeneratedStrategy>();
+
+        // Unified Kafka consumer — dispatches to strategies by topic
+        services.AddHostedService<InventoryEventConsumer>();
 
         // Register expiry worker as hosted service (optional in tests)
         services.AddSingleton<IHostedService, Inventory.Infrastructure.Workers.ReservationExpiryWorker>(sp =>
@@ -54,21 +94,16 @@ public static class ServiceCollectionExtensions
             return new Inventory.Infrastructure.Workers.ReservationExpiryWorker(scopeFactory, kafka);
         });
 
-        // Register seats-generated Kafka consumer as hosted service
-        var consumerConfig = new ConsumerConfig
-        {
-            BootstrapServers = kafkaBootstrapServers,
-            GroupId = "inventory-seats-consumer",
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
-        };
-        
-        services.AddSingleton<IHostedService, SeatsGeneratedConsumer>(sp =>
+        // Register opportunity expiry worker for waitlist re-selection
+        services.AddSingleton<IHostedService, Inventory.Infrastructure.Workers.OpportunityExpiryWorker>(sp =>
         {
             var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-            var consumer = new ConsumerBuilder<string?, string>(consumerConfig).Build();
-            return new SeatsGeneratedConsumer(scopeFactory, consumer);
+            var kafka = sp.GetRequiredService<IKafkaProducer>();
+            var logger = sp.GetRequiredService<ILogger<Inventory.Infrastructure.Workers.OpportunityExpiryWorker>>();
+            var waitlistSettings = sp.GetRequiredService<WaitlistSettings>();
+            return new Inventory.Infrastructure.Workers.OpportunityExpiryWorker(scopeFactory, kafka, logger, waitlistSettings);
         });
+
 
         return services;
     }

@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
   title: Inventory Service API
-  description: Seat reservation and inventory management service
-  version: 1.0.0
+  description: Seat reservation, inventory management, and waitlist service
+  version: 1.1.0
   contact:
     name: SpecKit Team
 
@@ -20,6 +20,14 @@ paths:
       operationId: createReservation
       tags:
         - Inventory
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Authenticated user identifier. Optional for guest reservations.
       requestBody:
         required: true
         content:
@@ -36,10 +44,10 @@ paths:
                 customerId:
                   type: string
                   format: uuid
+                  description: Optional; derived from X-User-Id header when authenticated
               required:
                 - eventId
                 - seatId
-                - customerId
       responses:
         '201':
           description: Reservation created successfully
@@ -60,12 +68,12 @@ paths:
                   status:
                     type: string
                     enum: [active, expired, confirmed]
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: Seat or event not found
         '409':
           description: Seat already reserved
-        '422':
-          description: Version conflict (seat changed)
-        '500':
-          description: Internal server error
 
   /reservations/{reservationId}:
     get:
@@ -86,6 +94,257 @@ paths:
         '404':
           description: Reservation not found
 
+  /api/waitlist/join:
+    post:
+      summary: Join waitlist
+      description: Register user in waitlist for a specific event and section when no seats are available
+      operationId: joinWaitlist
+      tags:
+        - Waitlist
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                eventId:
+                  type: string
+                  format: uuid
+                section:
+                  type: string
+              required:
+                - eventId
+                - section
+      responses:
+        '201':
+          description: Successfully joined waitlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventId:
+                    type: string
+                    format: uuid
+                  section:
+                    type: string
+                  position:
+                    type: integer
+                  status:
+                    type: string
+                    enum: [ACTIVE, NOTIFIED, CONSUMED, CANCELLED]
+                  joinedAt:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid request parameters
+        '409':
+          description: User already in waitlist
+
+  /api/waitlist/status:
+    get:
+      summary: Get waitlist status
+      description: Check user's position and status in waitlist
+      operationId: getWaitlistStatus
+      tags:
+        - Waitlist
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User identifier
+        - name: eventId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Waitlist status found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventId:
+                    type: string
+                    format: uuid
+                  section:
+                    type: string
+                  position:
+                    type: integer
+                  status:
+                    type: string
+                    enum: [ACTIVE, NOTIFIED, CONSUMED, CANCELLED]
+                  joinedAt:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: User not in waitlist
+
+  /api/waitlist/opportunity/{token}:
+    get:
+      summary: Validate opportunity
+      description: Validate opportunity token and create reservation (called from frontend)
+      operationId: validateOpportunity
+      tags:
+        - Waitlist
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Opportunity token from notification
+      responses:
+        '200':
+          description: Opportunity valid, reservation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  opportunityId:
+                    type: string
+                    format: uuid
+                  eventId:
+                    type: string
+                    format: uuid
+                  section:
+                    type: string
+                  seatId:
+                    type: string
+                    format: uuid
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  reservationId:
+                    type: string
+                    format: uuid
+        '400':
+          description: Opportunity expired or already used
+        '404':
+          description: Invalid token
+
+  /api/waitlist/cancel:
+    delete:
+      summary: Cancel waitlist
+      description: Remove user from waitlist
+      operationId: cancelWaitlist
+      tags:
+        - Waitlist
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User identifier
+        - name: eventId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully removed from waitlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: User not in waitlist
+
+  /api/waitlist/my-opportunities:
+    get:
+      summary: Get user opportunities
+      description: Get all active opportunity windows for a user
+      operationId: getUserOpportunities
+      tags:
+        - Waitlist
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User identifier
+        - name: eventId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of active opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    opportunityId:
+                      type: string
+                      format: uuid
+                    eventId:
+                      type: string
+                      format: uuid
+                    section:
+                      type: string
+                    seatId:
+                      type: string
+                      format: uuid
+                    status:
+                      type: string
+                      enum: [OFFERED, IN_PROGRESS, USED, EXPIRED]
+                    expiresAt:
+                      type: string
+                      format: date-time
+                    createdAt:
+                      type: string
+                      format: date-time
+        '400':
+          description: Invalid request parameters
+
   /health:
     get:
       summary: Health check
@@ -95,6 +354,14 @@ paths:
       responses:
         '200':
           description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
 
 components:
   securitySchemes:

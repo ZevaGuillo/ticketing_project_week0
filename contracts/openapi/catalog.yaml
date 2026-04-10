@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
   title: Catalog Service API
-  description: Read-side service for event and seat information
-  version: 1.0.0
+  description: Read-side service for event and seat information, including admin management
+  version: 1.1.0
   contact:
     name: SpecKit Team
 
@@ -13,6 +13,52 @@ servers:
     description: Production environment
 
 paths:
+  /events:
+    get:
+      summary: Get all events
+      description: Retrieve a list of all active events
+      operationId: getAllEvents
+      tags:
+        - Catalog
+      responses:
+        '200':
+          description: List of events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventSummary'
+        '500':
+          description: Internal server error
+
+  /events/{eventId}:
+    get:
+      summary: Get event by ID
+      description: Retrieve full details for a single event
+      operationId: getEventById
+      tags:
+        - Catalog
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Event identifier
+      responses:
+        '200':
+          description: Event retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '404':
+          description: Event not found
+        '500':
+          description: Internal server error
+
   /events/{eventId}/seatmap:
     get:
       summary: Get event seatmap
@@ -64,6 +110,199 @@ paths:
         '500':
           description: Internal server error
 
+  /admin/events:
+    post:
+      summary: Create a new event
+      description: Admin endpoint to create a new event with venue and capacity details
+      operationId: createEvent
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Rock Concert 2026
+                description:
+                  type: string
+                  example: The biggest rock concert of the year
+                eventDate:
+                  type: string
+                  format: date-time
+                venue:
+                  type: string
+                  example: Luna Park
+                maxCapacity:
+                  type: integer
+                  example: 5000
+                basePrice:
+                  type: number
+                  format: decimal
+                  example: 1500.00
+              required:
+                - name
+                - eventDate
+                - venue
+                - maxCapacity
+                - basePrice
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '400':
+          description: Invalid request
+        '500':
+          description: Internal server error
+
+  /admin/events/{eventId}:
+    put:
+      summary: Update an event
+      description: Admin endpoint to update event name, description or capacity
+      operationId: updateEvent
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                maxCapacity:
+                  type: integer
+      responses:
+        '200':
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+        '400':
+          description: Invalid request
+        '404':
+          description: Event not found
+
+  /admin/events/{eventId}/seats:
+    post:
+      summary: Generate seats for an event
+      description: Admin endpoint to generate seats for an event with section configurations
+      operationId: generateSeats
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sectionConfigurations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      section:
+                        type: string
+                        example: VIP
+                      rowCount:
+                        type: integer
+                        example: 5
+                      seatsPerRow:
+                        type: integer
+                        example: 10
+                      price:
+                        type: number
+                        format: decimal
+                        example: 3000.00
+              required:
+                - sectionConfigurations
+      responses:
+        '200':
+          description: Seats generated successfully
+        '400':
+          description: Invalid request
+        '404':
+          description: Event not found
+
+  /admin/events/{eventId}/deactivate:
+    post:
+      summary: Deactivate an event
+      description: Admin endpoint to deactivate an event, making it unavailable for purchase
+      operationId: deactivateEvent
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event deactivated successfully
+        '400':
+          description: Event already inactive or invalid state
+        '404':
+          description: Event not found
+
+  /admin/events/{eventId}/reactivate:
+    post:
+      summary: Reactivate an event
+      description: Admin endpoint to reactivate a previously deactivated event
+      operationId: reactivateEvent
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event reactivated successfully
+        '400':
+          description: Event already active or invalid state
+        '404':
+          description: Event not found
+
   /health:
     get:
       summary: Health check
@@ -73,6 +312,14 @@ paths:
       responses:
         '200':
           description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
 
 components:
   securitySchemes:
@@ -81,5 +328,50 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
-security:
-  - bearerAuth: []
+  schemas:
+    EventSummary:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        venue:
+          type: string
+        maxCapacity:
+          type: integer
+        basePrice:
+          type: number
+          format: decimal
+        isActive:
+          type: boolean
+
+    EventDetail:
+      allOf:
+        - $ref: '#/components/schemas/EventSummary'
+        - type: object
+          properties:
+            seats:
+              type: array
+              items:
+                type: object
+                properties:
+                  seatId:
+                    type: string
+                    format: uuid
+                  seatNumber:
+                    type: string
+                  section:
+                    type: string
+                  basePrice:
+                    type: number
+                    format: decimal
+                  status:
+                    type: string
+                    enum: [available, reserved, sold]

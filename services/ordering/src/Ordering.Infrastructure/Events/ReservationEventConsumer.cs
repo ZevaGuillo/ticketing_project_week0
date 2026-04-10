@@ -1,22 +1,22 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Ordering.Infrastructure.Events.Strategies;
 
 namespace Ordering.Infrastructure.Events;
 
 /// <summary>
 /// Background service that consumes reservation events from Kafka.
+/// Dispatches each message to the registered <see cref="IOrderingEventStrategy"/> for its topic.
 /// </summary>
 public class ReservationEventConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ReservationEventConsumer> _logger;
     private readonly KafkaOptions _kafkaOptions;
-    private readonly JsonSerializerOptions _jsonOptions;
 
     public ReservationEventConsumer(
         IServiceProvider serviceProvider,
@@ -26,11 +26,6 @@ public class ReservationEventConsumer : BackgroundService
         _serviceProvider = serviceProvider;
         _logger = logger;
         _kafkaOptions = kafkaOptions.Value;
-        
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -58,24 +53,25 @@ public class ReservationEventConsumer : BackgroundService
             catch (Exception ex)
             {
                 retryCount++;
-                _logger.LogWarning(ex, "Kafka consumer error (attempt {RetryCount}/{MaxRetries}). Retrying in {DelayMs}ms...", 
+                _logger.LogWarning(ex, "Kafka consumer error (attempt {RetryCount}/{MaxRetries}). Retrying in {DelayMs}ms...",
                     retryCount, maxRetries, retryDelayMs);
-                
+
                 if (retryCount < maxRetries)
-                {
                     await Task.Delay(retryDelayMs, stoppingToken);
-                }
             }
         }
 
         if (retryCount >= maxRetries)
-        {
             _logger.LogError("Kafka consumer failed after {MaxRetries} attempts. Shutting down.", maxRetries);
-        }
     }
 
     private async Task ConsumeMessagesAsync(CancellationToken stoppingToken)
     {
+        using var scope = _serviceProvider.CreateScope();
+        var strategies = scope.ServiceProvider
+            .GetRequiredService<IEnumerable<IOrderingEventStrategy>>()
+            .ToDictionary(s => s.Topic);
+
         var config = new ConsumerConfig
         {
             BootstrapServers = _kafkaOptions.BootstrapServers,
@@ -93,8 +89,8 @@ public class ReservationEventConsumer : BackgroundService
 
         try
         {
-            consumer.Subscribe(new[] { "reservation-created", "reservation-expired", "payment-succeeded" });
-            _logger.LogInformation("Started consuming reservation and payment events from Kafka topics");
+            consumer.Subscribe(strategies.Keys);
+            _logger.LogInformation("Started consuming events from Kafka topics: {Topics}", string.Join(", ", strategies.Keys));
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -104,28 +100,14 @@ public class ReservationEventConsumer : BackgroundService
                     // Se identificó deuda técnica: se recomienda migrar a Polly para manejar
                     // reintentos con Exponential Backoff y Circuit Breaker.
                     var consumeResult = consumer.Consume(stoppingToken);
-                    
+
                     if (consumeResult?.Message?.Value != null)
-                    {
-                        await ProcessMessage(consumeResult.Topic, consumeResult.Message.Value, stoppingToken);
-                    }
+                        await DispatchAsync(consumeResult.Topic, consumeResult.Message.Value, strategies, stoppingToken);
                 }
-                catch (ConsumeException ex)
-                {
-                    _logger.LogError(ex, "Error consuming Kafka message");
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex, "Error deserializing Kafka message");
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Unexpected error processing Kafka message");
-                }
+                catch (ConsumeException ex) { _logger.LogError(ex, "Error consuming Kafka message"); }
+                catch (JsonException ex) { _logger.LogError(ex, "Error deserializing Kafka message"); }
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex) { _logger.LogError(ex, "Unexpected error processing Kafka message"); }
             }
         }
         catch (Exception ex)
@@ -140,74 +122,27 @@ public class ReservationEventConsumer : BackgroundService
         }
     }
 
-    private async Task ProcessMessage(string topic, string messageValue, CancellationToken cancellationToken)
+    private async Task DispatchAsync(
+        string topic,
+        string message,
+        Dictionary<string, IOrderingEventStrategy> strategies,
+        CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var reservationStore = scope.ServiceProvider.GetRequiredService<ReservationStore>();
-
-        switch (topic)
+        if (!strategies.TryGetValue(topic, out var strategy))
         {
-            case "reservation-created":
-                var createdEvent = JsonSerializer.Deserialize<ReservationCreatedEvent>(messageValue, _jsonOptions);
-                
-                if (createdEvent != null)
-                {
-                    reservationStore.AddReservation(createdEvent);
-                    _logger.LogInformation("Processed reservation-created event for reservation {ReservationId}", 
-                        createdEvent.ReservationId);
-                }
-                break;
-
-            case "reservation-expired":
-                var expiredEvent = JsonSerializer.Deserialize<ReservationExpiredEvent>(messageValue, _jsonOptions);
-                
-                if (expiredEvent != null)
-                {
-                    reservationStore.RemoveReservation(expiredEvent);
-                    _logger.LogInformation("Processed reservation-expired event for reservation {ReservationId}", 
-                        expiredEvent.ReservationId);
-                }
-                break;
-
-            case "payment-succeeded":
-                var paymentEvent = JsonSerializer.Deserialize<PaymentSucceededEvent>(messageValue, _jsonOptions);
-                if (paymentEvent != null && Guid.TryParse(paymentEvent.OrderId, out var orderId))
-                {
-                    var orderRepo = scope.ServiceProvider.GetRequiredService<Ordering.Application.Ports.IOrderRepository>();
-                    var order = await orderRepo.GetByIdAsync(orderId, cancellationToken);
-                    if (order != null)
-                    {
-                        order.State = "paid";
-                        order.PaidAt = DateTime.UtcNow;
-                        await orderRepo.UpdateAsync(order, cancellationToken);
-                        _logger.LogInformation("Order {OrderId} updated to State: PAID", orderId);
-                    }
-                }
-                break;
-
-            default:
-                _logger.LogWarning("Unknown topic: {Topic}", topic);
-                break;
+            _logger.LogWarning("No strategy registered for topic '{Topic}'", topic);
+            return;
         }
 
-        await Task.CompletedTask;
+        using var scope = _serviceProvider.CreateScope();
+        try
+        {
+            var root = JsonDocument.Parse(message).RootElement;
+            await strategy.HandleAsync(root, scope, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing event for topic '{Topic}'", topic);
+        }
     }
-
-    private class PaymentSucceededEvent
-    {
-        [JsonPropertyName("orderId")]
-        public string OrderId { get; set; } = string.Empty;
-    }
-}
-
-/// <summary>
-/// Configuration options for Kafka.
-/// </summary>
-public class KafkaOptions
-{
-    public const string Section = "Kafka";
-    
-    public string BootstrapServers { get; set; } = "localhost:9092";
-    public string ConsumerGroupId { get; set; } = "ordering-service";
-    public bool EnableConsumer { get; set; } = true;
 }

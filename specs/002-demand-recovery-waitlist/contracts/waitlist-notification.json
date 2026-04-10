@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Waitlist Notification Event",
+  "description": "Event published when a user is selected from waitlist and notified of available seat",
+  "type": "object",
+  "properties": {
+    "notificationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique notification identifier"
+    },
+    "waitlistEntryId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Waitlist entry that triggered this notification"
+    },
+    "userId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "User being notified"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Event identifier"
+    },
+    "seatId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Available seat identifier"
+    },
+    "section": {
+      "type": "string",
+      "description": "Seat section"
+    },
+    "notifiedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the notification was sent"
+    },
+    "opportunityExpiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the purchase opportunity expires"
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "description": "SHA256 hash to prevent duplicate notifications"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["sent", "failed", "clicked", "expired"],
+      "description": "Notification delivery status"
+    }
+  },
+  "required": [
+    "notificationId",
+    "waitlistEntryId",
+    "userId",
+    "eventId",
+    "seatId",
+    "notifiedAt",
+    "opportunityExpiresAt",
+    "idempotencyKey",
+    "status"
+  ],
+  "additionalProperties": false
+}

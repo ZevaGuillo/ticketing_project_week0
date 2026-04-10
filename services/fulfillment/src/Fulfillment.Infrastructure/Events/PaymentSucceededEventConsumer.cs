@@ -3,7 +3,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Fulfillment.Application.Ports;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Fulfillment.Domain.Entities;
 
@@ -11,6 +13,7 @@ namespace Fulfillment.Infrastructure.Events;
 
 public class PaymentSucceededEventConsumer : BackgroundService
 {
+    private static readonly JsonSerializerOptions CamelCaseOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly IConsumer<string, string> _consumer;
     private readonly KafkaOptions _kafkaOptions;
     private readonly IServiceProvider _serviceProvider;
@@ -58,7 +61,7 @@ public class PaymentSucceededEventConsumer : BackgroundService
                 {
                     var paymentEvent = JsonSerializer.Deserialize<PaymentSucceededEvent>(
                         consumeResult.Message.Value,
-                        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                        CamelCaseOptions);
 
                     if (paymentEvent == null)
                     {
@@ -88,12 +91,37 @@ public class PaymentSucceededEventConsumer : BackgroundService
                             continue;
                         }
 
+                        // Resolve customer email: if the stored value is a UUID (no @), call Identity
+                        var customerEmail = orderDetails.CustomerEmail;
+                        if (!customerEmail.Contains('@'))
+                        {
+                            try
+                            {
+                                var httpFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
+                                var identityClient = httpFactory.CreateClient("identity");
+                                var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                                var identityBase = config["IdentityService:BaseUrl"] ?? "http://identity:5001";
+                                var resp = await identityClient.GetAsync($"{identityBase}/internal/users/{customerEmail}");
+                                if (resp.IsSuccessStatusCode)
+                                {
+                                    var userInfo = await resp.Content.ReadFromJsonAsync<IdentityUserResult>(
+                                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                                    if (userInfo?.Email != null)
+                                        customerEmail = userInfo.Email;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Could not resolve email from Identity for userId {UserId}", customerEmail);
+                            }
+                        }
+
                         // Create new ticket entity with enriched data
                         var ticket = new Ticket
                         {
                             Id = Guid.NewGuid(),
                             OrderId = orderDetails.OrderId,
-                            CustomerEmail = orderDetails.CustomerEmail,
+                            CustomerEmail = customerEmail,
                             EventName = orderDetails.EventName,
                             SeatNumber = orderDetails.SeatNumber,
                             Price = orderDetails.Price,
@@ -123,15 +151,22 @@ public class PaymentSucceededEventConsumer : BackgroundService
                             // Save ticket to database
                             await ticketRepository.CreateAsync(ticket);
 
+                            var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                            var gatewayBaseUrl = config["Gateway:BaseUrl"] ?? "http://gateway:5000";
+
                             // Publish ticket-issued event
                             var ticketEvent = new TicketIssuedEvent
                             {
                                 OrderId = ticket.OrderId,
                                 TicketId = ticket.Id,
                                 CustomerEmail = ticket.CustomerEmail,
-                                TicketPdfUrl = $"/tickets/{pdfPath}",
+                                TicketPdfUrl = $"{gatewayBaseUrl}/fulfillment/tickets/{ticket.Id}",
                                 EventName = ticket.EventName,
                                 SeatNumber = ticket.SeatNumber,
+                                Price = ticket.Price,
+                                Currency = ticket.Currency,
+                                IssuedAt = ticket.GeneratedAt,
+                                QrCodeData = ticket.QrCodeData,
                                 Timestamp = DateTime.UtcNow
                             };
 
@@ -168,3 +203,5 @@ public class PaymentSucceededEventConsumer : BackgroundService
         }
     }
 }
+
+internal record IdentityUserResult(Guid UserId, string Email);

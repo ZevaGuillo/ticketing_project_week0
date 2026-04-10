@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-
-// This should match your Identity Service endpoint
-const IDENTITY_SERVICE_URL = process.env.IDENTITY_SERVICE_URL || "http://localhost:50000"
+import { API_CONFIG } from "@/lib/api/config"
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,44 +13,44 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fix escaped characters in password (e.g., \041 -> !, \044 -> $, etc.)
     password = password
-      .replace(/\\041/g, '!')   // Octal escape for !
-      .replace(/\\044/g, '$')   // Octal escape for $ 
-      .replace(/\\040/g, ' ')   // Octal escape for space
-      .replace(/\\035/g, '#')   // Octal escape for #
-      .replace(/\\046/g, '&')   // Octal escape for &
+      .replaceAll('\\041', '!')
+      .replaceAll('\\044', '$')
+      .replaceAll('\\040', ' ')
+      .replaceAll('\\035', '#')
+      .replaceAll('\\046', '&')
 
-    // First check if Identity service is reachable
     try {
-      console.log("Testing Identity service connectivity...")
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000)
       
-      const healthCheck = await fetch(`${IDENTITY_SERVICE_URL}/health`, { 
+      const healthCheck = await fetch(`${API_CONFIG.gateway}/health`, { 
         method: "GET",
         signal: controller.signal
       })
       
       clearTimeout(timeoutId)
-      console.log("Health check response:", healthCheck.status)
+      
+      if (!healthCheck.ok) {
+        return NextResponse.json(
+          { 
+            message: "Servicio de autenticación no disponible", 
+            debug: `Gateway health check failed`
+          },
+          { status: 503 }
+        )
+      }
     } catch (healthError) {
-      console.error("Identity service not reachable:", healthError)
       return NextResponse.json(
         { 
-          message: "Servicio de autenticación no disponible. Verifique que el Identity service esté corriendo.", 
-          debug: `Cannot reach Identity service at ${IDENTITY_SERVICE_URL}`,
-          suggestion: "Ejecute: cd services/identity/src/Identity.Api && dotnet run"
+          message: "Servicio de autenticación no disponible", 
+          debug: `Cannot reach Gateway at ${API_CONFIG.gateway}`
         },
         { status: 503 }
       )
     }
 
-    // Call Identity Service to authenticate
-    console.log("Calling Identity service at:", `${IDENTITY_SERVICE_URL}/token`)
-    console.log("Request payload:", { email, password: password.substring(0, 3) + "***" })
-    
-    const identityResponse = await fetch(`${IDENTITY_SERVICE_URL}/token`, {
+    const identityResponse = await fetch(`${API_CONFIG.gateway}/auth/token`, {
       method: "POST", 
       headers: {
         "Content-Type": "application/json",
@@ -63,13 +61,8 @@ export async function POST(request: NextRequest) {
       }),
     })
 
-    console.log("Identity service response status:", identityResponse.status)
-    console.log("Identity service response headers:", Object.fromEntries(identityResponse.headers.entries()))
-    
     if (!identityResponse.ok) {
       const responseText = await identityResponse.text()
-      console.log("Identity service error response:", responseText)
-      
       let errorData = null
       try {
         errorData = JSON.parse(responseText)
@@ -80,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           message: errorData?.message || "Credenciales inválidas",
-          debug: `Identity service returned ${identityResponse.status}: ${responseText}`
+          debug: `Gateway returned ${identityResponse.status}: ${responseText}`
         },
         { status: 401 }
       )
@@ -88,10 +81,6 @@ export async function POST(request: NextRequest) {
 
     const { token, userRole, userEmail, expiresAt } = await identityResponse.json()
 
-    console.log("User:" , {token});
-    
-
-    // Validate user has admin role (direct from response and JWT verification)
     if (userRole !== "Admin") {
       return NextResponse.json(
         { message: "Acceso no autorizado. Se requiere rol de administrador." },
@@ -99,23 +88,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Additional JWT validation for security
     try {
       const payload = JSON.parse(atob(token.split(".")[1]))
-      console.log("JWT Payload:", payload)
       
       let jwtRole = payload.role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
       
-      // Handle case where role might be an array (due to duplicate claims)
       if (Array.isArray(jwtRole)) {
-        jwtRole = jwtRole[0] // Take the first role if it's an array
+        jwtRole = jwtRole[0]
       }
       
       if (jwtRole !== "Admin") {
         return NextResponse.json(
           { 
             message: "Token inválido - rol no coincide.",
-            debug: `Expected 'Admin', got '${jwtRole}' (type: ${typeof jwtRole})`
+            debug: `Expected 'Admin', got '${jwtRole}'`
           },
           { status: 403 }
         )
@@ -127,18 +113,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Set token in HTTP-only cookie for security
     const response = NextResponse.json({ 
       token, 
       userRole, 
       userEmail,
       expiresAt 
     })
+    
     response.cookies.set("admin-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 8, // 8 hours
+      maxAge: 60 * 60 * 8,
       path: "/admin"
     })
 

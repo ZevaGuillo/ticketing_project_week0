@@ -10,15 +10,21 @@ public class SendTicketNotificationHandlerTests
 {
     private readonly Mock<IEmailNotificationRepository> _repositoryMock;
     private readonly Mock<IEmailService> _emailServiceMock;
-    private readonly Mock<ILogger<SendTicketNotificationHandler>> _loggerMock;
-    private readonly SendTicketNotificationHandler _handler;
+    private readonly Mock<IQrCodeService> _qrCodeServiceMock;
+    private readonly Mock<ILogger<SendTicketNotificationCommandHandler>> _loggerMock;
+    private readonly SendTicketNotificationCommandHandler _handler;
 
     public SendTicketNotificationHandlerTests()
     {
         _repositoryMock = new Mock<IEmailNotificationRepository>();
         _emailServiceMock = new Mock<IEmailService>();
-        _loggerMock = new Mock<ILogger<SendTicketNotificationHandler>>();
-        _handler = new SendTicketNotificationHandler(_repositoryMock.Object, _emailServiceMock.Object, _loggerMock.Object);
+        _qrCodeServiceMock = new Mock<IQrCodeService>();
+        _loggerMock = new Mock<ILogger<SendTicketNotificationCommandHandler>>();
+        _handler = new SendTicketNotificationCommandHandler(
+            _repositoryMock.Object, 
+            _emailServiceMock.Object,
+            _qrCodeServiceMock.Object, 
+            _loggerMock.Object);
     }
 
     [Fact]
@@ -31,26 +37,29 @@ public class SendTicketNotificationHandlerTests
         var orderId = Guid.NewGuid();
         var ticketId = Guid.NewGuid();
         var customerEmail = "customer@example.com";
-        var command = new SendTicketNotificationCommand
-        {
-            TicketId = ticketId,
-            OrderId = orderId,
-            RecipientEmail = customerEmail,
-            EventName = "Concert 2026",
-            SeatNumber = "A1",
-            Price = 100.00m,
-            Currency = "USD",
-            TicketPdfUrl = "https://example.com/ticket.pdf",
-            QrCodeData = "QR_DATA_HERE",
-            TicketIssuedAt = DateTime.UtcNow
-        };
+        var command = new SendTicketNotificationCommand(
+            TicketId: ticketId,
+            OrderId: orderId,
+            RecipientEmail: customerEmail,
+            EventName: "Concert 2026",
+            SeatNumber: "A1",
+            Price: 100.00m,
+            TicketIssuedAt: DateTime.UtcNow,
+            Currency: "USD",
+            TicketPdfUrl: "https://example.com/ticket.pdf",
+            QrCodeData: "QR_DATA_HERE");
 
         _repositoryMock
             .Setup(r => r.GetByOrderIdAsync(orderId))
             .ReturnsAsync((EmailNotification?)null);
 
         _emailServiceMock
-            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(e => e.SendAsync(
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()))
             .ReturnsAsync(true);
 
         _repositoryMock
@@ -74,7 +83,12 @@ public class SendTicketNotificationHandlerTests
         // [VERIFICAR: COMPORTAMIENTO] - ¿Se siguio el PROCESO tecnico correcto (Mocks)?
         // Verificamos que se llamo al servicio de email REALMENTE.
         _emailServiceMock.Verify(
-            e => e.SendAsync(customerEmail, It.IsAny<string>(), It.IsAny<string>(), command.TicketPdfUrl),
+            e => e.SendAsync(
+                customerEmail, 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()),
             Times.Once);
 
         // Verificamos que se PERSISTIO en la base de datos.
@@ -91,12 +105,14 @@ public class SendTicketNotificationHandlerTests
         // Arrange
         var orderId = Guid.NewGuid();
         var existingNotificationId = Guid.NewGuid();
-        var command = new SendTicketNotificationCommand
-        {
-            TicketId = Guid.NewGuid(),
-            OrderId = orderId,
-            // ... otros datos
-        };
+        var command = new SendTicketNotificationCommand(
+            TicketId: Guid.NewGuid(),
+            OrderId: orderId,
+            RecipientEmail: string.Empty,
+            EventName: string.Empty,
+            SeatNumber: string.Empty,
+            Price: 0m,
+            TicketIssuedAt: DateTime.UtcNow);
 
         // ...
 
@@ -125,7 +141,14 @@ public class SendTicketNotificationHandlerTests
 
         // [VERIFICAR: SILENCIO] - ¡AQUI USAMOS TIMES.NEVER!
         // Verificamos que el "Portero" (if) detuvo el envio de email (Comportamiento).
-        _emailServiceMock.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _emailServiceMock.Verify(
+            e => e.SendAsync(
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()), 
+            Times.Never);
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<EmailNotification>()), Times.Never);
         
         // [REFÁCTOR]: Una vez en verde, podriamos limpiar la logica de mapeo en el Handler.
@@ -138,24 +161,27 @@ public class SendTicketNotificationHandlerTests
         var orderId = Guid.NewGuid();
         var ticketId = Guid.NewGuid();
         var customerEmail = "customer@example.com";
-        var command = new SendTicketNotificationCommand
-        {
-            TicketId = ticketId,
-            OrderId = orderId,
-            RecipientEmail = customerEmail,
-            EventName = "Concert 2026",
-            SeatNumber = "A1",
-            Price = 100.00m,
-            Currency = "USD",
-            TicketIssuedAt = DateTime.UtcNow
-        };
+        var command = new SendTicketNotificationCommand(
+            TicketId: ticketId,
+            OrderId: orderId,
+            RecipientEmail: customerEmail,
+            EventName: "Concert 2026",
+            SeatNumber: "A1",
+            Price: 100.00m,
+            TicketIssuedAt: DateTime.UtcNow,
+            Currency: "USD");
 
         _repositoryMock
             .Setup(r => r.GetByOrderIdAsync(orderId))
             .ReturnsAsync((EmailNotification?)null);
 
         _emailServiceMock
-            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(e => e.SendAsync(
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string>(), 
+                It.IsAny<string?>(), 
+                It.IsAny<byte[]?>()))
             .ReturnsAsync(false);
 
         EmailNotification? capturedNotification = null;
@@ -185,17 +211,15 @@ public class SendTicketNotificationHandlerTests
     {
         // Arrange
         var orderId = Guid.NewGuid();
-        var command = new SendTicketNotificationCommand
-        {
-            TicketId = Guid.NewGuid(),
-            OrderId = orderId,
-            RecipientEmail = "customer@example.com",
-            EventName = "Concert 2026",
-            SeatNumber = "A1",
-            Price = 100.00m,
-            Currency = "USD",
-            TicketIssuedAt = DateTime.UtcNow
-        };
+        var command = new SendTicketNotificationCommand(
+            TicketId: Guid.NewGuid(),
+            OrderId: orderId,
+            RecipientEmail: "customer@example.com",
+            EventName: "Concert 2026",
+            SeatNumber: "A1",
+            Price: 100.00m,
+            TicketIssuedAt: DateTime.UtcNow,
+            Currency: "USD");
 
         _repositoryMock
             .Setup(r => r.GetByOrderIdAsync(orderId))

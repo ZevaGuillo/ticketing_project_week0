@@ -54,12 +54,14 @@ public sealed class CheckoutOrderHandler : IRequestHandler<CheckoutOrderCommand,
             var orderDto = new OrderDto(
                 updatedOrder.Id,
                 updatedOrder.UserId,
+                updatedOrder.UserEmail,
                 updatedOrder.GuestToken,
                 updatedOrder.TotalAmount,
                 updatedOrder.State,
                 updatedOrder.CreatedAt,
                 updatedOrder.PaidAt,
-                updatedOrder.Items.Select(i => new OrderItemDto(i.Id, i.SeatId, i.Price))
+                updatedOrder.Items.Select(i => new OrderItemDto(i.Id, i.SeatId, i.Price, i.SeatLabel)),
+                updatedOrder.EventName ?? "Evento"
             );
 
             return new CheckoutOrderResponse(true, null, orderDto);

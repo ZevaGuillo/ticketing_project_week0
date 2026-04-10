@@ -1,27 +1,21 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /src
 
-# Copy only the Payment src to keep context small and preserve project references
 COPY services/payment/src ./services/payment/src
 WORKDIR /src/services/payment/src/Payment.Api
 
-# Restore and publish
 RUN dotnet restore
 RUN dotnet publish -c Release -o /app/publish
 
-# Generate EF Core migration bundle
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
 WORKDIR /app
 
-# Install native dependencies for librdkafka (required by Confluent.Kafka on Linux)
-RUN apt-get update && apt-get install -y librdkafka-dev && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache librdkafka-dev
 
 COPY --from=build /app/publish .
 
-# Entrypoint script: run migrations then start app
-RUN printf '#!/bin/bash\nset -e\necho "Applying EF Core migrations..."\necho "Migrations skipped" || echo "Migration warning: migrations may already be applied"\necho "Starting application..."\nexec dotnet Payment.Api.dll\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/sh\nset -e\necho "Applying EF Core migrations..."\necho "Migrations skipped" || echo "Migration warning: migrations may already be applied"\necho "Starting application..."\nexec dotnet Payment.Api.dll\n' > /entrypoint.sh && chmod +x /entrypoint.sh
 
-ENV ASPNETCORE_URLS=http://+:5004
-EXPOSE 5004
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENV ASPNETCORE_URLS=http://+:5006
+EXPOSE 5006
+ENTRYPOINT ["/entrypoint.sh"]

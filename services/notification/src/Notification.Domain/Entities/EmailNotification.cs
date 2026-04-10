@@ -3,8 +3,9 @@ namespace Notification.Domain.Entities;
 public class EmailNotification
 {
     public Guid Id { get; set; }
-    public Guid TicketId { get; set; }
-    public Guid OrderId { get; set; }
+    public Guid? TicketId { get; set; }
+    public Guid? OrderId { get; set; }
+    public Guid? OpportunityId { get; set; }
     public string RecipientEmail { get; set; } = string.Empty;
     public string Subject { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
