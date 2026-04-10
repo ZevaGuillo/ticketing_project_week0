@@ -8,6 +8,16 @@ Plataforma distribuida de venta de boletos para eventos diseñada bajo **Arquite
 
 ---
 
+## 🧪 Pruebas Automatizadas
+
+| Repositorio | Descripción |
+| :--- | :--- |
+| [AUTO_FRONT_POM_FACTORY](https://github.com/ZevaGuillo/-AUTO_FRONT_POM_FACTORY) | Pruebas E2E Frontend con Page Object Model |
+| [AUTO_FROM_SCREENPLAY](https://github.com/ZevaGuillo/AUTO_FROM_SCREENPLAY) | Pruebas E2E con Screenplay Pattern |
+| [AUTO_API_SCREENPLAY](https://github.com/ZevaGuillo/AUTO_API_SCREENPLAY) | Pruebas API con Screenplay Pattern |
+
+---
+
 ## 🏛️ Arquitectura y Comunicación
 
 El sistema se basa en microservicios independientes que se comunican de forma híbrida: **REST** para operaciones síncronas de lectura/acción inmediata y **Kafka** para la coreografía de procesos de larga duración (Pago, Reserva, Emisión).
