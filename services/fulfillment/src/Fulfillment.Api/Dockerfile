@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY services/fulfillment/src ./services/fulfillment/src
@@ -7,7 +7,7 @@ WORKDIR /src/services/fulfillment/src/Fulfillment.Api
 RUN dotnet restore
 RUN dotnet publish -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 WORKDIR /app
 
 RUN apk add --no-cache fontconfig freetype libx11 libxext libxrender
